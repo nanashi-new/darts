@@ -6,11 +6,13 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
     QComboBox,
+    QFileDialog,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QSpinBox,
     QTableView,
@@ -20,6 +22,7 @@ from PySide6.QtWidgets import (
 
 from app.db.database import get_connection
 from app.db.repositories import ResultRepository, TournamentRepository
+from app.services.export_service import ExportService
 
 
 @dataclass
@@ -36,6 +39,7 @@ class RatingView(QWidget):
         self._connection = get_connection()
         self._tournament_repo = TournamentRepository(self._connection)
         self._result_repo = ResultRepository(self._connection)
+        self._export_service = ExportService()
 
         root_layout = QVBoxLayout(self)
         root_layout.addLayout(self._build_filters())
@@ -89,8 +93,12 @@ class RatingView(QWidget):
         print_btn = QPushButton("Print", self)
         save_image_btn = QPushButton("Save as Image", self)
 
+        export_pdf_btn.clicked.connect(self._export_pdf)
+        export_xlsx_btn.clicked.connect(self._export_xlsx)
+        print_btn.clicked.connect(self._print_table)
+        save_image_btn.clicked.connect(self._save_image)
+
         for button in (export_pdf_btn, export_xlsx_btn, print_btn, save_image_btn):
-            button.setEnabled(False)
             actions_layout.addWidget(button)
 
         actions_layout.addStretch(1)
@@ -174,3 +182,74 @@ class RatingView(QWidget):
 
         self._table.setModel(model)
         self._table.resizeColumnsToContents()
+
+    def _export_pdf(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Экспорт рейтинга в PDF",
+            "rating.pdf",
+            "PDF Files (*.pdf)",
+        )
+        if not path:
+            QMessageBox.warning(self, "Экспорт рейтинга", "Путь для сохранения не выбран.")
+            return
+        try:
+            self._export_service.export_table_pdf(
+                self._table, path, self._build_export_header()
+            )
+        except OSError as exc:
+            QMessageBox.critical(self, "Экспорт рейтинга", str(exc))
+            return
+        QMessageBox.information(self, "Экспорт рейтинга", f"Готово: {path}")
+
+    def _export_xlsx(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Экспорт рейтинга в XLSX",
+            "rating.xlsx",
+            "Excel Files (*.xlsx)",
+        )
+        if not path:
+            QMessageBox.warning(self, "Экспорт рейтинга", "Путь для сохранения не выбран.")
+            return
+        try:
+            self._export_service.export_table_xlsx(
+                self._table, path, self._build_export_header()
+            )
+        except OSError as exc:
+            QMessageBox.critical(self, "Экспорт рейтинга", str(exc))
+            return
+        QMessageBox.information(self, "Экспорт рейтинга", f"Готово: {path}")
+
+    def _print_table(self) -> None:
+        if self._export_service.print_table(
+            self._table, self, self._build_export_header()
+        ):
+            QMessageBox.information(self, "Печать", "Печать отправлена на принтер.")
+
+    def _save_image(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Сохранить рейтинг как изображение",
+            "rating.png",
+            "PNG Files (*.png)",
+        )
+        if not path:
+            QMessageBox.warning(self, "Сохранение изображения", "Путь для сохранения не выбран.")
+            return
+        try:
+            self._export_service.save_table_image(self._table, path)
+        except OSError as exc:
+            QMessageBox.critical(self, "Сохранение изображения", str(exc))
+            return
+        QMessageBox.information(self, "Сохранение изображения", f"Готово: {path}")
+
+    def _build_export_header(self) -> list[str]:
+        date_label = self._export_service.format_date_label()
+        category = self._category_combo.currentText()
+        n_value = self._n_spin.value()
+        return [
+            f"Дата: {date_label}",
+            f"Категория: {category}",
+            f"N: {n_value}",
+        ]
