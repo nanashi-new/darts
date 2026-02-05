@@ -99,4 +99,17 @@ Windows • Offline • Judges & Coaches
 
 ---
 
+## ▶️ Быстрый запуск (для разработчика)
+
+1. Установить зависимости:
+   ```bash
+   python -m pip install -r requirements.txt
+   ```
+2. Запустить приложение:
+   ```bash
+   python -m app
+   ```
+
+---
+
 © EBCK • Darts Rating System
