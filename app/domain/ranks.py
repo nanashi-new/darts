@@ -1,6 +1,6 @@
-class RankCalculator:
-    """Placeholder for rank calculations."""
+from __future__ import annotations
 
-    def assign(self) -> None:
-        """Assign ranks (stub)."""
-        raise NotImplementedError("Rank calculation is not implemented yet.")
+
+def get_rank(*_: object, **__: object) -> None:
+    """Return a rank for a result (placeholder)."""
+    return None
