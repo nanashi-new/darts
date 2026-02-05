@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 from app.db.database import get_connection
 from app.db.repositories import ResultRepository, TournamentRepository
 from app.services.export_service import ExportService
+from app.services.recalculate_tournament import recalculate_tournament_results
 
 
 class TournamentsView(QWidget):
@@ -37,15 +38,17 @@ class TournamentsView(QWidget):
 
     def _build_actions(self) -> QHBoxLayout:
         actions_layout = QHBoxLayout()
+        recalc_btn = QPushButton("Пересчитать турнир", self)
         export_pdf_btn = QPushButton("Export PDF", self)
         export_xlsx_btn = QPushButton("Export XLSX", self)
         print_btn = QPushButton("Print", self)
 
+        recalc_btn.clicked.connect(self._recalculate_tournament)
         export_pdf_btn.clicked.connect(self._export_pdf)
         export_xlsx_btn.clicked.connect(self._export_xlsx)
         print_btn.clicked.connect(self._print_table)
 
-        for button in (export_pdf_btn, export_xlsx_btn, print_btn):
+        for button in (recalc_btn, export_pdf_btn, export_xlsx_btn, print_btn):
             actions_layout.addWidget(button)
 
         actions_layout.addStretch(1)
@@ -160,6 +163,24 @@ class TournamentsView(QWidget):
             self.results_table, self, self._build_export_header()
         ):
             QMessageBox.information(self, "Печать", "Печать отправлена на принтер.")
+
+    def _recalculate_tournament(self) -> None:
+        if not self._current_tournament:
+            QMessageBox.warning(self, "Пересчет", "Турнир не выбран.")
+            return
+        tournament_id = int(self._current_tournament["id"])
+        try:
+            norms_loaded = recalculate_tournament_results(
+                connection=self._connection,
+                tournament_id=tournament_id,
+            )
+        except ValueError as exc:
+            QMessageBox.warning(self, "Пересчет", str(exc))
+            return
+        if not norms_loaded:
+            QMessageBox.warning(self, "Пересчет", "Нормативы не загружены.")
+        self.refresh_latest_tournament(tournament_id)
+        QMessageBox.information(self, "Пересчет", "Пересчет завершен.")
 
     def _build_export_header(self) -> list[str]:
         if not self._current_tournament:
