@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date, datetime
+import json
 from typing import Iterable
 
 from openpyxl import load_workbook
+
+from app.db.repositories import PlayerRepository, ResultRepository, TournamentRepository
+from app.domain.points import points_for_place
 
 
 @dataclass(frozen=True)
@@ -138,3 +143,146 @@ def validate_rows(rows: Iterable[dict[str, object]]) -> list[str]:
                     f"Строка {idx}: поле '{label}' не число ({value})"
                 )
     return warnings
+
+
+def _normalize_text(value: object | None) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _parse_fio(value: object) -> tuple[str, str, str | None]:
+    text = _normalize_text(value)
+    parts = [part for part in text.split() if part]
+    if not parts:
+        return "", "", None
+    last_name = parts[0]
+    first_name = parts[1] if len(parts) > 1 else ""
+    middle_name = " ".join(parts[2:]) if len(parts) > 2 else None
+    return last_name, first_name, middle_name
+
+
+def _parse_birth_value(value: object | None) -> tuple[str | None, str | None]:
+    if value is None or _normalize_text(value) == "":
+        return None, None
+    if isinstance(value, datetime):
+        return value.date().isoformat(), str(value.year)
+    if isinstance(value, date):
+        return value.isoformat(), str(value.year)
+    if isinstance(value, (int, float)):
+        year = int(value)
+        if 1900 <= year <= 2100:
+            return str(year), str(year)
+        return None, None
+    text = _normalize_text(value)
+    if text.isdigit() and len(text) == 4:
+        return text, text
+    for fmt in ("%d.%m.%Y", "%d.%m.%y", "%Y-%m-%d", "%d/%m/%Y"):
+        try:
+            parsed = datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+        return parsed.isoformat(), str(parsed.year)
+    return None, None
+
+
+def _to_int(value: object | None) -> int | None:
+    if value is None or _normalize_text(value) == "":
+        return None
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    text = _normalize_text(value).replace(",", ".")
+    try:
+        return int(float(text))
+    except ValueError:
+        return None
+
+
+def import_tournament_results(
+    *,
+    connection,
+    file_path: str,
+    tournament_name: str,
+    tournament_date: str | None,
+    category_code: str | None,
+) -> int:
+    _, rows = parse_first_table_from_xlsx(file_path)
+    if not rows:
+        raise ValueError("Не удалось найти таблицу в файле.")
+
+    tournament_repo = TournamentRepository(connection)
+    player_repo = PlayerRepository(connection)
+    result_repo = ResultRepository(connection)
+
+    tournament_id = tournament_repo.create(
+        {
+            "name": tournament_name,
+            "date": tournament_date,
+            "category_code": category_code,
+            "league_code": None,
+            "source_files": json.dumps([file_path]),
+        }
+    )
+
+    for row in rows:
+        fio = row.get("fio")
+        if fio is None or _normalize_text(fio) == "":
+            continue
+        last_name, first_name, middle_name = _parse_fio(fio)
+        birth_date, birth_year = _parse_birth_value(row.get("birth"))
+
+        player = player_repo.find_by_identity(
+            last_name=last_name,
+            first_name=first_name,
+            middle_name=middle_name,
+            birth_date=birth_date,
+            birth_year=birth_year,
+        )
+        if player is None:
+            player_id = player_repo.create(
+                {
+                    "last_name": last_name,
+                    "first_name": first_name,
+                    "middle_name": middle_name,
+                    "birth_date": birth_date,
+                    "gender": None,
+                    "coach": _normalize_text(row.get("coach")) or None,
+                    "club": None,
+                    "notes": None,
+                }
+            )
+        else:
+            player_id = int(player["id"])
+
+        place = _to_int(row.get("place"))
+        score_set = _to_int(row.get("score_set"))
+        score_sector20 = _to_int(row.get("score_sector20"))
+        score_big_round = _to_int(row.get("score_big_round"))
+
+        points_place = points_for_place(place) if place is not None else 0
+        points_classification = 0
+        points_total = points_place + points_classification
+
+        result_repo.create(
+            {
+                "tournament_id": tournament_id,
+                "player_id": player_id,
+                "place": place,
+                "score_set": score_set,
+                "score_sector20": score_sector20,
+                "score_big_round": score_big_round,
+                "rank_set": None,
+                "rank_sector20": None,
+                "rank_big_round": None,
+                "points_classification": points_classification,
+                "points_place": points_place,
+                "points_total": points_total,
+                "calc_version": "v1",
+            }
+        )
+
+    return tournament_id
