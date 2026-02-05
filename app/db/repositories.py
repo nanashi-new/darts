@@ -227,6 +227,17 @@ class TournamentRepository:
         ).fetchone()
         return _row_to_dict(row)
 
+    def list_category_codes(self) -> list[str]:
+        rows = self._connection.execute(
+            """
+            SELECT DISTINCT category_code
+            FROM tournaments
+            WHERE category_code IS NOT NULL AND category_code != ''
+            ORDER BY category_code
+            """
+        ).fetchall()
+        return [str(row[0]) for row in rows]
+
 
 class ResultRepository:
     """Repository for tournament results data access."""
@@ -363,5 +374,46 @@ class ResultRepository:
             ORDER BY results.points_total DESC, results.place ASC
             """,
             (tournament_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_results_for_rating(
+        self,
+        *,
+        category_code: str | None = None,
+        search_term: str | None = None,
+    ) -> list[dict[str, Any]]:
+        clauses: list[str] = []
+        params: list[Any] = []
+        if category_code:
+            clauses.append("tournaments.category_code = ?")
+            params.append(category_code)
+
+        if search_term:
+            like_term = f"%{search_term}%"
+            clauses.append(
+                "(players.last_name LIKE ? OR players.first_name LIKE ? OR players.middle_name LIKE ?)"
+            )
+            params.extend([like_term, like_term, like_term])
+
+        where_sql = ""
+        if clauses:
+            where_sql = "WHERE " + " AND ".join(clauses)
+
+        rows = self._connection.execute(
+            f"""
+            SELECT results.player_id,
+                   results.points_total,
+                   tournaments.date AS tournament_date,
+                   players.last_name,
+                   players.first_name,
+                   players.middle_name
+            FROM results
+            JOIN tournaments ON tournaments.id = results.tournament_id
+            JOIN players ON players.id = results.player_id
+            {where_sql}
+            ORDER BY tournaments.date DESC, tournaments.id DESC
+            """,
+            params,
         ).fetchall()
         return [dict(row) for row in rows]
