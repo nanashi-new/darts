@@ -18,9 +18,10 @@ class MainWindow(QMainWindow):
 
         tabs = QTabWidget()
         tabs.addTab(RatingView(), "Рейтинг")
-        tabs.addTab(TournamentsView(), "Турниры")
+        tournaments_view = TournamentsView()
+        tabs.addTab(tournaments_view, "Турниры")
         tabs.addTab(PlayersView(), "Игроки")
-        tabs.addTab(ImportExportView(), "Импорт/Экспорт")
+        tabs.addTab(ImportExportView(tournaments_view), "Импорт/Экспорт")
         tabs.addTab(ReportsView(), "Отчёты")
         tabs.addTab(FaqView(), "FAQ")
         tabs.addTab(SettingsView(), "Настройки")

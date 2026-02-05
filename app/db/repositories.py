@@ -108,6 +108,34 @@ class PlayerRepository:
         ).fetchall()
         return [dict(row) for row in rows]
 
+    def find_by_identity(
+        self,
+        *,
+        last_name: str,
+        first_name: str,
+        middle_name: str | None,
+        birth_date: str | None,
+        birth_year: str | None,
+    ) -> dict[str, Any] | None:
+        params: list[Any] = [last_name, first_name, middle_name or ""]
+        clauses = [
+            "last_name = ?",
+            "first_name = ?",
+            "COALESCE(middle_name, '') = ?",
+        ]
+        if birth_date:
+            clauses.append("birth_date = ?")
+            params.append(birth_date)
+        elif birth_year:
+            clauses.append("(birth_date LIKE ? OR birth_date = ?)")
+            params.extend([f"{birth_year}%", birth_year])
+        where_sql = " AND ".join(clauses)
+        row = self._connection.execute(
+            f"SELECT * FROM players WHERE {where_sql} LIMIT 1",
+            params,
+        ).fetchone()
+        return _row_to_dict(row)
+
 
 class TournamentRepository:
     """Repository for tournament data access."""
@@ -192,6 +220,12 @@ class TournamentRepository:
             (like_term, like_term, like_term),
         ).fetchall()
         return [dict(row) for row in rows]
+
+    def get_latest(self) -> dict[str, Any] | None:
+        row = self._connection.execute(
+            "SELECT * FROM tournaments ORDER BY date DESC, id DESC LIMIT 1"
+        ).fetchone()
+        return _row_to_dict(row)
 
 
 class ResultRepository:
@@ -312,5 +346,22 @@ class ResultRepository:
         rows = self._connection.execute(
             f"SELECT * FROM results {where_sql} ORDER BY points_total DESC, place ASC",
             params,
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_with_players(self, tournament_id: int) -> list[dict[str, Any]]:
+        rows = self._connection.execute(
+            """
+            SELECT results.*,
+                   players.last_name,
+                   players.first_name,
+                   players.middle_name,
+                   players.birth_date
+            FROM results
+            JOIN players ON players.id = results.player_id
+            WHERE results.tournament_id = ?
+            ORDER BY results.points_total DESC, results.place ASC
+            """,
+            (tournament_id,),
         ).fetchall()
         return [dict(row) for row in rows]
