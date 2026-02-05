@@ -9,6 +9,8 @@ from openpyxl import load_workbook
 
 from app.db.repositories import PlayerRepository, ResultRepository, TournamentRepository
 from app.domain.points import points_for_place
+from app.domain.ranks import calculate_points_classification
+from app.services.norms_loader import load_norms_from_settings
 
 
 @dataclass(frozen=True)
@@ -209,7 +211,7 @@ def import_tournament_results(
     tournament_name: str,
     tournament_date: str | None,
     category_code: str | None,
-) -> int:
+) -> tuple[int, bool]:
     _, rows = parse_first_table_from_xlsx(file_path)
     if not rows:
         raise ValueError("Не удалось найти таблицу в файле.")
@@ -217,6 +219,7 @@ def import_tournament_results(
     tournament_repo = TournamentRepository(connection)
     player_repo = PlayerRepository(connection)
     result_repo = ResultRepository(connection)
+    norms, norms_loaded = load_norms_from_settings()
 
     tournament_id = tournament_repo.create(
         {
@@ -263,8 +266,17 @@ def import_tournament_results(
         score_sector20 = _to_int(row.get("score_sector20"))
         score_big_round = _to_int(row.get("score_big_round"))
 
+        gender = None if player is None else player.get("gender")
+        ranks, points_classification = calculate_points_classification(
+            score_set=score_set,
+            score_sector20=score_sector20,
+            score_big_round=score_big_round,
+            gender=gender,
+            birth_date=birth_date,
+            tournament_date=tournament_date,
+            norms=norms or {},
+        )
         points_place = points_for_place(place) if place is not None else 0
-        points_classification = 0
         points_total = points_place + points_classification
 
         result_repo.create(
@@ -275,14 +287,14 @@ def import_tournament_results(
                 "score_set": score_set,
                 "score_sector20": score_sector20,
                 "score_big_round": score_big_round,
-                "rank_set": None,
-                "rank_sector20": None,
-                "rank_big_round": None,
+                "rank_set": ranks["rank_set"],
+                "rank_sector20": ranks["rank_sector20"],
+                "rank_big_round": ranks["rank_big_round"],
                 "points_classification": points_classification,
                 "points_place": points_place,
                 "points_total": points_total,
-                "calc_version": "v1",
+                "calc_version": "v2",
             }
         )
 
-    return tournament_id
+    return tournament_id, norms_loaded

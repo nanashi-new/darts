@@ -367,7 +367,8 @@ class ResultRepository:
                    players.last_name,
                    players.first_name,
                    players.middle_name,
-                   players.birth_date
+                   players.birth_date,
+                   players.gender
             FROM results
             JOIN players ON players.id = results.player_id
             WHERE results.tournament_id = ?

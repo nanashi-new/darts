@@ -80,7 +80,7 @@ class ImportExportView(QWidget):
         category_code = self.category_code_input.text().strip() or None
 
         try:
-            tournament_id = import_tournament_results(
+            tournament_id, norms_loaded = import_tournament_results(
                 connection=self._connection,
                 file_path=file_path,
                 tournament_name=tournament_name,
@@ -96,4 +96,6 @@ class ImportExportView(QWidget):
             if callable(refresh):
                 refresh(tournament_id)
 
+        if not norms_loaded:
+            QMessageBox.warning(self, "Импорт", "Нормативы не загружены.")
         QMessageBox.information(self, "Импорт", "Импорт завершён.")
