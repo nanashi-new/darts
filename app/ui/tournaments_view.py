@@ -170,17 +170,24 @@ class TournamentsView(QWidget):
             return
         tournament_id = int(self._current_tournament["id"])
         try:
-            norms_loaded = recalculate_tournament_results(
+            report = recalculate_tournament_results(
                 connection=self._connection,
                 tournament_id=tournament_id,
             )
         except ValueError as exc:
             QMessageBox.warning(self, "Пересчет", str(exc))
             return
-        if not norms_loaded:
-            QMessageBox.warning(self, "Пересчет", "Нормативы не загружены.")
         self.refresh_latest_tournament(tournament_id)
-        QMessageBox.information(self, "Пересчет", "Пересчет завершен.")
+        details = [
+            f"Обновлено результатов: {report.results_updated}",
+            f"Warnings: {len(report.warnings)}",
+            f"Errors: {len(report.errors)}",
+        ]
+        if report.warnings:
+            details.append("\n".join(report.warnings[:3]))
+        if report.errors:
+            details.append("\n".join(report.errors[:3]))
+        QMessageBox.information(self, "Пересчет", "\n".join(details))
 
     def _build_export_header(self) -> list[str]:
         if not self._current_tournament:
