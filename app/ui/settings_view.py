@@ -19,6 +19,8 @@ from PySide6.QtWidgets import (
 from app.db.database import get_connection
 from app.services.audit_log import AuditLogService, RECALC_ALL
 from app.services.norms_loader import load_norms_from_settings
+from app.services.player_merge import PlayerMergeService
+from app.ui.player_merge_dialog import PlayerMergeDialog
 from app.services.recalculate_tournament import recalculate_all_tournaments
 from app.settings import get_norms_xlsx_path, set_norms_xlsx_path
 
@@ -56,6 +58,10 @@ class SettingsView(QWidget):
         recalc_all_btn = QPushButton("Пересчитать всё", self)
         recalc_all_btn.clicked.connect(self._recalculate_all)
         layout.addWidget(recalc_all_btn)
+
+        merge_btn = QPushButton("Слияние дублей", self)
+        merge_btn.clicked.connect(self._open_player_merge)
+        layout.addWidget(merge_btn)
 
         layout.addStretch(1)
 
@@ -120,3 +126,8 @@ class SettingsView(QWidget):
         if report.errors:
             details.append("\n".join(report.errors[:3]))
         QMessageBox.information(self, "Пересчитать всё", "\n".join(details))
+
+
+    def _open_player_merge(self) -> None:
+        dialog = PlayerMergeDialog(PlayerMergeService(self._connection), self)
+        dialog.exec()
