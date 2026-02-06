@@ -4,11 +4,13 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from datetime import date, datetime
 import json
+from pathlib import Path
 from typing import Iterable
 
 from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
 
+from app.db.database import get_default_database_path
 from app.db.repositories import PlayerRepository, ResultRepository, TournamentRepository
 from app.domain.points import points_for_place
 from app.domain.ranks import calculate_points_classification
@@ -30,6 +32,27 @@ class ImportParseReport:
     missing_required_columns: list[str]
     needs_mapping: bool
     confidence: float
+
+
+@dataclass(frozen=True)
+class TableBlock:
+    sheet_name: str
+    start_row: int
+    end_row: int
+    header_mapping: dict[str, str]
+    rows: list[dict[str, object]]
+    warnings: list[str]
+    errors: list[str]
+    needs_mapping: bool
+    confidence: float
+    missing_required_columns: list[str]
+
+
+@dataclass(frozen=True)
+class ImportProfile:
+    name: str
+    required_columns: list[str]
+    header_aliases: dict[str, list[str]]
 
 
 def _normalize_header(value: object) -> str:
@@ -64,6 +87,24 @@ def detect_headers(row_values: Iterable[object]) -> dict[str, int]:
                 mapping[key] = idx
                 break
     return mapping
+
+
+def _default_required_fields() -> dict[str, str]:
+    return {
+        "fio": "ФИО",
+        "place": "Место",
+        "score_set": "Очки",
+    }
+
+
+def _calculate_mapping_stats(header_mapping: dict[str, int]) -> tuple[list[str], bool, float]:
+    required_fields = _default_required_fields()
+    missing_required = [label for key, label in required_fields.items() if key not in header_mapping]
+    total_required = len(required_fields)
+    found_required = total_required - len(missing_required)
+    confidence = found_required / total_required if total_required else 0.0
+    needs_mapping = confidence < 1.0
+    return missing_required, needs_mapping, confidence
 
 
 def _is_row_empty(row_values: Iterable[object]) -> bool:
@@ -131,6 +172,300 @@ def _parse_first_table(path: str) -> tuple[
     return header_labels, rows, header_mapping, header_found
 
 
+def _profile_storage_path() -> Path:
+    return get_default_database_path().parent / "import_profiles.json"
+
+
+def save_import_profile(profile: ImportProfile | dict[str, object]) -> None:
+    payload = profile if isinstance(profile, dict) else {
+        "name": profile.name,
+        "required_columns": profile.required_columns,
+        "header_aliases": profile.header_aliases,
+    }
+    name = str(payload.get("name", "")).strip()
+    if not name:
+        raise ValueError("У профиля должно быть имя.")
+
+    required_columns = [str(item) for item in payload.get("required_columns", [])]
+    aliases_raw = payload.get("header_aliases", {})
+    if not isinstance(aliases_raw, dict):
+        raise ValueError("header_aliases должен быть словарём.")
+
+    header_aliases = {
+        str(key): [str(alias) for alias in aliases]
+        for key, aliases in aliases_raw.items()
+        if isinstance(aliases, list)
+    }
+
+    profiles = list_import_profiles()
+    filtered = [item for item in profiles if item.name != name]
+    filtered.append(ImportProfile(name=name, required_columns=required_columns, header_aliases=header_aliases))
+
+    path = _profile_storage_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps([
+            {
+                "name": p.name,
+                "required_columns": p.required_columns,
+                "header_aliases": p.header_aliases,
+            }
+            for p in filtered
+        ], ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def list_import_profiles() -> list[ImportProfile]:
+    path = _profile_storage_path()
+    if not path.exists():
+        return []
+
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+
+    profiles: list[ImportProfile] = []
+    if not isinstance(raw, list):
+        return profiles
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name", "")).strip()
+        if not name:
+            continue
+        required_columns = [str(value) for value in item.get("required_columns", [])]
+        aliases = item.get("header_aliases", {})
+        if not isinstance(aliases, dict):
+            aliases = {}
+        header_aliases = {
+            str(key): [str(alias) for alias in values]
+            for key, values in aliases.items()
+            if isinstance(values, list)
+        }
+        profiles.append(
+            ImportProfile(
+                name=name,
+                required_columns=required_columns,
+                header_aliases=header_aliases,
+            )
+        )
+    return profiles
+
+
+
+
+def delete_import_profile(name: str) -> None:
+    target = name.strip()
+    if not target:
+        return
+    profiles = [p for p in list_import_profiles() if p.name != target]
+    path = _profile_storage_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps([
+            {
+                "name": p.name,
+                "required_columns": p.required_columns,
+                "header_aliases": p.header_aliases,
+            }
+            for p in profiles
+        ], ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+def apply_profile_to_headers(
+    profile: ImportProfile | dict[str, object],
+    headers_row: Iterable[object],
+) -> tuple[dict[str, str], float]:
+    aliases_raw = profile.header_aliases if isinstance(profile, ImportProfile) else profile.get("header_aliases", {})
+    required_columns = profile.required_columns if isinstance(profile, ImportProfile) else profile.get("required_columns", [])
+    if not isinstance(aliases_raw, dict):
+        aliases_raw = {}
+
+    normalized_headers = [str(value).strip() if value is not None else "" for value in headers_row]
+    mapping: dict[str, str] = {}
+    matched_required = 0
+    required_set = {str(value) for value in required_columns}
+
+    for header in normalized_headers:
+        normalized = _normalize_header(header)
+        if not normalized:
+            continue
+        for internal_key, aliases in aliases_raw.items():
+            if not isinstance(aliases, list):
+                continue
+            normalized_aliases = {_normalize_header(alias) for alias in aliases}
+            if normalized in normalized_aliases:
+                mapping[header] = str(internal_key)
+                if internal_key in required_set:
+                    matched_required += 1
+                break
+
+    total_required = len(required_set)
+    confidence = matched_required / total_required if total_required else 0.0
+    return mapping, confidence
+
+
+def _rows_for_table(
+    sheet,
+    start_index: int,
+    header_mapping: dict[str, int],
+    max_col: int,
+) -> tuple[list[dict[str, object]], int]:
+    rows: list[dict[str, object]] = []
+    idx = start_index
+    sheet_rows = list(sheet.iter_rows(values_only=True, max_col=max_col))
+    while idx < len(sheet_rows):
+        row_values = list(sheet_rows[idx])
+        if _is_row_empty(row_values) or _row_has_total(row_values):
+            break
+
+        if detect_headers(row_values).get("fio") is not None:
+            break
+
+        row_data: dict[str, object] = {
+            "fio": None,
+            "birth": None,
+            "coach": None,
+            "place": None,
+            "score_set": None,
+            "score_sector20": None,
+            "score_big_round": None,
+        }
+        for key in row_data:
+            if key in header_mapping:
+                row_data[key] = row_values[header_mapping[key]]
+        rows.append(row_data)
+        idx += 1
+
+    return rows, idx
+
+
+def parse_tables_from_xlsx_with_report(path: str) -> list[TableBlock]:
+    try:
+        workbook = load_workbook(path, data_only=True)
+    except (InvalidFileException, OSError):
+        return []
+
+    blocks: list[TableBlock] = []
+    for sheet in workbook.worksheets:
+        max_col = max(sheet.max_column, 1)
+        sheet_rows = list(sheet.iter_rows(values_only=True, max_col=max_col))
+        idx = 0
+        while idx < len(sheet_rows):
+            row_values = list(sheet_rows[idx])
+            header_mapping = detect_headers(row_values)
+            if header_mapping.get("fio") is None:
+                idx += 1
+                continue
+
+            header_labels = [str(value).strip() if value is not None else "" for value in row_values]
+            rows, end_idx = _rows_for_table(sheet, idx + 1, header_mapping, max_col)
+            warnings = validate_rows(rows)
+            missing_required, needs_mapping, confidence = _calculate_mapping_stats(header_mapping)
+
+            if (confidence < 1.0 or needs_mapping) and header_labels:
+                for profile in list_import_profiles():
+                    profile_mapping, profile_confidence = apply_profile_to_headers(profile, header_labels)
+                    if profile_confidence > confidence:
+                        confidence = profile_confidence
+                        needs_mapping = confidence < 1.0
+                        missing_required = [
+                            _default_required_fields().get(key, key)
+                            for key in profile.required_columns
+                            if key not in profile_mapping.values()
+                        ]
+
+            source_to_internal = {
+                header_labels[column_idx]: key
+                for key, column_idx in header_mapping.items()
+                if 0 <= column_idx < len(header_labels)
+            }
+
+            errors = []
+            for label in missing_required:
+                errors.append(f"Не найден столбец {label}.")
+
+            blocks.append(
+                TableBlock(
+                    sheet_name=sheet.title,
+                    start_row=idx + 1,
+                    end_row=end_idx,
+                    header_mapping=source_to_internal,
+                    rows=rows,
+                    warnings=warnings,
+                    errors=errors,
+                    needs_mapping=needs_mapping,
+                    confidence=confidence,
+                    missing_required_columns=missing_required,
+                )
+            )
+            idx = end_idx + 1
+
+    return blocks
+
+
+def import_batch_from_folder(folder: str, recursive: bool = False) -> dict[str, object]:
+    base_path = Path(folder)
+    pattern = "**/*.xlsx" if recursive else "*.xlsx"
+    files = sorted(base_path.glob(pattern)) if base_path.exists() else []
+
+    items: list[dict[str, object]] = []
+    success = 0
+    error = 0
+
+    for file_path in files:
+        try:
+            tables = parse_tables_from_xlsx_with_report(str(file_path))
+            if not tables:
+                items.append(
+                    {
+                        "path": str(file_path),
+                        "status": "error",
+                        "message": "Не удалось распознать таблицы.",
+                        "tables": 0,
+                    }
+                )
+                error += 1
+                continue
+
+            item_status = "ok"
+            message = "OK"
+            if all((not block.rows) or block.errors for block in tables):
+                item_status = "error"
+                message = "; ".join(block.errors[0] for block in tables if block.errors) or "Нет данных."
+
+            items.append(
+                {
+                    "path": str(file_path),
+                    "status": item_status,
+                    "message": message,
+                    "tables": len(tables),
+                }
+            )
+            if item_status == "ok":
+                success += 1
+            else:
+                error += 1
+        except Exception as exc:  # noqa: BLE001
+            items.append(
+                {
+                    "path": str(file_path),
+                    "status": "error",
+                    "message": str(exc),
+                    "tables": 0,
+                }
+            )
+            error += 1
+
+    return {
+        "success": success,
+        "error": error,
+        "items": items,
+    }
+
+
 def parse_first_table_from_xlsx(path: str) -> tuple[list[str], list[dict[str, object]]]:
     header_labels, rows, _, _ = _parse_first_table(path)
     return header_labels, rows
@@ -144,19 +479,9 @@ def parse_first_table_from_xlsx_with_report(path: str) -> ImportParseReport:
     if not header_found:
         errors.append("Не найден заголовок таблицы.")
 
-    required_fields = {
-        "fio": "ФИО",
-        "place": "Место",
-        "score_set": "Очки",
-    }
-    missing_required = [label for key, label in required_fields.items() if key not in header_mapping]
+    missing_required, needs_mapping, confidence = _calculate_mapping_stats(header_mapping)
     for label in missing_required:
         errors.append(f"Не найден столбец {label}.")
-
-    total_required = len(required_fields)
-    found_required = total_required - len(missing_required)
-    confidence = found_required / total_required if total_required else 0.0
-    needs_mapping = confidence < 1.0
 
     return ImportParseReport(
         headers=headers,

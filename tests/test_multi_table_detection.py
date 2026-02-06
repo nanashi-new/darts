@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-import pytest
-
-from app.services.import_xlsx import parse_first_table_from_xlsx_with_report
+from app.services.import_xlsx import parse_tables_from_xlsx_with_report
 from tests.helpers.xlsx_factory import make_multi_table_xlsx
 
 
-@pytest.mark.xfail(reason="Multi-table XLSX detection not implemented yet.")
-def test_parse_multi_table_blocks_expected_fail(tmp_path) -> None:
+def test_parse_multi_table_blocks(tmp_path) -> None:
     blocks = [
         {
             "title": "Категория U12",
@@ -22,7 +19,10 @@ def test_parse_multi_table_blocks_expected_fail(tmp_path) -> None:
     ]
     path = make_multi_table_xlsx(tmp_path, blocks, gap_rows=2)
 
-    report = parse_first_table_from_xlsx_with_report(str(path))
+    parsed = parse_tables_from_xlsx_with_report(str(path))
 
-    assert report.errors == []
-    assert len(report.rows) == 2
+    assert len(parsed) == 2
+    assert parsed[0].errors == []
+    assert parsed[1].errors == []
+    assert len(parsed[0].rows) == 1
+    assert len(parsed[1].rows) == 1
