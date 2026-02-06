@@ -2,56 +2,127 @@ from __future__ import annotations
 
 import os
 from datetime import date
-from typing import Iterable
+from pathlib import Path
+from typing import Iterable, Sequence
 
 from openpyxl import Workbook
-from openpyxl.styles import Alignment, Font
+from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
-from PySide6.QtCore import QPoint, QRect, QSize, Qt
-from PySide6.QtGui import QPainter, QRegion
-from PySide6.QtGui import QPageSize
-from PySide6.QtPrintSupport import QPrintDialog, QPrinter
-from PySide6.QtWidgets import QTableView
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PySide6.QtWidgets import QTableView
 
 
 class ExportService:
     def export_table_pdf(
         self,
-        table: QTableView,
+        table: "QTableView",
         path: str,
         header_lines: Iterable[str],
     ) -> None:
-        printer = QPrinter(QPrinter.HighResolution)
-        printer.setOutputFormat(QPrinter.PdfFormat)
-        printer.setOutputFileName(path)
-        printer.setPageOrientation(QPrinter.Landscape)
-        printer.setPageSize(QPageSize(QPageSize.A4))
-        self._render_table_to_printer(table, printer, list(header_lines))
-        if not os.path.exists(path):
-            raise OSError("Не удалось сохранить PDF файл.")
+        columns, rows = self._extract_table_data(table)
+        column_widths = [max(table.columnWidth(i), 80) for i in range(len(columns))]
+        self.export_dataset_pdf(path, header_lines, columns, rows, column_widths)
 
     def print_table(
         self,
-        table: QTableView,
+        table: "QTableView",
         parent,
         header_lines: Iterable[str],
     ) -> bool:
+        from PySide6.QtGui import QPageSize
+        from PySide6.QtPrintSupport import QPrintDialog, QPrinter
+
         printer = QPrinter(QPrinter.HighResolution)
         printer.setPageOrientation(QPrinter.Landscape)
         printer.setPageSize(QPageSize(QPageSize.A4))
         dialog = QPrintDialog(printer, parent)
         if dialog.exec() != QPrintDialog.Accepted:
             return False
-        self._render_table_to_printer(table, printer, list(header_lines))
+
+        columns, rows = self._extract_table_data(table)
+        column_widths = [max(table.columnWidth(i), 80) for i in range(len(columns))]
+        self._render_dataset_to_printer(printer, list(header_lines), columns, rows, column_widths)
         return True
 
     def export_table_xlsx(
         self,
-        table: QTableView,
+        table: "QTableView",
         path: str,
         header_lines: Iterable[str],
     ) -> None:
-        model = table.model()
+        columns, rows = self._extract_table_data(table)
+        self.export_dataset_xlsx(path, header_lines, columns, rows)
+
+    def save_table_image(self, table: "QTableView", path: str, full_table: bool = False) -> None:
+        extension = Path(path).suffix.lower()
+        image_format = "JPG" if extension in {".jpg", ".jpeg"} else "PNG"
+        if not full_table:
+            pixmap = table.viewport().grab()
+            if not pixmap.save(path, image_format):
+                raise OSError("Не удалось сохранить изображение.")
+            return
+
+        columns, rows = self._extract_table_data(table)
+        column_widths = [max(table.columnWidth(i), 80) for i in range(len(columns))]
+        self.export_dataset_image(path, columns, rows, column_widths)
+
+    def export_dataset(
+        self,
+        export_format: str,
+        path: str,
+        header_lines: Iterable[str],
+        columns: Sequence[str],
+        rows: Sequence[Sequence[str]],
+        column_widths: Sequence[int] | None = None,
+        full_image: bool = True,
+    ) -> None:
+        normalized = export_format.lower()
+        if normalized == "pdf":
+            self.export_dataset_pdf(path, header_lines, columns, rows, column_widths)
+        elif normalized == "xlsx":
+            self.export_dataset_xlsx(path, header_lines, columns, rows)
+        elif normalized in {"png", "jpg", "jpeg"}:
+            if not full_image:
+                raise ValueError("Режим видимой области доступен только для экспорта из таблицы UI.")
+            self.export_dataset_image(path, columns, rows, column_widths)
+        else:
+            raise ValueError(f"Неподдерживаемый формат: {export_format}")
+
+    def export_dataset_pdf(
+        self,
+        path: str,
+        header_lines: Iterable[str],
+        columns: Sequence[str],
+        rows: Sequence[Sequence[str]],
+        column_widths: Sequence[int] | None = None,
+    ) -> None:
+        from PySide6.QtGui import QPageSize
+        from PySide6.QtPrintSupport import QPrinter
+
+        printer = QPrinter(QPrinter.HighResolution)
+        printer.setOutputFormat(QPrinter.PdfFormat)
+        printer.setOutputFileName(path)
+        printer.setPageOrientation(QPrinter.Landscape)
+        printer.setPageSize(QPageSize(QPageSize.A4))
+        self._render_dataset_to_printer(
+            printer,
+            list(header_lines),
+            list(columns),
+            [["" if value is None else str(value) for value in row] for row in rows],
+            list(column_widths) if column_widths is not None else [120] * len(columns),
+        )
+        if not os.path.exists(path):
+            raise OSError("Не удалось сохранить PDF файл.")
+
+    def export_dataset_xlsx(
+        self,
+        path: str,
+        header_lines: Iterable[str],
+        columns: Sequence[str],
+        rows: Sequence[Sequence[str]],
+    ) -> None:
         workbook = Workbook()
         sheet = workbook.active
         sheet.title = "Экспорт"
@@ -63,109 +134,183 @@ class ExportService:
             current_row += 1
 
         header_row = current_row
-        for column in range(model.columnCount()):
-            header_text = model.headerData(column, Qt.Horizontal)
-            cell = sheet.cell(row=header_row, column=column + 1, value=header_text)
-            cell.font = Font(bold=True)
+        header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
+        for column, header_text in enumerate(columns, start=1):
+            cell = sheet.cell(row=header_row, column=column, value=header_text)
+            cell.font = Font(bold=True, color="FFFFFF")
             cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.fill = header_fill
 
         current_row += 1
-        alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        for row in range(model.rowCount()):
-            for column in range(model.columnCount()):
-                value = model.index(row, column).data()
-                cell = sheet.cell(row=current_row, column=column + 1, value=value)
+        alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+        for row in rows:
+            for column, value in enumerate(row, start=1):
+                cell = sheet.cell(row=current_row, column=column, value=value)
                 cell.alignment = alignment
             current_row += 1
 
-        sheet.freeze_panes = sheet.cell(row=header_row + 1, column=1)
+        sheet.freeze_panes = f"A{header_row + 1}"
 
-        for column_cells in sheet.columns:
-            max_length = 0
-            column = column_cells[0].column
-            for cell in column_cells:
-                if cell.value is None:
+        for column_index in range(1, len(columns) + 1):
+            max_length = len(str(columns[column_index - 1]))
+            for row_index in range(header_row + 1, current_row):
+                value = sheet.cell(row=row_index, column=column_index).value
+                if value is None:
                     continue
-                max_length = max(max_length, len(str(cell.value)))
-            sheet.column_dimensions[get_column_letter(column)].width = max_length + 2
+                max_length = max(max_length, len(str(value)))
+            sheet.column_dimensions[get_column_letter(column_index)].width = min(max_length + 2, 60)
 
+        sheet.page_setup.orientation = "landscape"
+        sheet.page_setup.fitToWidth = 1
+        sheet.page_setup.fitToHeight = 0
         workbook.save(path)
 
-    def save_table_image(self, table: QTableView, path: str) -> None:
-        pixmap = table.viewport().grab()
-        if not pixmap.save(path, "PNG"):
-            raise OSError("Не удалось сохранить изображение.")
-
-    def _render_table_to_printer(
+    def export_dataset_image(
         self,
-        table: QTableView,
-        printer: QPrinter,
-        header_lines: list[str],
+        path: str,
+        columns: Sequence[str],
+        rows: Sequence[Sequence[str]],
+        column_widths: Sequence[int] | None = None,
     ) -> None:
-        painter = QPainter(printer)
-        original_size = table.size()
+        if not columns:
+            raise OSError("Нет данных для экспорта изображения.")
+        widths = list(column_widths) if column_widths else [140] * len(columns)
+        padding = 6
+        row_height = 28
+        header_height = 34
+        width = sum(widths) + 1
+        height = header_height + row_height * len(rows) + 1
+        from PySide6.QtCore import QRect, Qt
+        from PySide6.QtGui import QImage, QPainter
+
+        image = QImage(width, height, QImage.Format_ARGB32)
+        image.fill(Qt.white)
+
+        painter = QPainter(image)
         try:
-            table_size = self._calculate_table_size(table)
-            table.resize(table_size)
-            table.updateGeometry()
+            painter.setPen(Qt.black)
+            x = 0
+            for index, title in enumerate(columns):
+                rect = QRect(x, 0, widths[index], header_height)
+                painter.fillRect(rect, Qt.lightGray)
+                painter.drawRect(rect)
+                painter.drawText(rect.adjusted(padding, 0, -padding, 0), Qt.AlignVCenter | Qt.AlignLeft, title)
+                x += widths[index]
 
-            page_rect = printer.pageRect(QPrinter.DevicePixel)
-            header_height = self._draw_header(painter, page_rect, header_lines)
-
-            available_height = page_rect.height() - header_height
-            scale = min(page_rect.width() / table_size.width(), 1.0)
-            source_page_height = available_height / scale
-
-            y_offset = 0.0
-            page_index = 0
-            while y_offset < table_size.height():
-                if page_index > 0:
-                    printer.newPage()
-
-                painter.save()
-                painter.translate(page_rect.x(), page_rect.y() + header_height)
-                painter.scale(scale, scale)
-
-                source_rect = QRect(
-                    0,
-                    int(y_offset),
-                    table_size.width(),
-                    int(min(source_page_height, table_size.height() - y_offset)),
-                )
-                table.render(painter, QPoint(0, 0), QRegion(source_rect))
-                painter.restore()
-
-                y_offset += source_page_height
-                page_index += 1
+            for row_index, row in enumerate(rows):
+                y = header_height + row_index * row_height
+                x = 0
+                for col_index, value in enumerate(row):
+                    rect = QRect(x, y, widths[col_index], row_height)
+                    painter.drawRect(rect)
+                    painter.drawText(
+                        rect.adjusted(padding, 0, -padding, 0),
+                        Qt.AlignVCenter | Qt.AlignLeft,
+                        "" if value is None else str(value),
+                    )
+                    x += widths[col_index]
         finally:
-            table.resize(original_size)
             painter.end()
 
-    @staticmethod
-    def _calculate_table_size(table: QTableView) -> QSize:
-        horizontal_header = table.horizontalHeader()
-        vertical_header = table.verticalHeader()
-        frame = table.frameWidth() * 2
-        width = vertical_header.width() + horizontal_header.length() + frame
-        height = horizontal_header.height() + vertical_header.length() + frame
-        return QSize(width, height)
+        extension = Path(path).suffix.lower()
+        image_format = "JPG" if extension in {".jpg", ".jpeg"} else "PNG"
+        if not image.save(path, image_format):
+            raise OSError("Не удалось сохранить изображение.")
 
-    @staticmethod
-    def _draw_header(
-        painter: QPainter, page_rect: QRect, header_lines: list[str]
-    ) -> int:
-        if not header_lines:
-            return 0
-        font = painter.font()
-        font.setPointSize(12)
-        painter.setFont(font)
-        metrics = painter.fontMetrics()
-        line_height = metrics.height()
-        y_offset = page_rect.y() + line_height
-        for line in header_lines:
-            painter.drawText(page_rect.x(), y_offset, line)
-            y_offset += line_height
-        return y_offset - page_rect.y() + line_height // 2
+    def _extract_table_data(self, table: "QTableView") -> tuple[list[str], list[list[str]]]:
+        model = table.model()
+        if model is None:
+            return [], []
+        from PySide6.QtCore import Qt
+
+        columns = [str(model.headerData(column, Qt.Horizontal) or "") for column in range(model.columnCount())]
+        rows: list[list[str]] = []
+        for row in range(model.rowCount()):
+            rows.append([
+                "" if model.index(row, column).data() is None else str(model.index(row, column).data())
+                for column in range(model.columnCount())
+            ])
+        return columns, rows
+
+    def _render_dataset_to_printer(
+        self,
+        printer,
+        header_lines: list[str],
+        columns: list[str],
+        rows: list[list[str]],
+        column_widths: list[int],
+    ) -> None:
+        if not columns:
+            return
+        from PySide6.QtCore import QRect, Qt
+        from PySide6.QtGui import QPainter, QTextOption
+        from PySide6.QtPrintSupport import QPrinter
+
+        painter = QPainter(printer)
+        try:
+            page_rect = printer.pageRect(QPrinter.DevicePixel).adjusted(40, 40, -40, -40)
+            total_width = sum(column_widths)
+            scaled_widths = [max(60, int(page_rect.width() * width / total_width)) for width in column_widths]
+            scaled_widths[-1] += page_rect.width() - sum(scaled_widths)
+
+            header_font = painter.font()
+            header_font.setPointSize(12)
+            table_header_font = painter.font()
+            table_header_font.setPointSize(10)
+            table_header_font.setBold(True)
+            body_font = painter.font()
+            body_font.setPointSize(9)
+            text_option = QTextOption()
+            text_option.setWrapMode(QTextOption.WordWrap)
+
+            def draw_page_header() -> tuple[int, int]:
+                y = page_rect.top()
+                painter.setFont(header_font)
+                metrics = painter.fontMetrics()
+                for line in header_lines:
+                    line_rect = QRect(page_rect.left(), y, page_rect.width(), metrics.height())
+                    painter.drawText(line_rect, Qt.AlignLeft | Qt.AlignVCenter, line)
+                    y += metrics.height() + 4
+
+                header_row_height = 30
+                painter.setFont(table_header_font)
+                x = page_rect.left()
+                for index, title in enumerate(columns):
+                    rect = QRect(x, y, scaled_widths[index], header_row_height)
+                    painter.fillRect(rect, Qt.lightGray)
+                    painter.drawRect(rect)
+                    painter.drawText(rect.adjusted(6, 0, -6, 0), Qt.AlignVCenter | Qt.AlignLeft, title)
+                    x += scaled_widths[index]
+                return y + header_row_height, page_rect.bottom()
+
+            y, bottom = draw_page_header()
+            painter.setFont(body_font)
+            body_metrics = painter.fontMetrics()
+
+            for row in rows:
+                row_height = 24
+                for index, value in enumerate(row):
+                    cell_rect = body_metrics.boundingRect(
+                        QRect(0, 0, scaled_widths[index] - 12, 10_000),
+                        Qt.TextWordWrap,
+                        "" if value is None else str(value),
+                    )
+                    row_height = max(row_height, cell_rect.height() + 10)
+
+                if y + row_height > bottom:
+                    printer.newPage()
+                    y, bottom = draw_page_header()
+                    painter.setFont(body_font)
+
+                x = page_rect.left()
+                for index, value in enumerate(row):
+                    rect = QRect(x, y, scaled_widths[index], row_height)
+                    painter.drawRect(rect)
+                    painter.drawText(rect.adjusted(6, 4, -6, -4), "" if value is None else str(value), text_option)
+                    x += scaled_widths[index]
+                y += row_height
+        finally:
+            painter.end()
 
     @staticmethod
     def format_date_label() -> str:
