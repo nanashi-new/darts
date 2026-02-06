@@ -787,7 +787,8 @@ def import_tournament_rows(
     tournament_repo = TournamentRepository(connection)
     player_repo = PlayerRepository(connection)
     result_repo = ResultRepository(connection)
-    norms, norms_loaded = load_norms_from_settings()
+    norms_load = load_norms_from_settings()
+    norms, norms_loaded = norms_load.norms, norms_load.loaded
 
     tournament_id = tournament_repo.create(
         {
