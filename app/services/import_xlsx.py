@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from datetime import date, datetime
 import json
 from typing import Iterable
 
 from openpyxl import load_workbook
+from openpyxl.utils.exceptions import InvalidFileException
 
 from app.db.repositories import PlayerRepository, ResultRepository, TournamentRepository
 from app.domain.points import points_for_place
@@ -25,6 +27,7 @@ class ImportParseReport:
     rows: list[dict[str, object]]
     errors: list[str]
     warnings: list[str]
+    missing_required_columns: list[str]
     needs_mapping: bool
     confidence: float
 
@@ -87,7 +90,10 @@ def _parse_first_table(path: str) -> tuple[
     dict[str, int],
     bool,
 ]:
-    workbook = load_workbook(path, data_only=True)
+    try:
+        workbook = load_workbook(path, data_only=True)
+    except (InvalidFileException, OSError):
+        return [], [], {}, False
     sheet = workbook.active
 
     header_mapping: dict[str, int] = {}
@@ -141,6 +147,7 @@ def parse_first_table_from_xlsx_with_report(path: str) -> ImportParseReport:
     required_fields = {
         "fio": "ФИО",
         "place": "Место",
+        "score_set": "Очки",
     }
     missing_required = [label for key, label in required_fields.items() if key not in header_mapping]
     for label in missing_required:
@@ -156,6 +163,7 @@ def parse_first_table_from_xlsx_with_report(path: str) -> ImportParseReport:
         rows=rows,
         errors=errors,
         warnings=warnings,
+        missing_required_columns=missing_required,
         needs_mapping=needs_mapping,
         confidence=confidence,
     )
@@ -191,7 +199,7 @@ def validate_rows(rows: Iterable[dict[str, object]]) -> list[str]:
             value = row.get(field)
             if value is None or str(value).strip() == "":
                 continue
-            if not _is_number(value):
+            if parse_int(value, warnings) is None and not _is_number(value):
                 warnings.append(
                     f"Строка {idx}: поле '{label}' не число ({value})"
                 )
@@ -239,24 +247,34 @@ def _parse_birth_value(value: object | None) -> tuple[str | None, str | None]:
     return None, None
 
 
-def _to_int(value: object | None) -> int | None:
+def _parse_integer_value(value: object | None) -> tuple[int | None, bool]:
     if value is None or _normalize_text(value) == "":
-        return None
+        return None, False
     if isinstance(value, bool):
-        return None
+        return None, False
     if isinstance(value, int):
-        return value
+        return value, False
     if isinstance(value, float):
-        return int(value)
+        if value.is_integer():
+            return int(value), False
+        return None, True
     text = _normalize_text(value).replace(",", ".")
     try:
-        return int(float(text))
-    except ValueError:
+        decimal_value = Decimal(text)
+    except InvalidOperation:
+        return None, False
+    if decimal_value != decimal_value.to_integral_value():
+        return None, True
+    return int(decimal_value), False
+
+
+def parse_int(value: object | None, warnings: list[str] | None = None) -> int | None:
+    parsed, has_fraction = _parse_integer_value(value)
+    if has_fraction:
+        if warnings is not None:
+            warnings.append(f"некорректное целое число: {value}")
         return None
-
-
-def parse_int(value: object | None) -> int | None:
-    return _to_int(value)
+    return parsed
 
 
 def import_tournament_results(
@@ -316,10 +334,10 @@ def import_tournament_results(
         else:
             player_id = int(player["id"])
 
-        place = _to_int(row.get("place"))
-        score_set = _to_int(row.get("score_set"))
-        score_sector20 = _to_int(row.get("score_sector20"))
-        score_big_round = _to_int(row.get("score_big_round"))
+        place = parse_int(row.get("place"))
+        score_set = parse_int(row.get("score_set"))
+        score_sector20 = parse_int(row.get("score_sector20"))
+        score_big_round = parse_int(row.get("score_big_round"))
 
         gender = None if player is None else player.get("gender")
         ranks, points_classification = calculate_points_classification(
