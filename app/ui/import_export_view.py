@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.db.database import get_connection
+from app.services.audit_log import AuditLogService, ERROR, IMPORT_FILE, IMPORT_FOLDER
 from app.services.import_xlsx import (
     TableBlock,
     import_batch_from_folder,
@@ -152,6 +153,7 @@ class ImportExportView(QWidget):
     def __init__(self, tournaments_view: QWidget | None = None) -> None:
         super().__init__()
         self._connection = get_connection()
+        self._audit_log_service = AuditLogService(self._connection)
         self._tournaments_view = tournaments_view
         layout = QVBoxLayout(self)
 
@@ -209,6 +211,13 @@ class ImportExportView(QWidget):
 
         blocks = parse_tables_from_xlsx_with_report(file_path)
         if not blocks:
+            self._audit_log_service.log_event(
+                IMPORT_FILE,
+                "Импорт файла: таблицы не найдены",
+                f"Файл: {file_path}",
+                level="warning",
+                context={"path": file_path},
+            )
             QMessageBox.information(self, "Импорт", "Не удалось найти таблицы в файле.")
             return
 
@@ -284,6 +293,13 @@ class ImportExportView(QWidget):
                     player_match_resolver=self._resolve_player_match,
                 )
         except ValueError as exc:
+            self._audit_log_service.log_event(
+                ERROR,
+                "Ошибка импорта файла",
+                str(exc),
+                level="error",
+                context={"path": file_path},
+            )
             QMessageBox.warning(self, "Импорт", str(exc))
             return
 
@@ -293,7 +309,20 @@ class ImportExportView(QWidget):
                 refresh(tournament_id)
 
         if not norms_loaded:
+            self._audit_log_service.log_event(
+                IMPORT_FILE,
+                "Импорт файла выполнен с предупреждением",
+                "Нормативы не загружены.",
+                level="warning",
+                context={"path": file_path, "tournament_id": tournament_id},
+            )
             QMessageBox.warning(self, "Импорт", "Нормативы не загружены.")
+        self._audit_log_service.log_event(
+            IMPORT_FILE,
+            "Импорт файла завершён",
+            f"Турнир ID: {tournament_id}",
+            context={"path": file_path, "tournament_id": tournament_id},
+        )
         QMessageBox.information(self, "Импорт", "Импорт завершён.")
 
     def _on_import_folder_clicked(self) -> None:
@@ -301,6 +330,14 @@ class ImportExportView(QWidget):
         if not folder:
             return
         result = import_batch_from_folder(folder)
+        level = "warning" if result["error"] else "info"
+        self._audit_log_service.log_event(
+            IMPORT_FOLDER,
+            "Импорт папки завершён",
+            f"Успешно: {result['success']}; ошибок: {result['error']}",
+            level=level,
+            context={"folder": folder, "success": result["success"], "error": result["error"]},
+        )
         QMessageBox.information(
             self,
             "Импорт папки",

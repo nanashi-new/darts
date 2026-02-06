@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 
 from app.db.database import get_connection
 from app.db.repositories import ResultRepository, TournamentRepository
+from app.services.audit_log import AuditLogService, ERROR, EXPORT_FILE
 from app.services.export_service import ExportService
 
 
@@ -41,6 +42,7 @@ class RatingView(QWidget):
         self._tournament_repo = TournamentRepository(self._connection)
         self._result_repo = ResultRepository(self._connection)
         self._export_service = ExportService()
+        self._audit_log_service = AuditLogService(self._connection)
 
         root_layout = QVBoxLayout(self)
         root_layout.addLayout(self._build_filters())
@@ -231,8 +233,21 @@ class RatingView(QWidget):
                 full_table = self._image_mode_combo.currentIndex() == 1
                 self._export_service.save_table_image(self._table, path, full_table=full_table)
         except (OSError, ValueError) as exc:
+            self._audit_log_service.log_event(
+                ERROR,
+                "Ошибка экспорта рейтинга",
+                str(exc),
+                level="error",
+                context={"path": path, "format": selected_format},
+            )
             QMessageBox.critical(self, "Экспорт рейтинга", str(exc))
             return
+        self._audit_log_service.log_event(
+            EXPORT_FILE,
+            "Экспорт рейтинга",
+            f"Формат: {selected_format}; путь: {path}",
+            context={"path": path, "format": selected_format},
+        )
         QMessageBox.information(self, "Экспорт рейтинга", f"Готово: {path}")
 
     def _table_rows(self) -> list[list[str]]:

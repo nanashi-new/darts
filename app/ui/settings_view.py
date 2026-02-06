@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.db.database import get_connection
+from app.services.audit_log import AuditLogService, RECALC_ALL
 from app.services.norms_loader import load_norms_from_settings
 from app.services.recalculate_tournament import recalculate_all_tournaments
 from app.settings import get_norms_xlsx_path, set_norms_xlsx_path
@@ -26,6 +27,7 @@ class SettingsView(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self._connection = get_connection()
+        self._audit_log_service = AuditLogService(self._connection)
         self._build_ui()
         self._refresh_norms_info()
 
@@ -97,6 +99,16 @@ class SettingsView(QWidget):
 
     def _recalculate_all(self) -> None:
         report = recalculate_all_tournaments(connection=self._connection)
+        self._audit_log_service.log_event(
+            RECALC_ALL,
+            "Пересчёт всех турниров (настройки)",
+            (
+                f"Турниров: {report.tournaments_processed}; "
+                f"обновлено: {report.results_updated}; "
+                f"warnings: {len(report.warnings)}; errors: {len(report.errors)}"
+            ),
+            level="error" if report.errors else "warning" if report.warnings else "info",
+        )
         details = [
             f"Турниров: {report.tournaments_processed}",
             f"Обновлено результатов: {report.results_updated}",
