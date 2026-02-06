@@ -34,6 +34,7 @@ from app.services.import_xlsx import (
 )
 from app.ui.column_mapping_dialog import ColumnMappingDialog
 from app.ui.import_preview_dialog import ImportPreviewDialog
+from app.ui.player_match_dialog import PlayerMatchDialog
 
 
 class TableBlocksDialog(QDialog):
@@ -185,6 +186,22 @@ class ImportExportView(QWidget):
         self.import_profiles_button.clicked.connect(self._on_import_profiles_clicked)
         layout.addWidget(self.import_profiles_button)
 
+
+    def _resolve_player_match(
+        self,
+        fio: str,
+        birth_date_or_year: str | None,
+        candidates: list[dict[str, object]],
+    ) -> dict[str, object] | None:
+        dialog = PlayerMatchDialog(
+            fio=fio,
+            birth_date_or_year=birth_date_or_year,
+            candidates=candidates,
+            parent=self,
+        )
+        dialog.exec()
+        return dialog.resolution()
+
     def _on_import_clicked(self) -> None:
         file_path, _ = QFileDialog.getOpenFileName(self, "Выберите XLSX", "", "Excel файлы (*.xlsx)")
         if not file_path:
@@ -255,6 +272,7 @@ class ImportExportView(QWidget):
                     tournament_date=tournament_date,
                     category_code=category_code,
                     source_files=[file_path],
+                    player_match_resolver=self._resolve_player_match,
                 )
             else:
                 tournament_id, norms_loaded = import_tournament_results(
@@ -263,6 +281,7 @@ class ImportExportView(QWidget):
                     tournament_name=tournament_name,
                     tournament_date=tournament_date,
                     category_code=category_code,
+                    player_match_resolver=self._resolve_player_match,
                 )
         except ValueError as exc:
             QMessageBox.warning(self, "Импорт", str(exc))

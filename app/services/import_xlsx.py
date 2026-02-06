@@ -5,7 +5,7 @@ from decimal import Decimal, InvalidOperation
 from datetime import date, datetime
 import json
 from pathlib import Path
-from typing import Iterable
+from typing import Callable, Iterable
 
 from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
@@ -616,8 +616,22 @@ def _normalize_text(value: object | None) -> str:
     return str(value).strip()
 
 
-def _parse_fio(value: object) -> tuple[str, str, str | None]:
+def _normalize_fio_key(value: object | None) -> str:
+    text = _normalize_text(value).lower().replace("ё", "е")
+    return " ".join(text.split())
+
+
+def _birth_year_from_value(value: object | None) -> str | None:
+    if value is None:
+        return None
     text = _normalize_text(value)
+    if len(text) >= 4 and text[:4].isdigit():
+        return text[:4]
+    return None
+
+
+def _parse_fio(value: object) -> tuple[str, str, str | None]:
+    text = _normalize_fio_key(value)
     parts = [part for part in text.split() if part]
     if not parts:
         return "", "", None
@@ -649,6 +663,85 @@ def _parse_birth_value(value: object | None) -> tuple[str | None, str | None]:
             continue
         return parsed.isoformat(), str(parsed.year)
     return None, None
+
+
+def _player_match_rules_path() -> Path:
+    return get_default_database_path().parent / "player_match_rules.json"
+
+
+def _load_player_match_rules() -> dict[str, int]:
+    path = _player_match_rules_path()
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    rules: dict[str, int] = {}
+    for key, player_id in raw.items():
+        try:
+            rules[str(key)] = int(player_id)
+        except (TypeError, ValueError):
+            continue
+    return rules
+
+
+def _save_player_match_rules(rules: dict[str, int]) -> None:
+    path = _player_match_rules_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(rules, ensure_ascii=False, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+
+def _player_match_key(fio: object | None, birth_date_or_year: object | None) -> str:
+    birth_date, birth_year = _parse_birth_value(birth_date_or_year)
+    birth_token = birth_date or birth_year or ""
+    return f"{_normalize_fio_key(fio)}|{birth_token}"
+
+
+def find_player_candidates(
+    fio: object,
+    birth_date_or_year: object | None,
+    *,
+    player_repo: PlayerRepository,
+) -> list[dict[str, object]]:
+    fio_key = _normalize_fio_key(fio)
+    if not fio_key:
+        return []
+
+    input_birth_date, input_birth_year = _parse_birth_value(birth_date_or_year)
+    candidates: list[dict[str, object]] = []
+    for player in player_repo.list():
+        player_fio = _normalize_fio_key(
+            " ".join(
+                part for part in (
+                    player.get("last_name"),
+                    player.get("first_name"),
+                    player.get("middle_name"),
+                ) if part
+            )
+        )
+        if player_fio != fio_key:
+            continue
+
+        if input_birth_date or input_birth_year:
+            player_birth_raw = player.get("birth_date")
+            player_birth_text = _normalize_text(player_birth_raw)
+            player_birth_year = _birth_year_from_value(player_birth_raw)
+            has_birth_match = False
+
+            if input_birth_date and player_birth_text == input_birth_date:
+                has_birth_match = True
+            if input_birth_year and player_birth_year == input_birth_year:
+                has_birth_match = True
+
+            if not has_birth_match:
+                continue
+
+        candidates.append(player)
+    return candidates
 
 
 def _parse_integer_value(value: object | None) -> tuple[int | None, bool]:
@@ -689,6 +782,7 @@ def import_tournament_rows(
     tournament_date: str | None,
     category_code: str | None,
     source_files: list[str] | None = None,
+    player_match_resolver: Callable[[str, str | None, list[dict[str, object]]], dict[str, object] | None] | None = None,
 ) -> tuple[int, bool]:
     tournament_repo = TournamentRepository(connection)
     player_repo = PlayerRepository(connection)
@@ -704,6 +798,7 @@ def import_tournament_rows(
             "source_files": json.dumps(source_files or []),
         }
     )
+    remembered_rules = _load_player_match_rules()
 
     for row in rows:
         fio = row.get("fio")
@@ -712,13 +807,41 @@ def import_tournament_rows(
         last_name, first_name, middle_name = _parse_fio(fio)
         birth_date, birth_year = _parse_birth_value(row.get("birth"))
 
-        player = player_repo.find_by_identity(
-            last_name=last_name,
-            first_name=first_name,
-            middle_name=middle_name,
-            birth_date=birth_date,
-            birth_year=birth_year,
+        candidates = find_player_candidates(
+            fio=fio,
+            birth_date_or_year=birth_date or birth_year,
+            player_repo=player_repo,
         )
+
+        player: dict[str, object] | None = None
+        if len(candidates) == 1:
+            player = candidates[0]
+        elif len(candidates) > 1:
+            match_key = _player_match_key(fio, birth_date or birth_year)
+            remembered_player_id = remembered_rules.get(match_key)
+            if remembered_player_id is not None:
+                player = next((item for item in candidates if int(item["id"]) == remembered_player_id), None)
+
+            if player is None:
+                if player_match_resolver is None:
+                    raise ValueError(f"Найдено несколько игроков для '{fio}'.")
+                resolution = player_match_resolver(str(fio), birth_date or birth_year, candidates)
+                if not resolution:
+                    raise ValueError("Импорт отменён пользователем.")
+                action = str(resolution.get("action") or "cancel")
+                if action == "cancel":
+                    raise ValueError("Импорт отменён пользователем.")
+                if action == "select":
+                    selected_player_id = int(resolution.get("player_id"))
+                    player = next((item for item in candidates if int(item["id"]) == selected_player_id), None)
+                    if player is None:
+                        raise ValueError("Выбранный игрок отсутствует в списке кандидатов.")
+                    if bool(resolution.get("remember")):
+                        remembered_rules[match_key] = selected_player_id
+                        _save_player_match_rules(remembered_rules)
+                elif action != "create":
+                    raise ValueError("Неизвестное решение по выбору игрока.")
+
         if player is None:
             player_id = player_repo.create(
                 {
@@ -781,6 +904,7 @@ def import_tournament_results(
     tournament_name: str,
     tournament_date: str | None,
     category_code: str | None,
+    player_match_resolver: Callable[[str, str | None, list[dict[str, object]]], dict[str, object] | None] | None = None,
 ) -> tuple[int, bool]:
     _, rows = parse_first_table_from_xlsx(file_path)
     if not rows:
@@ -793,4 +917,5 @@ def import_tournament_results(
         tournament_date=tournament_date,
         category_code=category_code,
         source_files=[file_path],
+        player_match_resolver=player_match_resolver,
     )
