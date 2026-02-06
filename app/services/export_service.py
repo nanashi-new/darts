@@ -15,6 +15,54 @@ if TYPE_CHECKING:
 
 
 class ExportService:
+    @staticmethod
+    def _escape_pdf_text(text: str) -> str:
+        return text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+    def _write_fallback_pdf(
+        self,
+        path: str,
+        header_lines: list[str],
+        columns: Sequence[str],
+        rows: Sequence[Sequence[str]],
+    ) -> None:
+        lines: list[str] = []
+        lines.extend(str(item) for item in header_lines)
+        if columns:
+            lines.append(" | ".join(str(item) for item in columns))
+        for row in rows:
+            lines.append(" | ".join("" if value is None else str(value) for value in row))
+
+        stream_lines = ["BT", "/F1 11 Tf", "50 800 Td", "14 TL"]
+        for idx, line in enumerate(lines[:120]):
+            prefix = "" if idx == 0 else "T* "
+            stream_lines.append(f"{prefix}({self._escape_pdf_text(line)}) Tj")
+        stream_lines.append("ET")
+        stream = "\n".join(stream_lines).encode("latin-1", errors="replace")
+
+        objects = [
+            b"1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n",
+            b"2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n",
+            b"3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj\n",
+            b"4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj\n",
+            f"5 0 obj << /Length {len(stream)} >> stream\n".encode("ascii") + stream + b"\nendstream endobj\n",
+        ]
+
+        pdf = bytearray(b"%PDF-1.4\n")
+        offsets = [0]
+        for obj in objects:
+            offsets.append(len(pdf))
+            pdf.extend(obj)
+        xref_offset = len(pdf)
+        pdf.extend(f"xref\n0 {len(offsets)}\n".encode("ascii"))
+        pdf.extend(b"0000000000 65535 f \n")
+        for offset in offsets[1:]:
+            pdf.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
+        pdf.extend(
+            f"trailer << /Size {len(offsets)} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n".encode("ascii")
+        )
+        Path(path).write_bytes(pdf)
+
     def export_table_pdf(
         self,
         table: "QTableView",
@@ -98,23 +146,31 @@ class ExportService:
         rows: Sequence[Sequence[str]],
         column_widths: Sequence[int] | None = None,
     ) -> None:
-        from PySide6.QtGui import QPageSize
-        from PySide6.QtPrintSupport import QPrinter
+        header_lines_list = list(header_lines)
+        rows_list = [["" if value is None else str(value) for value in row] for row in rows]
+        try:
+            from PySide6.QtGui import QPageSize
+            from PySide6.QtPrintSupport import QPrinter
 
-        printer = QPrinter(QPrinter.HighResolution)
-        printer.setOutputFormat(QPrinter.PdfFormat)
-        printer.setOutputFileName(path)
-        printer.setPageOrientation(QPrinter.Landscape)
-        printer.setPageSize(QPageSize(QPageSize.A4))
-        self._render_dataset_to_printer(
-            printer,
-            list(header_lines),
-            list(columns),
-            [["" if value is None else str(value) for value in row] for row in rows],
-            list(column_widths) if column_widths is not None else [120] * len(columns),
-        )
-        if not os.path.exists(path):
-            raise OSError("Не удалось сохранить PDF файл.")
+            printer = QPrinter(QPrinter.HighResolution)
+            printer.setOutputFormat(QPrinter.PdfFormat)
+            printer.setOutputFileName(path)
+            printer.setPageOrientation(QPrinter.Landscape)
+            printer.setPageSize(QPageSize(QPageSize.A4))
+            self._render_dataset_to_printer(
+                printer,
+                header_lines_list,
+                list(columns),
+                rows_list,
+                list(column_widths) if column_widths is not None else [120] * len(columns),
+            )
+            if not os.path.exists(path):
+                raise OSError("Не удалось сохранить PDF файл.")
+            return
+        except Exception:  # noqa: BLE001
+            self._write_fallback_pdf(path, header_lines_list, columns, rows_list)
+            if not os.path.exists(path):
+                raise OSError("Не удалось сохранить PDF файл.")
 
     def export_dataset_xlsx(
         self,
