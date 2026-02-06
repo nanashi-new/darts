@@ -19,6 +19,16 @@ class ParsedTable:
     rows: list[dict[str, object]]
 
 
+@dataclass(frozen=True)
+class ImportParseReport:
+    headers: list[str]
+    rows: list[dict[str, object]]
+    errors: list[str]
+    warnings: list[str]
+    needs_mapping: bool
+    confidence: float
+
+
 def _normalize_header(value: object) -> str:
     if value is None:
         return ""
@@ -71,7 +81,12 @@ def _row_has_total(row_values: Iterable[object]) -> bool:
     return False
 
 
-def parse_first_table_from_xlsx(path: str) -> tuple[list[str], list[dict[str, object]]]:
+def _parse_first_table(path: str) -> tuple[
+    list[str],
+    list[dict[str, object]],
+    dict[str, int],
+    bool,
+]:
     workbook = load_workbook(path, data_only=True)
     sheet = workbook.active
 
@@ -107,7 +122,43 @@ def parse_first_table_from_xlsx(path: str) -> tuple[list[str], list[dict[str, ob
                 row_data[key] = row_values[header_mapping[key]]
         rows.append(row_data)
 
+    return header_labels, rows, header_mapping, header_found
+
+
+def parse_first_table_from_xlsx(path: str) -> tuple[list[str], list[dict[str, object]]]:
+    header_labels, rows, _, _ = _parse_first_table(path)
     return header_labels, rows
+
+
+def parse_first_table_from_xlsx_with_report(path: str) -> ImportParseReport:
+    headers, rows, header_mapping, header_found = _parse_first_table(path)
+    warnings = validate_rows(rows)
+    errors: list[str] = []
+
+    if not header_found:
+        errors.append("Не найден заголовок таблицы.")
+
+    required_fields = {
+        "fio": "ФИО",
+        "place": "Место",
+    }
+    missing_required = [label for key, label in required_fields.items() if key not in header_mapping]
+    for label in missing_required:
+        errors.append(f"Не найден столбец {label}.")
+
+    total_required = len(required_fields)
+    found_required = total_required - len(missing_required)
+    confidence = found_required / total_required if total_required else 0.0
+    needs_mapping = confidence < 1.0
+
+    return ImportParseReport(
+        headers=headers,
+        rows=rows,
+        errors=errors,
+        warnings=warnings,
+        needs_mapping=needs_mapping,
+        confidence=confidence,
+    )
 
 
 def _is_number(value: object) -> bool:
@@ -202,6 +253,10 @@ def _to_int(value: object | None) -> int | None:
         return int(float(text))
     except ValueError:
         return None
+
+
+def parse_int(value: object | None) -> int | None:
+    return _to_int(value)
 
 
 def import_tournament_results(
