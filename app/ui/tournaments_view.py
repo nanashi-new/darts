@@ -1,7 +1,9 @@
 from PySide6.QtGui import QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
+    QComboBox,
     QFileDialog,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QMessageBox,
     QPushButton,
@@ -39,17 +41,23 @@ class TournamentsView(QWidget):
     def _build_actions(self) -> QHBoxLayout:
         actions_layout = QHBoxLayout()
         recalc_btn = QPushButton("Пересчитать турнир", self)
-        export_pdf_btn = QPushButton("Export PDF", self)
-        export_xlsx_btn = QPushButton("Export XLSX", self)
-        print_btn = QPushButton("Print", self)
+        self._format_combo = QComboBox(self)
+        self._format_combo.addItems(["PDF", "XLSX", "PNG"])
+        self._image_mode_combo = QComboBox(self)
+        self._image_mode_combo.addItems(["Сохранить видимую область", "Сохранить всю таблицу"])
+        export_btn = QPushButton("Экспорт", self)
+        print_btn = QPushButton("Печать", self)
 
         recalc_btn.clicked.connect(self._recalculate_tournament)
-        export_pdf_btn.clicked.connect(self._export_pdf)
-        export_xlsx_btn.clicked.connect(self._export_xlsx)
+        export_btn.clicked.connect(self._export_selected_format)
         print_btn.clicked.connect(self._print_table)
 
-        for button in (recalc_btn, export_pdf_btn, export_xlsx_btn, print_btn):
-            actions_layout.addWidget(button)
+        actions_layout.addWidget(recalc_btn)
+        actions_layout.addWidget(QLabel("Формат:"))
+        actions_layout.addWidget(self._format_combo)
+        actions_layout.addWidget(self._image_mode_combo)
+        actions_layout.addWidget(export_btn)
+        actions_layout.addWidget(print_btn)
 
         actions_layout.addStretch(1)
         return actions_layout
@@ -111,46 +119,66 @@ class TournamentsView(QWidget):
         self.results_table.setModel(model)
         self.results_table.resizeColumnsToContents()
 
-    def _export_pdf(self) -> None:
+    def _export_selected_format(self) -> None:
         if not self._current_tournament:
             QMessageBox.warning(self, "Экспорт протокола", "Турнир не выбран.")
             return
+        selected_format = self._format_combo.currentText().lower()
+        defaults = {
+            "pdf": "tournament_protocol.pdf",
+            "xlsx": "tournament_protocol.xlsx",
+            "png": "tournament_protocol.png",
+        }
+        filters = {
+            "pdf": "PDF Files (*.pdf)",
+            "xlsx": "Excel Files (*.xlsx)",
+            "png": "Image Files (*.png *.jpg)",
+        }
         path, _ = QFileDialog.getSaveFileName(
             self,
-            "Экспорт протокола в PDF",
-            "tournament_protocol.pdf",
-            "PDF Files (*.pdf)",
+            "Экспорт протокола",
+            defaults[selected_format],
+            filters[selected_format],
         )
         if not path:
             QMessageBox.warning(self, "Экспорт протокола", "Путь для сохранения не выбран.")
             return
-        try:
-            self._export_service.export_table_pdf(
-                self.results_table, path, self._build_export_header()
-            )
-        except OSError as exc:
-            QMessageBox.critical(self, "Экспорт протокола", str(exc))
-            return
-        QMessageBox.information(self, "Экспорт протокола", f"Готово: {path}")
 
-    def _export_xlsx(self) -> None:
-        if not self._current_tournament:
-            QMessageBox.warning(self, "Экспорт протокола", "Турнир не выбран.")
-            return
-        path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Экспорт протокола в XLSX",
-            "tournament_protocol.xlsx",
-            "Excel Files (*.xlsx)",
-        )
-        if not path:
-            QMessageBox.warning(self, "Экспорт протокола", "Путь для сохранения не выбран.")
-            return
-        try:
-            self._export_service.export_table_xlsx(
-                self.results_table, path, self._build_export_header()
+        if selected_format == "png" and not path.lower().endswith((".png", ".jpg", ".jpeg")):
+            chosen_extension, accepted = QInputDialog.getItem(
+                self,
+                "Формат изображения",
+                "Расширение:",
+                ["png", "jpg"],
+                editable=False,
             )
-        except OSError as exc:
+            if not accepted:
+                return
+            path = f"{path}.{chosen_extension}"
+
+        try:
+            if selected_format in {"pdf", "xlsx"}:
+                self._export_service.export_dataset(
+                    export_format=selected_format,
+                    path=path,
+                    header_lines=self._build_export_header(),
+                    columns=[
+                        "Место",
+                        "ФИО",
+                        "Дата рождения",
+                        "Набор очков",
+                        "Сектор 20",
+                        "Большой раунд",
+                        "Очки за место",
+                        "Очки классификации",
+                        "Итого",
+                    ],
+                    rows=self._table_rows(),
+                )
+            else:
+                full_table = self._image_mode_combo.currentIndex() == 1
+                self._export_service.save_table_image(self.results_table, path, full_table=full_table)
+        except (OSError, ValueError) as exc:
             QMessageBox.critical(self, "Экспорт протокола", str(exc))
             return
         QMessageBox.information(self, "Экспорт протокола", f"Готово: {path}")
@@ -189,6 +217,15 @@ class TournamentsView(QWidget):
             details.append("\n".join(report.errors[:3]))
         QMessageBox.information(self, "Пересчет", "\n".join(details))
 
+    def _table_rows(self) -> list[list[str]]:
+        model = self.results_table.model()
+        if model is None:
+            return []
+        rows: list[list[str]] = []
+        for row in range(model.rowCount()):
+            rows.append([str(model.index(row, column).data() or "") for column in range(model.columnCount())])
+        return rows
+
     def _build_export_header(self) -> list[str]:
         if not self._current_tournament:
             return []
@@ -198,7 +235,9 @@ class TournamentsView(QWidget):
             self._current_tournament.get("category_code") or "категория не указана"
         )
         return [
+            "Протокол турнира",
             f"Турнир: {name}",
             f"Дата: {date_label}",
             f"Категория: {category_label}",
+            "N: 6",
         ]
