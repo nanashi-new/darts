@@ -66,13 +66,32 @@ RESULT_INDEXES_SQL = [
     "CREATE INDEX IF NOT EXISTS idx_results_player ON results (player_id);",
 ]
 
+AUDIT_LOG_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS audit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    details TEXT,
+    level TEXT NOT NULL DEFAULT 'info',
+    context_json TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+AUDIT_LOG_INDEXES_SQL = [
+    "CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log (created_at DESC);",
+    "CREATE INDEX IF NOT EXISTS idx_audit_log_event_type ON audit_log (event_type);",
+]
+
 
 SCHEMA_SQL = [
     PLAYER_TABLE_SQL,
     TOURNAMENT_TABLE_SQL,
     RESULT_TABLE_SQL,
+    AUDIT_LOG_TABLE_SQL,
     *PLAYER_INDEXES_SQL,
     *RESULT_INDEXES_SQL,
+    *AUDIT_LOG_INDEXES_SQL,
 ]
 
 

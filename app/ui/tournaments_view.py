@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 
 from app.db.database import get_connection
 from app.db.repositories import ResultRepository, TournamentRepository
+from app.services.audit_log import AuditLogService, ERROR, EXPORT_FILE, RECALC_TOURNAMENT
 from app.services.export_service import ExportService
 from app.services.recalculate_tournament import recalculate_tournament_results
 
@@ -25,6 +26,7 @@ class TournamentsView(QWidget):
         self._tournament_repo = TournamentRepository(self._connection)
         self._result_repo = ResultRepository(self._connection)
         self._export_service = ExportService()
+        self._audit_log_service = AuditLogService(self._connection)
         self._current_tournament: dict[str, object] | None = None
 
         layout = QVBoxLayout(self)
@@ -179,8 +181,21 @@ class TournamentsView(QWidget):
                 full_table = self._image_mode_combo.currentIndex() == 1
                 self._export_service.save_table_image(self.results_table, path, full_table=full_table)
         except (OSError, ValueError) as exc:
+            self._audit_log_service.log_event(
+                ERROR,
+                "Ошибка экспорта протокола",
+                str(exc),
+                level="error",
+                context={"path": path, "format": selected_format},
+            )
             QMessageBox.critical(self, "Экспорт протокола", str(exc))
             return
+        self._audit_log_service.log_event(
+            EXPORT_FILE,
+            "Экспорт протокола",
+            f"Формат: {selected_format}; путь: {path}",
+            context={"path": path, "format": selected_format},
+        )
         QMessageBox.information(self, "Экспорт протокола", f"Готово: {path}")
 
     def _print_table(self) -> None:
@@ -203,9 +218,26 @@ class TournamentsView(QWidget):
                 tournament_id=tournament_id,
             )
         except ValueError as exc:
+            self._audit_log_service.log_event(
+                ERROR,
+                "Ошибка пересчёта турнира",
+                str(exc),
+                level="error",
+                context={"tournament_id": tournament_id},
+            )
             QMessageBox.warning(self, "Пересчет", str(exc))
             return
         self.refresh_latest_tournament(tournament_id)
+        self._audit_log_service.log_event(
+            RECALC_TOURNAMENT,
+            "Пересчёт турнира",
+            (
+                f"Турнир ID: {tournament_id}; обновлено: {report.results_updated}; "
+                f"warnings: {len(report.warnings)}; errors: {len(report.errors)}"
+            ),
+            level="error" if report.errors else "warning" if report.warnings else "info",
+            context={"tournament_id": tournament_id},
+        )
         details = [
             f"Обновлено результатов: {report.results_updated}",
             f"Warnings: {len(report.warnings)}",
