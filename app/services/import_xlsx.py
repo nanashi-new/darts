@@ -48,6 +48,17 @@ class TableBlock:
     missing_required_columns: list[str]
 
 
+SUPPORTED_MAPPING_KEYS = (
+    "fio",
+    "birth_year",
+    "birth_date",
+    "place",
+    "score_set",
+    "score_sector20",
+    "score_big_round",
+)
+
+
 @dataclass(frozen=True)
 class ImportProfile:
     name: str
@@ -342,6 +353,74 @@ def _rows_for_table(
     return rows, idx
 
 
+def read_table_block_preview(
+    path: str,
+    block: TableBlock,
+    preview_rows: int = 8,
+) -> tuple[list[str], list[list[object]]]:
+    try:
+        workbook = load_workbook(path, data_only=True)
+    except (InvalidFileException, OSError):
+        return [], []
+
+    sheet = workbook[block.sheet_name] if block.sheet_name in workbook.sheetnames else workbook.active
+    max_col = max(sheet.max_column, 1)
+    sheet_rows = list(sheet.iter_rows(values_only=True, max_col=max_col))
+
+    header_index = max(block.start_row - 1, 0)
+    if header_index >= len(sheet_rows):
+        return [], []
+
+    headers = [str(value).strip() if value is not None else "" for value in list(sheet_rows[header_index])]
+    data: list[list[object]] = []
+    start_data = header_index + 1
+    end_data = min(max(block.end_row - 1, start_data), len(sheet_rows) - 1)
+    for idx in range(start_data, end_data + 1):
+        data.append(list(sheet_rows[idx]))
+        if len(data) >= max(preview_rows, 1):
+            break
+    return headers, data
+
+
+def parse_table_block_with_mapping(
+    path: str,
+    block: TableBlock,
+    column_mapping: dict[str, str],
+) -> list[dict[str, object]]:
+    headers, data_rows = read_table_block_preview(
+        path,
+        block,
+        preview_rows=max(block.end_row - block.start_row, 1),
+    )
+    if not headers:
+        return []
+
+    header_to_index = {header: idx for idx, header in enumerate(headers)}
+    rows: list[dict[str, object]] = []
+    for values in data_rows:
+        row_data: dict[str, object] = {
+            "fio": None,
+            "birth": None,
+            "coach": None,
+            "place": None,
+            "score_set": None,
+            "score_sector20": None,
+            "score_big_round": None,
+        }
+        for internal_key, header in column_mapping.items():
+            if internal_key not in SUPPORTED_MAPPING_KEYS:
+                continue
+            column_index = header_to_index.get(header)
+            if column_index is None or column_index >= len(values):
+                continue
+            if internal_key in {"birth_year", "birth_date"}:
+                row_data["birth"] = values[column_index]
+            else:
+                row_data[internal_key] = values[column_index]
+        rows.append(row_data)
+    return rows
+
+
 def parse_tables_from_xlsx_with_report(path: str) -> list[TableBlock]:
     try:
         workbook = load_workbook(path, data_only=True)
@@ -602,18 +681,15 @@ def parse_int(value: object | None, warnings: list[str] | None = None) -> int | 
     return parsed
 
 
-def import_tournament_results(
+def import_tournament_rows(
     *,
     connection,
-    file_path: str,
+    rows: Iterable[dict[str, object]],
     tournament_name: str,
     tournament_date: str | None,
     category_code: str | None,
+    source_files: list[str] | None = None,
 ) -> tuple[int, bool]:
-    _, rows = parse_first_table_from_xlsx(file_path)
-    if not rows:
-        raise ValueError("Не удалось найти таблицу в файле.")
-
     tournament_repo = TournamentRepository(connection)
     player_repo = PlayerRepository(connection)
     result_repo = ResultRepository(connection)
@@ -625,7 +701,7 @@ def import_tournament_results(
             "date": tournament_date,
             "category_code": category_code,
             "league_code": None,
-            "source_files": json.dumps([file_path]),
+            "source_files": json.dumps(source_files or []),
         }
     )
 
@@ -696,3 +772,25 @@ def import_tournament_results(
         )
 
     return tournament_id, norms_loaded
+
+
+def import_tournament_results(
+    *,
+    connection,
+    file_path: str,
+    tournament_name: str,
+    tournament_date: str | None,
+    category_code: str | None,
+) -> tuple[int, bool]:
+    _, rows = parse_first_table_from_xlsx(file_path)
+    if not rows:
+        raise ValueError("Не удалось найти таблицу в файле.")
+
+    return import_tournament_rows(
+        connection=connection,
+        rows=rows,
+        tournament_name=tournament_name,
+        tournament_date=tournament_date,
+        category_code=category_code,
+        source_files=[file_path],
+    )

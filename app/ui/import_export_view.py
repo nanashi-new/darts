@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import (
     QDialog,
@@ -22,11 +24,15 @@ from app.services.import_xlsx import (
     TableBlock,
     import_batch_from_folder,
     import_tournament_results,
+    import_tournament_rows,
+    read_table_block_preview,
+    parse_table_block_with_mapping,
     list_import_profiles,
     parse_tables_from_xlsx_with_report,
     save_import_profile,
     delete_import_profile,
 )
+from app.ui.column_mapping_dialog import ColumnMappingDialog
 from app.ui.import_preview_dialog import ImportPreviewDialog
 
 
@@ -198,6 +204,36 @@ class ImportExportView(QWidget):
             return
 
         preview_block = blocks[selected[0]]
+        if preview_block.needs_mapping or preview_block.confidence < 1.0:
+            headers, preview_rows = read_table_block_preview(file_path, preview_block)
+            mapping_dialog = ColumnMappingDialog(headers, preview_rows, self)
+            if mapping_dialog.exec() != QDialog.DialogCode.Accepted:
+                return
+
+            selected_mapping = mapping_dialog.mapping()
+            header_aliases = {
+                key: [header]
+                for key, header in selected_mapping.items()
+                if header
+            }
+            save_import_profile(
+                {
+                    "name": f"wizard:{preview_block.sheet_name}:{preview_block.start_row}",
+                    "required_columns": ["fio", "place", "score_set"],
+                    "header_aliases": header_aliases,
+                }
+            )
+
+            mapped_rows = parse_table_block_with_mapping(file_path, preview_block, selected_mapping)
+            preview_block = replace(
+                preview_block,
+                rows=mapped_rows,
+                needs_mapping=False,
+                confidence=1.0,
+                missing_required_columns=[],
+                errors=[],
+            )
+
         preview = ImportPreviewDialog(preview_block.rows, preview_block.warnings, self)
         if preview.exec() != QDialog.DialogCode.Accepted:
             return
@@ -211,13 +247,23 @@ class ImportExportView(QWidget):
         category_code = self.category_code_input.text().strip() or None
 
         try:
-            tournament_id, norms_loaded = import_tournament_results(
-                connection=self._connection,
-                file_path=file_path,
-                tournament_name=tournament_name,
-                tournament_date=tournament_date,
-                category_code=category_code,
-            )
+            if preview_block.rows:
+                tournament_id, norms_loaded = import_tournament_rows(
+                    connection=self._connection,
+                    rows=preview_block.rows,
+                    tournament_name=tournament_name,
+                    tournament_date=tournament_date,
+                    category_code=category_code,
+                    source_files=[file_path],
+                )
+            else:
+                tournament_id, norms_loaded = import_tournament_results(
+                    connection=self._connection,
+                    file_path=file_path,
+                    tournament_name=tournament_name,
+                    tournament_date=tournament_date,
+                    category_code=category_code,
+                )
         except ValueError as exc:
             QMessageBox.warning(self, "Импорт", str(exc))
             return
