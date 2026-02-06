@@ -42,3 +42,13 @@ def test_parse_single_table_reports_missing_fio(tmp_path) -> None:
     report = parse_first_table_from_xlsx_with_report(str(path))
 
     assert any("пустое ФИО" in warning for warning in report.warnings)
+
+
+def test_parse_int_rejects_fractional_values() -> None:
+    warnings: list[str] = []
+
+    assert parse_int("1.9", warnings) is None
+    assert parse_int("1,5", warnings) is None
+    assert parse_int("1.0", warnings) == 1
+
+    assert any("некорректное целое число" in warning for warning in warnings)
