@@ -13,7 +13,11 @@ a = Analysis(
     datas=[
         ('app/resources/norms.xlsx.b64', 'app/resources'),
     ],
-    hiddenimports=[],
+    hiddenimports=[
+        'PySide6.QtCore',
+        'PySide6.QtGui',
+        'PySide6.QtWidgets',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
