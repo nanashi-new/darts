@@ -36,7 +36,7 @@
 - проверка сохранности и переносимости данных (бэкап/восстановление).
 
 Контроль релизной готовности и тест-прогона ведётся по документам:
-- [docs/10_RELEASE_CHECKLIST.md](docs/10_RELEASE_CHECKLIST.md)
+- [10_RELEASE_CHECKLIST.md](10_RELEASE_CHECKLIST.md)
 - [docs/11_RELEASE_TEST_RUN.md](docs/11_RELEASE_TEST_RUN.md)
 
 ## Текущий статус
