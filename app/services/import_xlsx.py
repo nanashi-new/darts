@@ -197,7 +197,8 @@ def save_import_profile(profile: ImportProfile | dict[str, object]) -> None:
     if not name:
         raise ValueError("У профиля должно быть имя.")
 
-    required_columns = [str(item) for item in payload.get("required_columns", [])]
+    required_columns_raw = payload.get("required_columns", [])
+    required_columns = [str(item) for item in required_columns_raw] if isinstance(required_columns_raw, list) else []
     aliases_raw = payload.get("header_aliases", {})
     if not isinstance(aliases_raw, dict):
         raise ValueError("header_aliases должен быть словарём.")
@@ -246,7 +247,8 @@ def list_import_profiles() -> list[ImportProfile]:
         name = str(item.get("name", "")).strip()
         if not name:
             continue
-        required_columns = [str(value) for value in item.get("required_columns", [])]
+        required_columns_raw = item.get("required_columns", [])
+        required_columns = [str(value) for value in required_columns_raw] if isinstance(required_columns_raw, list) else []
         aliases = item.get("header_aliases", {})
         if not isinstance(aliases, dict):
             aliases = {}
@@ -290,14 +292,16 @@ def apply_profile_to_headers(
     headers_row: Iterable[object],
 ) -> tuple[dict[str, str], float]:
     aliases_raw = profile.header_aliases if isinstance(profile, ImportProfile) else profile.get("header_aliases", {})
-    required_columns = profile.required_columns if isinstance(profile, ImportProfile) else profile.get("required_columns", [])
+    required_columns: list[str] | object = (
+        profile.required_columns if isinstance(profile, ImportProfile) else profile.get("required_columns", [])
+    )
     if not isinstance(aliases_raw, dict):
         aliases_raw = {}
 
     normalized_headers = [str(value).strip() if value is not None else "" for value in headers_row]
     mapping: dict[str, str] = {}
     matched_required = 0
-    required_set = {str(value) for value in required_columns}
+    required_set = {str(value) for value in required_columns} if isinstance(required_columns, list) else set()
 
     for header in normalized_headers:
         normalized = _normalize_header(header)
@@ -821,7 +825,15 @@ def import_tournament_rows(
             match_key = _player_match_key(fio, birth_date or birth_year)
             remembered_player_id = remembered_rules.get(match_key)
             if remembered_player_id is not None:
-                player = next((item for item in candidates if int(item["id"]) == remembered_player_id), None)
+                player = next(
+                    (
+                        item
+                        for item in candidates
+                        if (candidate_id := parse_int(item.get("id"))) is not None
+                        and candidate_id == remembered_player_id
+                    ),
+                    None,
+                )
 
             if player is None:
                 if player_match_resolver is None:
@@ -833,8 +845,18 @@ def import_tournament_rows(
                 if action == "cancel":
                     raise ValueError("Импорт отменён пользователем.")
                 if action == "select":
-                    selected_player_id = int(resolution.get("player_id"))
-                    player = next((item for item in candidates if int(item["id"]) == selected_player_id), None)
+                    selected_player_id = parse_int(resolution.get("player_id"))
+                    if selected_player_id is None:
+                        raise ValueError("Не удалось определить выбранного игрока.")
+                    player = next(
+                        (
+                            item
+                            for item in candidates
+                            if (candidate_id := parse_int(item.get("id"))) is not None
+                            and candidate_id == selected_player_id
+                        ),
+                        None,
+                    )
                     if player is None:
                         raise ValueError("Выбранный игрок отсутствует в списке кандидатов.")
                     if bool(resolution.get("remember")):
@@ -857,7 +879,10 @@ def import_tournament_rows(
                 }
             )
         else:
-            player_id = int(player["id"])
+            parsed_player_id = parse_int(player.get("id"))
+            if parsed_player_id is None:
+                raise ValueError("У найденного игрока отсутствует корректный id.")
+            player_id = parsed_player_id
 
         place = parse_int(row.get("place"))
         score_set = parse_int(row.get("score_set"))

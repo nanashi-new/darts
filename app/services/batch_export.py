@@ -5,9 +5,32 @@ from datetime import date
 from pathlib import Path
 import re
 import sqlite3
+from typing import Any, TypedDict, cast
 
 from app.db.repositories import ResultRepository, TournamentRepository
 from app.services.export_service import ExportService
+
+
+class RatingResultRow(TypedDict):
+    player_id: object
+    points_total: object
+    last_name: object
+    first_name: object
+    middle_name: object
+
+
+class PlayerRatingData(TypedDict):
+    entries: list[RatingResultRow]
+    fio: str
+
+
+def _safe_int(value: object, default: int = 0) -> int:
+    if value is None:
+        return default
+    try:
+        return int(str(value))
+    except (TypeError, ValueError):
+        return default
 
 
 @dataclass
@@ -31,7 +54,8 @@ class BatchExportService:
         tournaments_dir.mkdir(parents=True, exist_ok=True)
 
         files_created: list[Path] = []
-        for category in self._tournament_repo.list_category_codes():
+        categories = self._tournament_repo.list_category_codes()
+        for category in categories:
             rows = self._build_rating_rows(category, n_value)
             extension = self._normalize_extension(export_format)
             target_path = ratings_dir / f"rating_{self._slug(category)}.{extension}"
@@ -50,7 +74,7 @@ class BatchExportService:
             files_created.append(target_path)
 
         for tournament in self._tournament_repo.list():
-            tournament_id = int(tournament["id"])
+            tournament_id = _safe_int(tournament.get("id"), default=0)
             rows = self._build_protocol_rows(tournament_id)
             name = tournament.get("name") or f"tournament_{tournament_id}"
             extension = self._normalize_extension(export_format)
@@ -82,10 +106,15 @@ class BatchExportService:
         return BatchExportResult(run_directory=run_directory, files_created=files_created)
 
     def _build_rating_rows(self, category_code: str, n_value: int) -> list[list[str]]:
-        results = self._result_repo.list_results_for_rating(category_code=category_code)
-        players: dict[int, dict[str, object]] = {}
+        results_raw = self._result_repo.list_results_for_rating(category_code=category_code)
+        results: list[RatingResultRow] = [
+            cast(RatingResultRow, entry) for entry in results_raw if isinstance(entry, dict)
+        ]
+        players: dict[int, PlayerRatingData] = {}
         for entry in results:
-            player_id = int(entry["player_id"])
+            player_id = _safe_int(entry.get("player_id"), default=-1)
+            if player_id < 0:
+                continue
             players.setdefault(player_id, {"entries": [], "fio": ""})
             players[player_id]["entries"].append(entry)
             fio = " ".join(
@@ -101,8 +130,8 @@ class BatchExportService:
 
         rating_rows: list[dict[str, object]] = []
         for player in players.values():
-            entries = player["entries"]
-            points_list = [int(entry.get("points_total") or 0) for entry in entries]
+            entries: list[RatingResultRow] = player["entries"]
+            points_list = [_safe_int(entry.get("points_total"), default=0) for entry in entries]
             rating_rows.append(
                 {
                     "fio": str(player["fio"]),
@@ -111,14 +140,15 @@ class BatchExportService:
                 }
             )
 
-        rating_rows.sort(key=lambda row: (-int(row["points"]), str(row["fio"])))
+        rating_rows.sort(key=lambda row: (-_safe_int(row.get("points"), default=0), str(row.get("fio", ""))))
         return [
             [str(index), str(row["fio"]), str(row["points"]), str(row["tournaments_count"])]
             for index, row in enumerate(rating_rows, start=1)
         ]
 
     def _build_protocol_rows(self, tournament_id: int) -> list[list[str]]:
-        results = self._result_repo.list_with_players(tournament_id)
+        results_raw = self._result_repo.list_with_players(tournament_id)
+        results: list[dict[str, Any]] = [result for result in results_raw if isinstance(result, dict)]
         rows: list[list[str]] = []
         for result in results:
             fio = " ".join(
