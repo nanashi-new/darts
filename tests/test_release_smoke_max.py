@@ -14,6 +14,19 @@ from app.services.import_xlsx import ImportProfile, save_import_profile
 from app.services.norms_loader import load_norms_from_settings
 
 
+def _is_expected_headless_qt_failure(exc: Exception) -> bool:
+    message = str(exc).lower()
+    markers = (
+        "libgl.so.1",
+        "could not load the qt platform plugin",
+        "no qt platform plugin could be initialized",
+        "qt.qpa.plugin",
+        "xcb",
+        "offscreen",
+    )
+    return isinstance(exc, (ImportError, OSError, RuntimeError)) and any(marker in message for marker in markers)
+
+
 def _seed(connection) -> tuple[int, int]:
     players = PlayerRepository(connection)
     tournaments = TournamentRepository(connection)
@@ -140,7 +153,9 @@ def test_release_smoke_max(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
             column_widths=[100, 100],
         )
     except Exception as exc:  # noqa: BLE001
-        pytest.skip(f"Qt headless PNG export unavailable: {exc}")
+        if _is_expected_headless_qt_failure(exc):
+            pytest.skip(f"Qt headless PNG export unavailable: {exc}")
+        raise
 
     assert png_path.exists()
     assert png_path.stat().st_size > 0

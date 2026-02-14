@@ -1,5 +1,20 @@
 # 11 — Release Test Run (MAX)
 
+## Зависимости headless Qt/PNG
+
+Для Linux-агентов, где прогоняется `pytest -q -rs`, нужен системный OpenGL runtime
+с библиотекой `libGL.so.1`.
+
+Пример для Debian/Ubuntu:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y libgl1
+```
+
+Если пакет не установлен, smoke-тест экспорта PNG может быть пропущен как
+неподдерживаемое headless-окружение.
+
 ## Ручные сценарии перед релизом
 
 1. **Импорт одного XLSX (базовый happy-path)**
