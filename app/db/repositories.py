@@ -3,13 +3,20 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import Any
+from typing import Any, List
 
 
 def _row_to_dict(row: sqlite3.Row | None) -> dict[str, Any] | None:
     if row is None:
         return None
     return dict(row)
+
+
+def _lastrowid_as_int(cursor: sqlite3.Cursor) -> int:
+    lastrowid = cursor.lastrowid
+    if lastrowid is None:
+        raise RuntimeError("SQLite cursor has no lastrowid after INSERT")
+    return int(lastrowid)
 
 
 class PlayerRepository:
@@ -45,7 +52,7 @@ class PlayerRepository:
             ),
         )
         self._connection.commit()
-        return int(cursor.lastrowid)
+        return _lastrowid_as_int(cursor)
 
     def get(self, player_id: int) -> dict[str, Any] | None:
         row = self._connection.execute(
@@ -92,7 +99,7 @@ class PlayerRepository:
         ).fetchall()
         return [dict(row) for row in rows]
 
-    def search(self, term: str) -> list[dict[str, Any]]:
+    def search(self, term: str) -> List[dict[str, Any]]:
         like_term = f"%{term}%"
         rows = self._connection.execute(
             """
@@ -164,7 +171,7 @@ class TournamentRepository:
             ),
         )
         self._connection.commit()
-        return int(cursor.lastrowid)
+        return _lastrowid_as_int(cursor)
 
     def get(self, tournament_id: int) -> dict[str, Any] | None:
         row = self._connection.execute(
@@ -207,7 +214,7 @@ class TournamentRepository:
         ).fetchall()
         return [dict(row) for row in rows]
 
-    def search(self, term: str) -> list[dict[str, Any]]:
+    def search(self, term: str) -> List[dict[str, Any]]:
         like_term = f"%{term}%"
         rows = self._connection.execute(
             """
@@ -227,7 +234,7 @@ class TournamentRepository:
         ).fetchone()
         return _row_to_dict(row)
 
-    def list_category_codes(self) -> list[str]:
+    def list_category_codes(self) -> List[str]:
         rows = self._connection.execute(
             """
             SELECT DISTINCT category_code
@@ -282,7 +289,7 @@ class ResultRepository:
             ),
         )
         self._connection.commit()
-        return int(cursor.lastrowid)
+        return _lastrowid_as_int(cursor)
 
     def get(self, result_id: int) -> dict[str, Any] | None:
         row = self._connection.execute(
@@ -340,7 +347,7 @@ class ResultRepository:
 
     def search(
         self, *, tournament_id: int | None = None, player_id: int | None = None
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         clauses = []
         params: list[Any] = []
         if tournament_id is not None:
@@ -360,7 +367,7 @@ class ResultRepository:
         ).fetchall()
         return [dict(row) for row in rows]
 
-    def list_with_players(self, tournament_id: int) -> list[dict[str, Any]]:
+    def list_with_players(self, tournament_id: int) -> List[dict[str, Any]]:
         rows = self._connection.execute(
             """
             SELECT results.*,
@@ -383,7 +390,7 @@ class ResultRepository:
         *,
         category_code: str | None = None,
         search_term: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         clauses: list[str] = []
         params: list[Any] = []
         if category_code:

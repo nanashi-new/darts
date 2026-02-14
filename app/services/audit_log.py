@@ -60,7 +60,10 @@ class AuditLogService:
                 """,
                 (event_type, title, details, level, context_json),
             )
-        return int(cursor.lastrowid)
+        lastrowid = cursor.lastrowid
+        if lastrowid is None:
+            raise RuntimeError("SQLite cursor has no lastrowid after INSERT")
+        return int(lastrowid)
 
     def list_events(self, event_type: str | None = None, query: str = "") -> list[AuditEvent]:
         clauses: list[str] = []

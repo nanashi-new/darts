@@ -283,7 +283,11 @@ def calculate_points_classification(
     tournament_date: object | None,
     norms: Norms,
 ) -> tuple[dict[str, str | None], int]:
-    ranks = {"rank_set": None, "rank_sector20": None, "rank_big_round": None}
+    ranks: dict[str, str | None] = {
+        "rank_set": None,
+        "rank_sector20": None,
+        "rank_big_round": None,
+    }
     if not norms:
         return ranks, 0
 
@@ -291,7 +295,7 @@ def calculate_points_classification(
     if age_group is None:
         return ranks, 0
 
-    disciplines = [
+    disciplines: list[tuple[str, str, object | None]] = [
         ("SET", "rank_set", score_set),
         ("SECTOR20", "rank_sector20", score_sector20),
         ("BIGROUND", "rank_big_round", score_big_round),

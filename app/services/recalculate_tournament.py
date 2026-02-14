@@ -8,6 +8,13 @@ from app.domain.ranks import calculate_points_classification
 from app.services.norms_loader import load_norms_from_settings
 
 
+def _as_int_or_none(value: object) -> int | None:
+    try:
+        return int(str(value))
+    except (TypeError, ValueError):
+        return None
+
+
 @dataclass
 class RecalculationReport:
     tournaments_processed: int = 0
@@ -30,11 +37,11 @@ def recalculate_tournament_results(*, connection, tournament_id: int) -> Recalcu
     if not norms_loaded:
         report.warnings.append(norms_load.warning or "Нормативы не загружены.")
 
-    results = result_repo.list_with_players(tournament_id)
+    results: list[dict[str, object]] = result_repo.list_with_players(tournament_id)
     report.tournaments_processed = 1
     for result in results:
         try:
-            place = result.get("place")
+            place = _as_int_or_none(result.get("place"))
             points_place = points_for_place(place) if place is not None else 0
 
             ranks, points_classification = calculate_points_classification(
@@ -48,8 +55,12 @@ def recalculate_tournament_results(*, connection, tournament_id: int) -> Recalcu
             )
             points_total = points_place + points_classification
 
+            result_id = _as_int_or_none(result.get("id"))
+            if result_id is None:
+                raise ValueError("У результата отсутствует корректный id.")
+
             result_repo.update(
-                int(result["id"]),
+                result_id,
                 {
                     "tournament_id": result.get("tournament_id"),
                     "player_id": result.get("player_id"),
