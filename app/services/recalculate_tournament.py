@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TypedDict, cast
 
 from app.db.repositories import ResultRepository, TournamentRepository
 from app.domain.points import points_for_place
@@ -13,6 +14,22 @@ def _as_int_or_none(value: object) -> int | None:
         return int(str(value))
     except (TypeError, ValueError):
         return None
+
+
+class TournamentRow(TypedDict, total=False):
+    id: object
+
+
+class ResultRow(TypedDict, total=False):
+    id: object
+    tournament_id: object
+    player_id: object
+    place: object
+    score_set: object
+    score_sector20: object
+    score_big_round: object
+    gender: object
+    birth_date: object
 
 
 @dataclass
@@ -37,7 +54,10 @@ def recalculate_tournament_results(*, connection, tournament_id: int) -> Recalcu
     if not norms_loaded:
         report.warnings.append(norms_load.warning or "Нормативы не загружены.")
 
-    results: list[dict[str, object]] = result_repo.list_with_players(tournament_id)
+    results_raw = result_repo.list_with_players(tournament_id)
+    results: list[ResultRow] = [
+        cast(ResultRow, result) for result in results_raw if isinstance(result, dict)
+    ]
     report.tournaments_processed = 1
     for result in results:
         try:
@@ -87,8 +107,15 @@ def recalculate_tournament_results(*, connection, tournament_id: int) -> Recalcu
 def recalculate_all_tournaments(*, connection) -> RecalculationReport:
     tournament_repo = TournamentRepository(connection)
     report = RecalculationReport()
-    for tournament in tournament_repo.list():
-        tournament_id = int(tournament["id"])
+    tournaments_raw = tournament_repo.list()
+    tournaments: list[TournamentRow] = [
+        cast(TournamentRow, item) for item in tournaments_raw if isinstance(item, dict)
+    ]
+    for tournament in tournaments:
+        tournament_id = _as_int_or_none(tournament.get("id"))
+        if tournament_id is None:
+            report.errors.append("tournament_id=<missing>: отсутствует корректный id турнира")
+            continue
         try:
             one_report = recalculate_tournament_results(
                 connection=connection,

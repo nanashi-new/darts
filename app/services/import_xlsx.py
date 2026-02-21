@@ -5,7 +5,7 @@ from decimal import Decimal, InvalidOperation
 from datetime import date, datetime
 import json
 from pathlib import Path
-from typing import Callable, Iterable
+from typing import Callable, Iterable, TypedDict, cast
 
 from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
@@ -15,6 +15,22 @@ from app.db.repositories import PlayerRepository, ResultRepository, TournamentRe
 from app.domain.points import points_for_place
 from app.domain.ranks import calculate_points_classification
 from app.services.norms_loader import load_norms_from_settings
+
+
+class ImportRow(TypedDict, total=False):
+    fio: object
+    birth: object
+    coach: object
+    place: object
+    score_set: object
+    score_sector20: object
+    score_big_round: object
+
+
+class PlayerMatchResolution(TypedDict, total=False):
+    action: object
+    player_id: object
+    remember: object
 
 
 @dataclass(frozen=True)
@@ -786,7 +802,7 @@ def import_tournament_rows(
     tournament_date: str | None,
     category_code: str | None,
     source_files: list[str] | None = None,
-    player_match_resolver: Callable[[str, str | None, list[dict[str, object]]], dict[str, object] | None] | None = None,
+    player_match_resolver: Callable[[str, str | None, list[dict[str, object]]], PlayerMatchResolution | None] | None = None,
 ) -> tuple[int, bool]:
     tournament_repo = TournamentRepository(connection)
     player_repo = PlayerRepository(connection)
@@ -805,7 +821,10 @@ def import_tournament_rows(
     )
     remembered_rules = _load_player_match_rules()
 
-    for row in rows:
+    for row_data in rows:
+        if not isinstance(row_data, dict):
+            continue
+        row = cast(ImportRow, row_data)
         fio = row.get("fio")
         if fio is None or _normalize_text(fio) == "":
             continue
@@ -841,6 +860,8 @@ def import_tournament_rows(
                 resolution = player_match_resolver(str(fio), birth_date or birth_year, candidates)
                 if not resolution:
                     raise ValueError("Импорт отменён пользователем.")
+                if not isinstance(resolution, dict):
+                    raise ValueError("Некорректный формат решения по выбору игрока.")
                 action = str(resolution.get("action") or "cancel")
                 if action == "cancel":
                     raise ValueError("Импорт отменён пользователем.")
@@ -930,7 +951,7 @@ def import_tournament_results(
     tournament_name: str,
     tournament_date: str | None,
     category_code: str | None,
-    player_match_resolver: Callable[[str, str | None, list[dict[str, object]]], dict[str, object] | None] | None = None,
+    player_match_resolver: Callable[[str, str | None, list[dict[str, object]]], PlayerMatchResolution | None] | None = None,
 ) -> tuple[int, bool]:
     _, rows = parse_first_table_from_xlsx(file_path)
     if not rows:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Iterable
+from typing import Iterable, Literal, TypedDict
 
 from openpyxl import load_workbook
 
@@ -16,6 +16,12 @@ class RankThreshold:
 
 
 Norms = dict[str, dict[str, dict[str, list[RankThreshold]]]]
+
+
+class ClassificationRanks(TypedDict):
+    rank_set: str | None
+    rank_sector20: str | None
+    rank_big_round: str | None
 
 
 def _normalize_header(value: object) -> str:
@@ -257,11 +263,8 @@ def get_rank(
 
     best_rank: str | None = None
     for threshold in thresholds:
-        if isinstance(threshold, RankThreshold):
-            score_min = threshold.score_min
-            rank = threshold.rank
-        else:
-            score_min, rank = threshold
+        score_min = threshold.score_min
+        rank = threshold.rank
         if score_value >= score_min:
             best_rank = rank
         else:
@@ -282,8 +285,8 @@ def calculate_points_classification(
     birth_date: object | None,
     tournament_date: object | None,
     norms: Norms,
-) -> tuple[dict[str, str | None], int]:
-    ranks: dict[str, str | None] = {
+) -> tuple[ClassificationRanks, int]:
+    ranks: ClassificationRanks = {
         "rank_set": None,
         "rank_sector20": None,
         "rank_big_round": None,
@@ -295,7 +298,13 @@ def calculate_points_classification(
     if age_group is None:
         return ranks, 0
 
-    disciplines: list[tuple[str, str, object | None]] = [
+    disciplines: list[
+        tuple[
+            str,
+            Literal["rank_set", "rank_sector20", "rank_big_round"],
+            object | None,
+        ]
+    ] = [
         ("SET", "rank_set", score_set),
         ("SECTOR20", "rank_sector20", score_sector20),
         ("BIGROUND", "rank_big_round", score_big_round),
