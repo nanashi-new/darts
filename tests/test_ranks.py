@@ -1,6 +1,11 @@
 import unittest
 
-from app.domain.ranks import calculate_points_classification
+import pytest
+
+from app.domain.ranks import RankThreshold, calculate_points_classification
+
+
+pytestmark = pytest.mark.unit
 
 
 class ClassificationPointsTests(unittest.TestCase):
@@ -9,16 +14,16 @@ class ClassificationPointsTests(unittest.TestCase):
             "M": {
                 "U10": {
                     "SET": [
-                        (10, "3юн"),
-                        (20, "2юн"),
+                        RankThreshold(10, "3юн"),
+                        RankThreshold(20, "2юн"),
                     ],
-                    "SECTOR20": [(5, "3юн")],
-                    "BIGROUND": [(1, "3юн")],
+                    "SECTOR20": [RankThreshold(5, "3юн")],
+                    "BIGROUND": [RankThreshold(1, "3юн")],
                 },
                 "U12": {
-                    "SET": [(10, "3юн")],
-                    "SECTOR20": [(5, "2юн")],
-                    "BIGROUND": [(7, "1юн")],
+                    "SET": [RankThreshold(10, "3юн")],
+                    "SECTOR20": [RankThreshold(5, "2юн")],
+                    "BIGROUND": [RankThreshold(7, "1юн")],
                 },
             }
         }

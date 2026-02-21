@@ -1,8 +1,11 @@
+import pytest
 from pathlib import Path
 
 from app.db.database import get_connection
 from app.services.audit_log import AuditLogService, EXPORT_FILE, IMPORT_FILE
 
+
+pytestmark = pytest.mark.integration
 
 def test_log_event_writes_and_filters_records(tmp_path: Path) -> None:
     connection = get_connection(tmp_path / "app.db")
