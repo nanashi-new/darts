@@ -1,3 +1,4 @@
+import pytest
 import os
 import tempfile
 import unittest
@@ -7,6 +8,8 @@ from app.db.database import get_connection
 from app.db.repositories import PlayerRepository, ResultRepository, TournamentRepository
 from app.services.recalculate_tournament import recalculate_tournament_results
 
+
+pytestmark = pytest.mark.integration
 
 class RecalculationTests(unittest.TestCase):
     def setUp(self) -> None:

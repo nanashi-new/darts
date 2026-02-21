@@ -1,6 +1,11 @@
 import unittest
 
+import pytest
+
 from app.domain.points import points_for_place, points_for_rank
+
+
+pytestmark = pytest.mark.unit
 
 
 class PointsForPlaceTests(unittest.TestCase):

@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import pytest
+
 from app.services.import_xlsx import parse_first_table_from_xlsx_with_report, parse_int
 from tests.helpers.xlsx_factory import make_single_table_xlsx
 
+
+pytestmark = pytest.mark.integration
 
 def test_parse_single_table_happy_path(tmp_path) -> None:
     headers = ["ФИО", "Год рождения", "Место", "Очки", "С20", "БР"]

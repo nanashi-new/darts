@@ -1,6 +1,11 @@
 import unittest
 
+import pytest
+
 from app.domain.rating import rolling_rating
+
+
+pytestmark = pytest.mark.unit
 
 
 class RollingRatingTests(unittest.TestCase):

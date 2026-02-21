@@ -1,3 +1,4 @@
+import pytest
 from pathlib import Path
 
 from openpyxl import load_workbook
@@ -7,6 +8,8 @@ from app.db.repositories import PlayerRepository, ResultRepository, TournamentRe
 from app.services.batch_export import BatchExportService
 from app.services.export_service import ExportService
 
+
+pytestmark = pytest.mark.integration
 
 def _seed_sample_data(connection) -> tuple[int, int]:
     players = PlayerRepository(connection)

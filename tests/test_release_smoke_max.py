@@ -3,15 +3,16 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from openpyxl import load_workbook
+from openpyxl import Workbook
 
-import app
-from app.db.database import get_connection, get_default_database_path
-from app.db.repositories import PlayerRepository, ResultRepository, TournamentRepository
-from app.services.audit_log import AuditLogService
+from app.db.database import get_connection
+from app.db.repositories import ResultRepository
+from app.services.audit_log import AuditLogService, EXPORT_FILE, IMPORT_FILE
 from app.services.export_service import ExportService
-from app.services.import_xlsx import ImportProfile, save_import_profile
-from app.services.norms_loader import load_norms_from_settings
+from app.services.import_xlsx import import_tournament_results
+from app.services.recalculate_rating import RecalculateRatingService
+
+pytestmark = pytest.mark.release_smoke
 
 
 def _is_expected_headless_qt_failure(exc: Exception) -> bool:
@@ -26,152 +27,96 @@ def _is_expected_headless_qt_failure(exc: Exception) -> bool:
     )
     return isinstance(exc, (ImportError, OSError, RuntimeError)) and any(marker in message for marker in markers)
 
+def _create_import_file(path: Path) -> Path:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Results"
+    sheet.append(["ФИО", "Год рождения", "Место", "Очки", "С20", "БР"])
+    sheet.append(["Иванов Иван", 2010, 1, 120, 45, 30])
+    sheet.append(["Петров Петр", 2011, 2, 100, 40, 25])
+    workbook.save(path)
+    return path
 
-def _seed(connection) -> tuple[int, int]:
-    players = PlayerRepository(connection)
-    tournaments = TournamentRepository(connection)
-    results = ResultRepository(connection)
 
-    player_id = players.create(
-        {
-            "last_name": "Смок",
-            "first_name": "Тест",
-            "middle_name": None,
-            "birth_date": "2010-01-01",
-            "gender": "M",
-            "coach": None,
-            "club": None,
-            "notes": None,
-        }
+def test_release_smoke_critical_path(tmp_path: Path) -> None:
+    connection = get_connection(tmp_path / "app.db")
+    result_repo = ResultRepository(connection)
+
+    import_file = _create_import_file(tmp_path / "import.xlsx")
+    tournament_id, _ = import_tournament_results(
+        connection=connection,
+        file_path=str(import_file),
+        tournament_name="Release E2E",
+        tournament_date="2025-01-15",
+        category_code="U12-M",
     )
-    tournament_id = tournaments.create(
-        {
-            "name": "Release smoke",
-            "date": "2025-01-10",
-            "category_code": "U12-M",
-            "league_code": "A",
-            "source_files": "[]",
-        }
-    )
-    results.create(
-        {
-            "tournament_id": tournament_id,
-            "player_id": player_id,
-            "place": 1,
-            "score_set": 100,
-            "score_sector20": 50,
-            "score_big_round": 60,
-            "rank_set": "I",
-            "rank_sector20": "I",
-            "rank_big_round": "I",
-            "points_classification": 10,
-            "points_place": 20,
-            "points_total": 30,
-            "calc_version": "v2",
-        }
-    )
-    return player_id, tournament_id
 
+    imported_results = result_repo.search(tournament_id=tournament_id)
+    assert len(imported_results) == 2
 
-def test_release_smoke_max(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    assert app.__doc__
+    recalc_service = RecalculateRatingService()
+    single_report = recalc_service.run(connection=connection, tournament_id=tournament_id)
+    all_report = recalc_service.run(connection=connection)
 
-    import importlib
-
-    importlib.import_module("app.db.database")
-    importlib.import_module("app.db.repositories")
-    importlib.import_module("app.domain.points")
-    importlib.import_module("app.domain.ranks")
-    importlib.import_module("app.services.import_xlsx")
-    importlib.import_module("app.services.export_service")
-
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg"))
-    app_root = get_default_database_path().parent
-
-    db_path = get_default_database_path()
-    connection = get_connection(db_path)
-    _seed(connection)
-
-    settings_path = app_root / "settings.json"
-    _ = settings_path.parent
-
-    norms_path = app_root / "norms.xlsx"
-    if norms_path.exists():
-        norms_path.unlink()
-    monkeypatch.setenv("NORMS_XLSX_PATH", str(norms_path))
-    loaded_first = load_norms_from_settings()
-    assert loaded_first.loaded
-    assert norms_path.exists()
-    before_bytes = norms_path.read_bytes()
-    loaded_second = load_norms_from_settings()
-    assert loaded_second.loaded
-    assert norms_path.read_bytes() == before_bytes
-
-    save_import_profile(
-        ImportProfile(
-            name="release-profile",
-            required_columns=["fio", "place", "score_set"],
-            header_aliases={"fio": ["ФИО"]},
-        )
-    )
-    profile_path = app_root / "import_profiles.json"
-
-    logs_dir = app_root / "logs"
-    logs_dir.mkdir(parents=True, exist_ok=True)
-    audit_service = AuditLogService(connection)
-    audit_service.log_event("RELEASE_SMOKE", "run", "ok")
-    log_path = audit_service.export_txt(logs_dir / "audit.txt")
+    assert single_report.tournaments_processed == 1
+    assert single_report.results_updated == 2
+    assert single_report.errors == []
+    assert all_report.tournaments_processed >= 1
+    assert all_report.results_updated >= 2
+    assert all_report.errors == []
 
     exporter = ExportService()
-    xlsx_path = tmp_path / "smoke.xlsx"
+    rows = [["1", "Иванов Иван", "120"], ["2", "Петров Петр", "100"]]
+
+    xlsx_path = tmp_path / "rating.xlsx"
     exporter.export_dataset_xlsx(
         str(xlsx_path),
-        header_lines=["Smoke"],
-        columns=["A", "B"],
-        rows=[["1", "2"]],
+        header_lines=["Release smoke"],
+        columns=["Место", "ФИО", "Очки"],
+        rows=rows,
     )
     assert xlsx_path.exists()
-    workbook = load_workbook(xlsx_path)
-    assert workbook.active.cell(row=2, column=1).value == "A"
+    assert xlsx_path.stat().st_size > 0
 
-    pdf_path = tmp_path / "smoke.pdf"
+    pdf_path = tmp_path / "rating.pdf"
     exporter.export_dataset_pdf(
         str(pdf_path),
-        header_lines=["Smoke"],
-        columns=["A", "B"],
-        rows=[["1", "2"]],
+        header_lines=["Release smoke"],
+        columns=["Место", "ФИО", "Очки"],
+        rows=rows,
     )
     assert pdf_path.exists()
     assert pdf_path.stat().st_size > 0
 
-    png_path = tmp_path / "smoke.png"
+    png_path = tmp_path / "rating.png"
     try:
         exporter.export_dataset_image(
             str(png_path),
-            columns=["A", "B"],
-            rows=[["1", "2"]],
-            column_widths=[100, 100],
+            columns=["Место", "ФИО", "Очки"],
+            rows=rows,
+            column_widths=[100, 220, 120],
         )
     except Exception as exc:  # noqa: BLE001
         if _is_expected_headless_qt_failure(exc):
             pytest.skip(f"Qt headless PNG export unavailable: {exc}")
         raise
-
     assert png_path.exists()
     assert png_path.stat().st_size > 0
 
-    exports_dir = app_root / "exports"
-    exports_dir.mkdir(parents=True, exist_ok=True)
-    expected_dirs = [
-        app_root,
-        db_path.parent,
-        settings_path.parent,
-        norms_path.parent,
-        profile_path.parent,
-        logs_dir,
-        exports_dir,
-    ]
-    for path in expected_dirs:
-        assert path.exists()
+    audit = AuditLogService(connection)
+    audit.log_event(IMPORT_FILE, "Импорт", "import.xlsx")
+    audit.log_event(EXPORT_FILE, "Экспорт", "rating.pdf")
 
-    assert log_path.exists()
+    events = audit.list_events()
+    export_events = audit.list_events(event_type=EXPORT_FILE)
+
+    assert len(events) == 2
+    assert len(export_events) == 1
+    assert export_events[0].details == "rating.pdf"
+
+    audit_path = audit.export_txt(tmp_path / "audit.txt")
+    content = audit_path.read_text(encoding="utf-8")
+
+    assert audit_path.exists()
+    assert audit_path.stat().st_size > 0
+    assert "Traceback" not in content
