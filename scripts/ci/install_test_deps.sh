@@ -21,3 +21,8 @@ fi
 export DEBIAN_FRONTEND=noninteractive
 "${APT_CMD[@]}" update
 "${APT_CMD[@]}" install -y --no-install-recommends libgl1 libegl1
+
+# Keep packaging tooling current to avoid legacy resolver/build issues in CI.
+if command -v python3 >/dev/null 2>&1; then
+  python3 -m pip install --upgrade pip setuptools wheel
+fi

@@ -55,6 +55,24 @@ def test_recalculate_rating_service_validates_inputs() -> None:
         service.run(connection="db", tournament_id=0)
 
 
+
+
+def test_recalculate_rating_service_accepts_legacy_alias(monkeypatch: pytest.MonkeyPatch) -> None:
+    report = RecalculationReport(tournaments_processed=2, results_updated=4)
+
+    def fake_recalculate_all_tournaments(*, connection) -> RecalculationReport:
+        assert connection == "db"
+        return report
+
+    monkeypatch.setattr(
+        "app.services.recalculate_rating.recalculate_all_tournaments",
+        fake_recalculate_all_tournaments,
+    )
+
+    service = RecalculateRatingService()
+    assert service.recalculate(db_connection="db") is report
+
+
 def test_export_pdf_service_delegates() -> None:
     calls: dict[str, object] = {}
 
@@ -77,6 +95,22 @@ def test_export_pdf_service_delegates() -> None:
 
     assert calls["path"] == "/tmp/file.pdf"
     assert calls["columns"] == ["A"]
+
+
+
+
+def test_export_pdf_service_supports_pathlike_and_legacy_method(tmp_path) -> None:
+    output = tmp_path / "legacy.pdf"
+    service = ExportPdfService()
+
+    service.export(
+        path=output,
+        header_lines=["Title"],
+        columns=["A"],
+        rows=[["1"]],
+    )
+
+    assert output.exists()
 
 
 def test_export_pdf_service_validates_inputs() -> None:
@@ -109,6 +143,22 @@ def test_export_xlsx_service_delegates() -> None:
 
     assert calls["path"] == "/tmp/file.xlsx"
     assert calls["columns"] == ["A"]
+
+
+
+
+def test_export_xlsx_service_supports_pathlike_and_legacy_method(tmp_path) -> None:
+    output = tmp_path / "legacy.xlsx"
+    service = ExportXlsxService()
+
+    service.export(
+        path=output,
+        header_lines=["Title"],
+        columns=["A"],
+        rows=[["1"]],
+    )
+
+    assert output.exists()
 
 
 def test_export_xlsx_service_validates_inputs() -> None:
