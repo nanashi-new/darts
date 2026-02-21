@@ -31,7 +31,7 @@ class PlayerRatingData(TypedDict):
     fio: str
 
 
-def _safe_int(value: object, default: int = 0) -> int:
+def _safe_int(value: object | None, default: int = 0) -> int:
     if value is None:
         return default
     try:
