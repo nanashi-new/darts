@@ -6,7 +6,7 @@ from app.services.export_service import ExportService
 
 
 class ExportXlsxService:
-    """Backwards-compatible façade for XLSX export."""
+    """Compatibility wrapper for XLSX export."""
 
     def __init__(self, export_service: ExportService | None = None) -> None:
         self._export_service = export_service or ExportService()
@@ -19,11 +19,6 @@ class ExportXlsxService:
         columns: Sequence[str],
         rows: Sequence[Sequence[str]],
     ) -> None:
-        """Export tabular data to XLSX.
-
-        Raises:
-            ValueError: If required arguments are empty.
-        """
         if not path:
             raise ValueError("path is required")
         if not columns:

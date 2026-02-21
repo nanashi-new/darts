@@ -1,22 +1,27 @@
+from __future__ import annotations
+
 from pathlib import Path
 
-from PySide6.QtWidgets import QPlainTextEdit, QVBoxLayout, QWidget
-
-
-def _load_faq_text() -> str:
-    faq_path = Path(__file__).resolve().parents[2] / "FAQ.txt"
-    try:
-        return faq_path.read_text(encoding="utf-8")
-    except OSError:
-        return "FAQ временно недоступен: не удалось прочитать файл FAQ.txt."
+from PySide6.QtWidgets import QLabel, QPlainTextEdit, QVBoxLayout, QWidget
 
 
 class FaqView(QWidget):
     def __init__(self) -> None:
         super().__init__()
         layout = QVBoxLayout(self)
+        layout.addWidget(QLabel("FAQ"))
 
-        faq_text = QPlainTextEdit(self)
-        faq_text.setReadOnly(True)
-        faq_text.setPlainText(_load_faq_text())
-        layout.addWidget(faq_text)
+        text = QPlainTextEdit(self)
+        text.setReadOnly(True)
+        text.setPlainText(self._load_faq_text())
+        layout.addWidget(text)
+
+    def _load_faq_text(self) -> str:
+        faq_path = Path(__file__).resolve().parents[2] / "FAQ.txt"
+        try:
+            content = faq_path.read_text(encoding="utf-8").strip()
+            if content:
+                return content
+        except OSError:
+            pass
+        return "FAQ временно недоступен. Проверьте наличие файла FAQ.txt рядом с приложением."

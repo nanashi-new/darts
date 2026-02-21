@@ -6,7 +6,7 @@ from app.services.export_service import ExportService
 
 
 class ExportPdfService:
-    """Backwards-compatible façade for PDF export."""
+    """Compatibility wrapper for PDF export."""
 
     def __init__(self, export_service: ExportService | None = None) -> None:
         self._export_service = export_service or ExportService()
@@ -20,11 +20,6 @@ class ExportPdfService:
         rows: Sequence[Sequence[str]],
         column_widths: Sequence[int] | None = None,
     ) -> None:
-        """Export tabular data to PDF.
-
-        Raises:
-            ValueError: If required arguments are empty.
-        """
         if not path:
             raise ValueError("path is required")
         if not columns:
