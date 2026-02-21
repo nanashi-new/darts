@@ -63,6 +63,8 @@ class AuditLogService:
         lastrowid = cursor.lastrowid
         if lastrowid is None:
             raise RuntimeError("SQLite cursor has no lastrowid after INSERT")
+        if isinstance(lastrowid, int):
+            return lastrowid
         return int(lastrowid)
 
     def list_events(self, event_type: str | None = None, query: str = "") -> list[AuditEvent]:
@@ -110,8 +112,12 @@ class AuditLogService:
         if not isinstance(context, dict):
             context = {}
 
+        raw_id = row["id"]
+        if raw_id is None:
+            raise ValueError("audit_log.id is NULL")
+
         return AuditEvent(
-            id=int(row["id"]),
+            id=int(raw_id),
             event_type=str(row["event_type"]),
             title=str(row["title"]),
             details=str(row["details"] or ""),

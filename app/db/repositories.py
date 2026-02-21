@@ -3,19 +3,26 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Callable
 from typing import Any, List
 
 
-def _row_to_dict(row: sqlite3.Row | None) -> dict[str, Any] | None:
+RowDict = dict[str, Any]
+RowMapper = Callable[[sqlite3.Row], RowDict]
+
+
+def _row_to_dict(row: sqlite3.Row | None, mapper: RowMapper = dict) -> RowDict | None:
     if row is None:
         return None
-    return dict(row)
+    return mapper(row)
 
 
 def _lastrowid_as_int(cursor: sqlite3.Cursor) -> int:
     lastrowid = cursor.lastrowid
     if lastrowid is None:
         raise RuntimeError("SQLite cursor has no lastrowid after INSERT")
+    if isinstance(lastrowid, int):
+        return lastrowid
     return int(lastrowid)
 
 
@@ -99,7 +106,7 @@ class PlayerRepository:
         ).fetchall()
         return [dict(row) for row in rows]
 
-    def search(self, term: str) -> List[dict[str, Any]]:
+    def search(self, term: str) -> List[RowDict]:
         like_term = f"%{term}%"
         rows = self._connection.execute(
             """
@@ -214,7 +221,7 @@ class TournamentRepository:
         ).fetchall()
         return [dict(row) for row in rows]
 
-    def search(self, term: str) -> List[dict[str, Any]]:
+    def search(self, term: str) -> List[RowDict]:
         like_term = f"%{term}%"
         rows = self._connection.execute(
             """
@@ -347,7 +354,7 @@ class ResultRepository:
 
     def search(
         self, *, tournament_id: int | None = None, player_id: int | None = None
-    ) -> List[dict[str, Any]]:
+    ) -> List[RowDict]:
         clauses = []
         params: list[Any] = []
         if tournament_id is not None:
@@ -367,7 +374,7 @@ class ResultRepository:
         ).fetchall()
         return [dict(row) for row in rows]
 
-    def list_with_players(self, tournament_id: int) -> List[dict[str, Any]]:
+    def list_with_players(self, tournament_id: int) -> List[RowDict]:
         rows = self._connection.execute(
             """
             SELECT results.*,
@@ -390,7 +397,7 @@ class ResultRepository:
         *,
         category_code: str | None = None,
         search_term: str | None = None,
-    ) -> List[dict[str, Any]]:
+    ) -> List[RowDict]:
         clauses: list[str] = []
         params: list[Any] = []
         if category_code:

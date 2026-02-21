@@ -11,6 +11,13 @@ from app.db.repositories import ResultRepository, TournamentRepository
 from app.services.export_service import ExportService
 
 
+class TournamentRow(TypedDict, total=False):
+    id: object
+    name: object
+    date: object
+    category_code: object
+
+
 class RatingResultRow(TypedDict):
     player_id: object
     points_total: object
@@ -73,7 +80,11 @@ class BatchExportService:
             )
             files_created.append(target_path)
 
-        for tournament in self._tournament_repo.list():
+        tournaments_raw = self._tournament_repo.list()
+        tournaments: list[TournamentRow] = [
+            cast(TournamentRow, item) for item in tournaments_raw if isinstance(item, dict)
+        ]
+        for tournament in tournaments:
             tournament_id = _safe_int(tournament.get("id"), default=0)
             rows = self._build_protocol_rows(tournament_id)
             name = tournament.get("name") or f"tournament_{tournament_id}"
