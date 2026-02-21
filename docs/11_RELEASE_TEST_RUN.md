@@ -2,18 +2,27 @@
 
 ## Зависимости headless Qt/PNG
 
-Для Linux-агентов, где прогоняется `pytest -q -rs`, нужен системный OpenGL runtime
+Для Linux-агентов, где прогоняется `pytest -q -rs`, обязателен системный OpenGL runtime
 с библиотекой `libGL.so.1`.
 
-Пример для Debian/Ubuntu:
+Для CI/контейнера на Debian/Ubuntu используйте скрипт:
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y libgl1
+bash scripts/ci/install_test_deps.sh
 ```
 
-Если пакет не установлен, smoke-тест экспорта PNG может быть пропущен как
-неподдерживаемое headless-окружение.
+Скрипт устанавливает пакет `libgl1` (Mesa/OpenGL runtime), который нужен для Qt-offscreen
+экспорта PNG в `tests/test_release_smoke_max.py`.
+
+### Когда skip допустим
+
+`tests/test_release_smoke_max.py` **не должен** быть skip в целевом Linux CI, где можно
+установить системные пакеты (`apt-get`) и выполнен шаг установки `libgl1`.
+
+Skip допустим только в ограниченных окружениях, где нельзя установить системные
+библиотеки OpenGL (например, sandbox/ephemeral runner без доступа к apt-репозиториям).
+Ожидаемое поведение в таких окружениях: `pytest -q -rs` показывает
+`Qt headless PNG export unavailable: libGL.so.1 ...` как `SKIPPED`.
 
 ## Ручные сценарии перед релизом
 
