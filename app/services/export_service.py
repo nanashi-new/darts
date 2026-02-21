@@ -143,6 +143,8 @@ class ExportService:
     def _should_use_qt_pdf_renderer() -> bool:
         if os.environ.get("DARTS_FORCE_FALLBACK_PDF") == "1":
             return False
+        if os.environ.get("CI", "").lower() == "true":
+            return False
         if os.name == "nt":
             return True
         return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
