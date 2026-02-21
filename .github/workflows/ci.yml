@@ -34,6 +34,9 @@ jobs:
         run: python -m mypy app
 
       - name: Run pytest (fail-fast)
+        env:
+          CI: "true"
+          DARTS_FORCE_FALLBACK_PDF: "1"
         run: pytest -q -rs
 
   smoke-export:
@@ -61,4 +64,7 @@ jobs:
           pip install mypy pytest
 
       - name: Run release smoke export tests (PNG/PDF/XLSX)
+        env:
+          CI: "true"
+          DARTS_FORCE_FALLBACK_PDF: "1"
         run: pytest -q -rs tests/test_release_smoke_max.py
