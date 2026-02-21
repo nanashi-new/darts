@@ -1,5 +1,15 @@
 # 11 — Release Test Run (MAX)
 
+## CI-автоматизация release-проверок
+
+Release-проверки автоматизированы в GitHub Actions workflow:
+
+- [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
+
+В workflow есть отдельная Linux-джоба `smoke-export`, которая выполняет
+`tests/test_release_smoke_max.py` и тем самым автоматически проверяет экспорт
+PNG/PDF/XLSX.
+
 ## Зависимости headless Qt/PNG
 
 Для Linux-агентов, где прогоняется `pytest -q -rs`, обязателен системный OpenGL runtime

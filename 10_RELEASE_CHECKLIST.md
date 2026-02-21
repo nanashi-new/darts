@@ -2,6 +2,9 @@
 
 Перед передачей приложения:
 
+CI-пайплайн релизных проверок: [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+
+
 - [ ] Все тесты из `09_TEST_PLAN.md` пройдены
 - [ ] `mypy app` завершился с `Success: no issues found`
 - [ ] Импорт реальных XLSX без ошибок
