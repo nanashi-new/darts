@@ -138,6 +138,15 @@ class ExportService:
         else:
             raise ValueError(f"Неподдерживаемый формат: {export_format}")
 
+
+    @staticmethod
+    def _should_use_qt_pdf_renderer() -> bool:
+        if os.environ.get("DARTS_FORCE_FALLBACK_PDF") == "1":
+            return False
+        if os.name == "nt":
+            return True
+        return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+
     def export_dataset_pdf(
         self,
         path: str,
@@ -148,29 +157,32 @@ class ExportService:
     ) -> None:
         header_lines_list = list(header_lines)
         rows_list = [["" if value is None else str(value) for value in row] for row in rows]
-        try:
-            from PySide6.QtGui import QPageSize
-            from PySide6.QtPrintSupport import QPrinter
+        if self._should_use_qt_pdf_renderer():
+            try:
+                from PySide6.QtGui import QPageSize
+                from PySide6.QtPrintSupport import QPrinter
 
-            printer = QPrinter(QPrinter.HighResolution)
-            printer.setOutputFormat(QPrinter.PdfFormat)
-            printer.setOutputFileName(path)
-            printer.setPageOrientation(QPrinter.Landscape)
-            printer.setPageSize(QPageSize(QPageSize.A4))
-            self._render_dataset_to_printer(
-                printer,
-                header_lines_list,
-                list(columns),
-                rows_list,
-                list(column_widths) if column_widths is not None else [120] * len(columns),
-            )
-            if not os.path.exists(path):
-                raise OSError("Не удалось сохранить PDF файл.")
-            return
-        except Exception:  # noqa: BLE001
-            self._write_fallback_pdf(path, header_lines_list, columns, rows_list)
-            if not os.path.exists(path):
-                raise OSError("Не удалось сохранить PDF файл.")
+                printer = QPrinter(QPrinter.HighResolution)
+                printer.setOutputFormat(QPrinter.PdfFormat)
+                printer.setOutputFileName(path)
+                printer.setPageOrientation(QPrinter.Landscape)
+                printer.setPageSize(QPageSize(QPageSize.A4))
+                self._render_dataset_to_printer(
+                    printer,
+                    header_lines_list,
+                    list(columns),
+                    rows_list,
+                    list(column_widths) if column_widths is not None else [120] * len(columns),
+                )
+                if not os.path.exists(path):
+                    raise OSError("Не удалось сохранить PDF файл.")
+                return
+            except Exception:  # noqa: BLE001
+                pass
+
+        self._write_fallback_pdf(path, header_lines_list, columns, rows_list)
+        if not os.path.exists(path):
+            raise OSError("Не удалось сохранить PDF файл.")
 
     def export_dataset_xlsx(
         self,
