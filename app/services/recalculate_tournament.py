@@ -9,7 +9,9 @@ from app.domain.ranks import calculate_points_classification
 from app.services.norms_loader import load_norms_from_settings
 
 
-def _as_int_or_none(value: object) -> int | None:
+def _as_int_or_none(value: object | None) -> int | None:
+    if value is None:
+        return None
     try:
         return int(str(value))
     except (TypeError, ValueError):

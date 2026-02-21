@@ -60,12 +60,7 @@ class AuditLogService:
                 """,
                 (event_type, title, details, level, context_json),
             )
-        lastrowid = cursor.lastrowid
-        if lastrowid is None:
-            raise RuntimeError("SQLite cursor has no lastrowid after INSERT")
-        if isinstance(lastrowid, int):
-            return lastrowid
-        return int(lastrowid)
+        return _require_int_id(cursor.lastrowid, "SQLite cursor has no lastrowid after INSERT")
 
     def list_events(self, event_type: str | None = None, query: str = "") -> list[AuditEvent]:
         clauses: list[str] = []
@@ -112,12 +107,8 @@ class AuditLogService:
         if not isinstance(context, dict):
             context = {}
 
-        raw_id = row["id"]
-        if raw_id is None:
-            raise ValueError("audit_log.id is NULL")
-
         return AuditEvent(
-            id=int(raw_id),
+            id=_require_int_id(row["id"], "audit_log.id is NULL"),
             event_type=str(row["event_type"]),
             title=str(row["title"]),
             details=str(row["details"] or ""),
@@ -125,3 +116,11 @@ class AuditLogService:
             context=context,
             created_at=str(row["created_at"]),
         )
+
+
+def _require_int_id(value: object | None, null_message: str) -> int:
+    if value is None:
+        raise ValueError(null_message)
+    if isinstance(value, int):
+        return value
+    return int(str(value))
