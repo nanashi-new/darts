@@ -19,6 +19,7 @@ def _is_expected_headless_qt_failure(exc: Exception) -> bool:
     message = str(exc).lower()
     markers = (
         "libgl.so.1",
+        "libegl.so.1",
         "could not load the qt platform plugin",
         "no qt platform plugin could be initialized",
         "qt.qpa.plugin",
