@@ -27,9 +27,23 @@ Release-проверки автоматизированы в GitHub Actions work
 
 - [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
 
-В workflow есть отдельная Linux-джоба `smoke-export`, которая выполняет
-`tests/test_release_smoke_max.py` и тем самым автоматически проверяет экспорт
-PNG/PDF/XLSX.
+В workflow есть отдельные smoke-джобы:
+
+- Linux: `smoke-export`
+- Windows: `Smoke Windows (clean profile)`
+
+Обе джобы выполняют `tests/test_release_smoke_max.py`, а Windows-джоба дополнительно
+переинициализирует `USERPROFILE`/`APPDATA`/`LOCALAPPDATA` на временный путь runner'а,
+чтобы имитировать запуск на «чистом» профиле.
+
+### Branch protection перед freeze release-candidate
+
+Перед freeze ветки release-candidate в GitHub Branch protection / Rulesets нужно добавить
+обязательный required check:
+
+- `Smoke Windows (clean profile)`
+
+Без зелёного статуса этой проверки freeze/merge в release-candidate не выполняется.
 
 ## Зависимости headless Qt/PNG
 
