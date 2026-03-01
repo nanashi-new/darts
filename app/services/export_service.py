@@ -154,11 +154,9 @@ class ExportService:
     def _should_use_qt_image_renderer() -> bool:
         if os.environ.get("DARTS_FORCE_QT_IMAGE") == "1":
             return True
-        if os.environ.get("CI", "").lower() == "true":
+        if os.environ.get("DARTS_FORCE_FALLBACK_IMAGE") == "1":
             return False
-        if os.name == "nt":
-            return True
-        return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+        return True
 
     def export_dataset_pdf(
         self,
@@ -246,6 +244,14 @@ class ExportService:
         sheet.page_setup.fitToHeight = 0
         workbook.save(path)
 
+    @staticmethod
+    def _ensure_qt_application() -> None:
+        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        from PySide6.QtWidgets import QApplication
+
+        if QApplication.instance() is None:
+            QApplication([])
+
     def export_dataset_image(
         self,
         path: str,
@@ -263,8 +269,9 @@ class ExportService:
         height = header_height + row_height * len(rows) + 1
 
         if not self._should_use_qt_image_renderer():
-            raise RuntimeError("Qt offscreen image export unavailable in CI/headless environment")
+            raise RuntimeError("Qt image export unavailable in current environment")
 
+        self._ensure_qt_application()
         from PySide6.QtCore import QRect, Qt
         from PySide6.QtGui import QImage, QPainter
 

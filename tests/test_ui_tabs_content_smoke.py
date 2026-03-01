@@ -4,6 +4,8 @@ import os
 
 import pytest
 
+# Must be configured before first PySide6 import.
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 
@@ -20,6 +22,7 @@ def _is_expected_headless_qt_failure(exc: Exception) -> bool:
     markers = (
         "libgl.so.1",
         "libegl.so.1",
+        "libxkbcommon.so.0",
         "could not load the qt platform plugin",
         "no qt platform plugin could be initialized",
         "qt.qpa.plugin",
@@ -41,7 +44,6 @@ def _qt_widgets():
 
 def _ensure_app() -> object:
     QApplication, _, _, _ = _qt_widgets()
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     app = QApplication.instance()
     if app is None:
         app = QApplication([])

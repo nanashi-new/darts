@@ -20,4 +20,4 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 "${APT_CMD[@]}" update
-"${APT_CMD[@]}" install -y --no-install-recommends libgl1 libegl1
+"${APT_CMD[@]}" install -y --no-install-recommends libgl1 libegl1 libxkbcommon0
