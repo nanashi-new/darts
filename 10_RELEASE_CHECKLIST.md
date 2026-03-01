@@ -7,6 +7,7 @@ CI-пайплайн релизных проверок: [`.github/workflows/ci.ym
 
 - [ ] Все тесты из `09_TEST_PLAN.md` пройдены
 - [ ] `mypy app` завершился с `Success: no issues found`
+- [ ] dependency integrity check passed (`python -m pip check`)
 - [ ] Импорт реальных XLSX без ошибок
 - [ ] Экспорт PDF не обрезается
 - [ ] Экспорт Excel корректный

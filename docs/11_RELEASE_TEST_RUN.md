@@ -183,3 +183,14 @@ python -m mypy app
 25. **Негативный импорт: дробные значения в целочисленных полях (например 1.5)**
     - Ожидаемо: warning о некорректном целочисленном значении; приложение не падает.
     - Ошибка: crash/traceback.
+
+## Процесс обновления зависимостей для release-ветки
+
+1. Обновлять зависимости в `requirements.txt` только отдельным PR перед freeze релиза.
+2. Для release-ветки фиксировать версии без диапазонов (`==` вместо `>=`, `~=` и т.п.).
+3. После обновления выполнять локально:
+   - `pip install -r requirements.txt`
+   - `python -m pip check`
+4. Убедиться, что CI-шаг `Validate pinned dependencies for release branches` проходит без ошибок.
+5. Зафиксировать результат в `10_RELEASE_CHECKLIST.md` пунктом `dependency integrity check passed`.
+
