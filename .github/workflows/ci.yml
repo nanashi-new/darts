@@ -64,6 +64,23 @@ jobs:
           DARTS_FORCE_FALLBACK_PDF: "1"
         run: pytest -q -rs
 
+
+  release-manual-report:
+    name: Validate release manual run report
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && (github.base_ref == 'release' || startsWith(github.base_ref, 'release/'))
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate manual run report for release PR
+        env:
+          GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python scripts/ci/validate_release_report_for_pr.py
+
   smoke-export:
     name: Smoke export (PNG/PDF/XLSX)
     runs-on: ubuntu-latest

@@ -33,6 +33,7 @@ Release-проверки автоматизированы в GitHub Actions work
 
 - Linux: `smoke-export`
 - Windows: `Smoke Windows (clean profile)`
+- Gate релизного PR: `Validate release manual run report` (проверяет наличие/обновление `docs/artifacts/release-manual-run-*.md`)
 
 Обе джобы выполняют `tests/test_release_smoke_max.py`, а Windows-джоба дополнительно
 переинициализирует `USERPROFILE`/`APPDATA`/`LOCALAPPDATA` на временный путь runner'а,
@@ -80,6 +81,18 @@ python -m mypy app
 ```
 
 Пайплайн должен считаться успешным только при результате `Success: no issues found`.
+
+## Обязательный отчёт ручного прогона для релизного PR
+
+Для каждого PR в release/release-candidate обязателен заполненный отчёт по шаблону:
+
+- [`docs/release_manual_run_template.md`](release_manual_run_template.md)
+
+Требования:
+1. Отчёт размещён в репозитории (рекомендуется `docs/artifacts/release-manual-run-YYYY-MM-DD.md`).
+2. Разделы `import`, `recalc`, `export`, `merge`, `audit` заполнены.
+3. В каждом разделе добавлены ссылки на результаты (логи/артефакты/скриншоты/CI-run).
+4. PR/релиз не закрывается, пока отчёт не заполнен полностью.
 
 ## Ручные сценарии перед релизом
 
