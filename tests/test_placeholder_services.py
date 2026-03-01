@@ -8,6 +8,10 @@ from app.services.export_xlsx import ExportXlsxService
 from app.services.recalculate_rating import RecalculateRatingService
 
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 def test_export_wrappers_create_files(tmp_path: Path) -> None:
     rows = [["1", "Иванов Иван", "20"]]
     columns = ["Место", "ФИО", "Очки"]

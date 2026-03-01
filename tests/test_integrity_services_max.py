@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from app.db.database import get_connection
 from app.db.repositories import PlayerRepository, ResultRepository, TournamentRepository
 from app.services.audit_log import (
@@ -14,6 +16,9 @@ from app.services.audit_log import (
 from app.services.batch_export import BatchExportService
 from app.services.player_merge import PlayerMergeService
 from app.services.recalculate_tournament import recalculate_all_tournaments, recalculate_tournament_results
+
+
+pytestmark = pytest.mark.integration
 
 
 def test_integrity_services_max(tmp_path: Path) -> None:

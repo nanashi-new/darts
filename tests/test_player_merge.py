@@ -5,6 +5,10 @@ from app.db.repositories import PlayerRepository, ResultRepository, TournamentRe
 from app.services.player_merge import MERGE_PLAYERS, PlayerMergeService
 
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 def test_merge_players_moves_results_removes_duplicate_and_logs_event(tmp_path: Path) -> None:
     connection = get_connection(tmp_path / "app.db")
     players = PlayerRepository(connection)

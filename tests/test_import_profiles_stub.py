@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import pytest
+
 from app.services.import_xlsx import (
     ImportProfile,
     apply_profile_to_headers,
     parse_first_table_from_xlsx_with_report,
 )
 from tests.helpers.xlsx_factory import make_single_table_xlsx
+
+
+pytestmark = pytest.mark.integration
 
 
 def test_import_profiles_needs_mapping_for_nonstandard_headers(tmp_path) -> None:

@@ -6,6 +6,10 @@ from app.db.database import get_connection
 from app.db.repositories import PlayerRepository, ResultRepository, TournamentRepository
 
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 class DatabaseCrudTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()

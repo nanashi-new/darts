@@ -10,6 +10,10 @@ from app.services.batch_export import BatchExportService
 from app.services.recalculate_tournament import recalculate_all_tournaments
 
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 def _seed_dataset(connection) -> None:
     players = PlayerRepository(connection)
     tournaments = TournamentRepository(connection)

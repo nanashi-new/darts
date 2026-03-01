@@ -6,6 +6,9 @@ import pytest
 
 
 
+
+pytestmark = pytest.mark.release_smoke
+
 _PLACEHOLDER_TEXTS = (
     "будет реализован позже",
     "placeholder",

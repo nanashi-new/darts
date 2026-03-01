@@ -5,6 +5,10 @@ from app.db.repositories import PlayerRepository
 from app.services.import_xlsx import find_player_candidates
 
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 def test_find_player_candidates_normalizes_fio_and_birth_year(tmp_path) -> None:
     connection = get_connection(tmp_path / "players.db")
     repo = PlayerRepository(connection)

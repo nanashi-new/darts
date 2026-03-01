@@ -4,6 +4,10 @@ from app.services.import_xlsx import parse_tables_from_xlsx_with_report
 from tests.helpers.xlsx_factory import make_multi_table_xlsx
 
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 def test_parse_multi_table_blocks(tmp_path) -> None:
     blocks = [
         {
