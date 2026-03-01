@@ -2,24 +2,26 @@
 
 ## Последний выполненный прогон
 
-- **Дата/время:** 2026-03-01 (обновить при фактическом прогоне)
-- **Ветка / commit:** `work` / `1aeb9ff` (обновить после нового запуска)
-- **Окружение:** GitHub Actions, Ubuntu, Python 3.11
+- **Дата/время:** 2026-03-01 16:40 UTC
+- **Ветка / commit:** `work` / `d130bf5`
+- **Окружение:** локальный контейнер (Linux), Python 3.11
+- **Трассируемость (артефакт прогона):** [`docs/artifacts/release-run-2026-03-01_1640UTC.txt`](artifacts/release-run-2026-03-01_1640UTC.txt)
 
 ### Сводка статуса
-- `python -m mypy app`: ⚪ не зафиксировано в этом файле
-- `pytest -q -rs`: ⚪ не зафиксировано в этом файле
-- `pytest -q -rs tests/test_release_smoke_max.py`: ⚪ не зафиксировано в этом файле
+- `python -m mypy app`: ✅ PASS (`Success: no issues found in 23 source files`)
+- `pytest -q -rs`: ✅ PASS (`39 passed, 2 skipped, 24 subtests passed`; skip причины: headless Qt/OpenGL)
+- `pytest -q -rs tests/test_release_smoke_max.py`: ✅ PASS с `SKIP` теста в headless (`1 skipped`: `Qt offscreen image export unavailable in CI/headless environment`)
+- `python -m pip check`: ✅ PASS (`No broken requirements found.`)
 
 ### Известные особенности/ошибки
 - В headless-средах без OpenGL-библиотек возможен `SKIPPED` по PNG/UI smoke с причиной `Qt headless ...`.
 - Для стабильного CI обязательна установка системных зависимостей через `bash scripts/ci/install_test_deps.sh`.
 
 ### Что осталось до freeze release-candidate
-1. Прогнать CI-gate на текущей ветке `work`.
-2. Обновить этот раздел фактическими результатами (PASS/FAIL/SKIP + причины).
-3. Пройти ручные сценарии импорта/пересчёта/экспорта/merge.
-4. Выполнить smoke на «чистом» Windows-профиле.
+1. Прогнать тот же набор проверок в GitHub Actions и приложить ссылку на конкретный run.
+2. Пройти ручные сценарии импорта/пересчёта/экспорта/merge из этого документа.
+3. Выполнить smoke на «чистом» Windows-профиле (`Smoke Windows (clean profile)`).
+4. Подтвердить сборку `.exe` и запуск на чистом ПК без Python.
 
 ## CI-автоматизация release-проверок
 
