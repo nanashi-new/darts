@@ -30,6 +30,31 @@ jobs:
           pip install -r requirements.txt
           pip install mypy pytest
 
+      - name: Check installed dependency integrity
+        run: python -m pip check
+
+      - name: Validate pinned dependencies for release branches
+        if: startsWith(github.ref, 'refs/heads/release') || startsWith(github.ref, 'refs/heads/release/')
+        run: |
+          python - <<'PYTHON'
+          from pathlib import Path
+
+          invalid = []
+          for line in Path('requirements.txt').read_text(encoding='utf-8').splitlines():
+            entry = line.strip()
+            if not entry or entry.startswith('#'):
+              continue
+            if '==' not in entry:
+              invalid.append(entry)
+
+          if invalid:
+            raise SystemExit(
+              'requirements.txt contains non-pinned dependencies for release branch: '
+              + ', '.join(invalid)
+            )
+          print('All release dependencies are pinned with ==')
+          PYTHON
+
       - name: Run mypy (fail-fast)
         run: python -m mypy app
 
@@ -63,6 +88,31 @@ jobs:
           pip install -r requirements.txt
           pip install mypy pytest
 
+      - name: Check installed dependency integrity
+        run: python -m pip check
+
+      - name: Validate pinned dependencies for release branches
+        if: startsWith(github.ref, 'refs/heads/release') || startsWith(github.ref, 'refs/heads/release/')
+        run: |
+          python - <<'PYTHON'
+          from pathlib import Path
+
+          invalid = []
+          for line in Path('requirements.txt').read_text(encoding='utf-8').splitlines():
+            entry = line.strip()
+            if not entry or entry.startswith('#'):
+              continue
+            if '==' not in entry:
+              invalid.append(entry)
+
+          if invalid:
+            raise SystemExit(
+              'requirements.txt contains non-pinned dependencies for release branch: '
+              + ', '.join(invalid)
+            )
+          print('All release dependencies are pinned with ==')
+          PYTHON
+
       - name: Run release smoke export tests (PNG/PDF/XLSX)
         env:
           CI: "true"
@@ -90,6 +140,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install mypy pytest
+
+      - name: Check installed dependency integrity (Windows)
+        shell: pwsh
+        run: python -m pip check
+
+      - name: Validate pinned dependencies for release branches (Windows)
+        if: startsWith(github.ref, 'refs/heads/release') || startsWith(github.ref, 'refs/heads/release/')
+        shell: pwsh
+        run: |
+          python - <<'PYTHON'
+          from pathlib import Path
+
+          invalid = []
+          for line in Path('requirements.txt').read_text(encoding='utf-8').splitlines():
+            entry = line.strip()
+            if not entry or entry.startswith('#'):
+              continue
+            if '==' not in entry:
+              invalid.append(entry)
+
+          if invalid:
+            raise SystemExit(
+              'requirements.txt contains non-pinned dependencies for release branch: '
+              + ', '.join(invalid)
+            )
+          print('All release dependencies are pinned with ==')
+          PYTHON
 
       - name: Initialize clean Windows profile directories
         shell: pwsh
