@@ -7,6 +7,8 @@ CI-пайплайн релизных проверок: [`.github/workflows/ci.ym
 Фактический прогон зафиксирован: 2026-03-01 16:40 UTC, `work@d130bf5`, артефакт [`docs/artifacts/release-run-2026-03-01_1640UTC.txt`](docs/artifacts/release-run-2026-03-01_1640UTC.txt).
 
 - [ ] Все тесты из `09_TEST_PLAN.md` пройдены
+- [ ] Заполнен отчёт ручного прогона по шаблону `docs/release_manual_run_template.md`
+- [ ] В отчёте есть ссылки на результаты для разделов import/recalc/export/merge/audit
 - [x] `mypy app` завершился с `Success: no issues found`
 - [x] dependency integrity check passed (`python -m pip check`)
 - [ ] Импорт реальных XLSX без ошибок
@@ -22,3 +24,5 @@ CI-пайплайн релизных проверок: [`.github/workflows/ci.ym
 ---
 
 Релиз **не готов**: остаются незакрытые пункты чек-листа.
+
+Правило процесса: PR/релиз **не закрывается**, пока не приложен заполненный отчёт ручного прогона и ссылки на результаты по обязательным пунктам import/recalc/export/merge/audit.
