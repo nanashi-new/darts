@@ -2,16 +2,15 @@
 
 ## Последний выполненный прогон
 
-- **Дата/время:** 2026-03-01 16:40 UTC
-- **Ветка / commit:** `work` / `d130bf5`
-- **Окружение:** локальный контейнер (Linux), Python 3.11
-- **Трассируемость (артефакт прогона):** [`docs/artifacts/release-run-2026-03-01_1640UTC.txt`](artifacts/release-run-2026-03-01_1640UTC.txt)
+- **Дата/время:** 2026-03-01 16:54 UTC
+- **Ветка / commit:** `work` / `local-working-tree` (обновить после push)
+- **Окружение:** локальный контейнер (Linux), Python 3.12
 
 ### Сводка статуса
 - `python -m mypy app`: ✅ PASS (`Success: no issues found in 23 source files`)
-- `pytest -q -rs`: ✅ PASS (`39 passed, 2 skipped, 24 subtests passed`; skip причины: headless Qt/OpenGL)
-- `pytest -q -rs tests/test_release_smoke_max.py`: ✅ PASS с `SKIP` теста в headless (`1 skipped`: `Qt offscreen image export unavailable in CI/headless environment`)
 - `python -m pip check`: ✅ PASS (`No broken requirements found.`)
+- `QT_QPA_PLATFORM=offscreen pytest -q -rs -m release_smoke`: ✅ PASS (`2 passed, 39 deselected`)
+- `QT_QPA_PLATFORM=offscreen pytest -q -rs`: ✅ PASS (`41 passed, 24 subtests passed`)
 
 ### Известные особенности/ошибки
 - В headless-средах без OpenGL-библиотек возможен `SKIPPED` по PNG/UI smoke с причиной `Qt headless ...`.

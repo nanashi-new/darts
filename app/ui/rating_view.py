@@ -250,6 +250,10 @@ class RatingView(QWidget):
         )
         QMessageBox.information(self, "Экспорт рейтинга", f"Готово: {path}")
 
+    def _print_table(self) -> None:
+        if self._export_service.print_table(self._table, self, self._build_export_header()):
+            QMessageBox.information(self, "Печать", "Печать отправлена на принтер.")
+
     def _table_rows(self) -> list[list[str]]:
         model = self._table.model()
         if model is None:

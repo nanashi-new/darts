@@ -130,11 +130,12 @@ jobs:
           print('All release dependencies are pinned with ==')
           PYTHON
 
-      - name: Run release smoke export tests (PNG/PDF/XLSX)
+      - name: Run release smoke tests (including UI and export)
         env:
           CI: "true"
           DARTS_FORCE_FALLBACK_PDF: "1"
-        run: pytest -q -rs tests/test_release_smoke_max.py
+          QT_QPA_PLATFORM: "offscreen"
+        run: pytest -q -rs -m release_smoke
 
   smoke-windows:
     name: Smoke Windows (clean profile)
