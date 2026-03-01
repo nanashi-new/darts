@@ -4,10 +4,11 @@
 
 CI-пайплайн релизных проверок: [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
+Фактический прогон зафиксирован: 2026-03-01 16:40 UTC, `work@d130bf5`, артефакт [`docs/artifacts/release-run-2026-03-01_1640UTC.txt`](docs/artifacts/release-run-2026-03-01_1640UTC.txt).
 
 - [ ] Все тесты из `09_TEST_PLAN.md` пройдены
-- [ ] `mypy app` завершился с `Success: no issues found`
-- [ ] dependency integrity check passed (`python -m pip check`)
+- [x] `mypy app` завершился с `Success: no issues found`
+- [x] dependency integrity check passed (`python -m pip check`)
 - [ ] Импорт реальных XLSX без ошибок
 - [ ] Экспорт PDF не обрезается
 - [ ] Экспорт Excel корректный
@@ -20,4 +21,4 @@ CI-пайплайн релизных проверок: [`.github/workflows/ci.ym
 
 ---
 
-Релиз готов.
+Релиз **не готов**: остаются незакрытые пункты чек-листа.

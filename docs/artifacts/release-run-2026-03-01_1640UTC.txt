@@ -1,0 +1,25 @@
+Release verification artifact
+Timestamp (UTC): 2026-03-01 16:40 UTC
+Branch: work
+Commit: d130bf5
+
+Commands and outputs:
+
+$ python -m mypy app
+Success: no issues found in 23 source files
+
+$ pytest -q -rs
+.......................................ss        [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_release_smoke_max.py:102: Qt headless PNG export unavailable: Qt offscreen image export unavailable in CI/headless environment
+SKIPPED [1] tests/test_ui_tabs_content_smoke.py:37: Qt headless UI smoke unavailable: libGL.so.1: cannot open shared object file: No such file or directory
+39 passed, 2 skipped, 24 subtests passed in 10.32s
+
+$ pytest -q -rs tests/test_release_smoke_max.py
+s                                                                        [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_release_smoke_max.py:102: Qt headless PNG export unavailable: Qt offscreen image export unavailable in CI/headless environment
+1 skipped in 0.34s
+
+$ python -m pip check
+No broken requirements found.
