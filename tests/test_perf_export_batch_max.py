@@ -8,6 +8,10 @@ from app.db.repositories import PlayerRepository, ResultRepository, TournamentRe
 from app.services.batch_export import BatchExportService
 
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 def _seed_for_export(connection) -> None:
     players = PlayerRepository(connection)
     tournaments = TournamentRepository(connection)

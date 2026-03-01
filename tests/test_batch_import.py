@@ -6,6 +6,10 @@ from app.services.import_xlsx import import_batch_from_folder
 from tests.helpers.xlsx_factory import make_single_table_xlsx
 
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 def test_batch_import(tmp_path) -> None:
     good_headers = ["ФИО", "Место", "Очки"]
     good_rows = [["Иванов Иван", 1, 100]]

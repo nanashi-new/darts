@@ -6,6 +6,10 @@ from app.services.import_xlsx import import_batch_from_folder
 from tests.helpers.stress_factory import make_stress_xlsx_folder
 
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 def test_perf_import_batch_max(tmp_path) -> None:
     folder = make_stress_xlsx_folder(tmp_path, files=20, tables_per_file=2, rows_per_table=50)
 
