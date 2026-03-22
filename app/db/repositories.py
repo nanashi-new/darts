@@ -392,6 +392,26 @@ class ResultRepository:
         ).fetchall()
         return [dict(row) for row in rows]
 
+
+    def list_player_history(self, player_id: int) -> List[RowDict]:
+        rows = self._connection.execute(
+            """
+            SELECT results.id,
+                   results.tournament_id,
+                   results.place,
+                   results.points_total,
+                   tournaments.name AS tournament_name,
+                   tournaments.date AS tournament_date,
+                   tournaments.category_code AS category_code
+            FROM results
+            JOIN tournaments ON tournaments.id = results.tournament_id
+            WHERE results.player_id = ?
+            ORDER BY tournaments.date DESC, tournaments.id DESC
+            """,
+            (player_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
     def list_results_for_rating(
         self,
         *,
