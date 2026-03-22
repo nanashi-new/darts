@@ -32,13 +32,13 @@
 | last_name | TEXT | фамилия |
 | first_name | TEXT | имя |
 | middle_name | TEXT | отчество (опц.) |
-| birth_date | DATE | дата рождения |
+| birth_date | TEXT | дата рождения |
 | gender | TEXT | `M` / `F` |
 | coach | TEXT | тренер |
 | club | TEXT | клуб / школа |
 | notes | TEXT | примечания |
-| created_at | DATETIME | дата создания |
-| updated_at | DATETIME | дата изменения |
+| created_at | TEXT | дата создания (CURRENT_TIMESTAMP) |
+| updated_at | TEXT | дата изменения (CURRENT_TIMESTAMP) |
 
 **Индексы**
 - `(last_name, first_name)`
@@ -54,12 +54,12 @@
 |----|----|----|
 | id | INTEGER PK |
 | name | TEXT | название турнира |
-| date | DATE | дата проведения |
+| date | TEXT | дата проведения |
 | category_code | TEXT | код категории |
 | league_code | TEXT | `NULL / PREMIER / FIRST` |
 | source_files | TEXT | JSON со списком импортированных файлов |
-| created_at | DATETIME |
-| updated_at | DATETIME |
+| created_at | TEXT |
+| updated_at | TEXT |
 
 ---
 
@@ -89,6 +89,12 @@
 **Ограничения**
 - `(tournament_id, player_id)` — UNIQUE
 - `place >= 1 OR place IS NULL`
+- `tournament_id` → `tournaments(id)` (ON DELETE CASCADE)
+- `player_id` → `players(id)` (ON DELETE CASCADE)
+
+**Индексы**
+- `results(tournament_id)`
+- `results(player_id)`
 
 ---
 
@@ -124,7 +130,7 @@
 
 ---
 
-## 4. История и безопасность (v1.1)
+## 4. История и безопасность
 
 ### 4.1 Журнал изменений (audit log)
 
@@ -132,13 +138,17 @@
 
 | Поле | Тип | Описание |
 |----|----|----|
-| id | INTEGER |
-| entity | TEXT | таблица |
-| entity_id | INTEGER |
-| action | TEXT | create/update/delete |
-| before | TEXT | JSON |
-| after | TEXT | JSON |
-| created_at | DATETIME |
+| id | INTEGER PK |
+| event_type | TEXT | тип события |
+| title | TEXT | краткий заголовок |
+| details | TEXT | подробности |
+| level | TEXT | уровень (`info` по умолчанию) |
+| context_json | TEXT | JSON-контекст (`{}` по умолчанию) |
+| created_at | TEXT | дата/время события |
+
+**Индексы**
+- `audit_log(created_at DESC)`
+- `audit_log(event_type)`
 
 ---
 
