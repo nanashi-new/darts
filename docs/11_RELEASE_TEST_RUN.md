@@ -2,25 +2,26 @@
 
 ## Последний выполненный прогон
 
-- **Дата/время:** 2026-03-01 16:54 UTC
-- **Ветка / commit:** `work` / `local-working-tree` (обновить после push)
+- **Дата/время:** 2026-04-03 11:18 UTC
+- **Ветка / commit:** `work` / `d130bf5` (pre-squash SHA; post-squash SHA не назначен)
 - **Окружение:** локальный контейнер (Linux), Python 3.12
+- **Артефакт:** [`docs/artifacts/release-check-smoke-2026-04-03.log`](artifacts/release-check-smoke-2026-04-03.log)
 
 ### Сводка статуса
+- `bash scripts/ci/install_test_deps.sh`: ✅ PASS
 - `python -m mypy app`: ✅ PASS (`Success: no issues found in 23 source files`)
-- `python -m pip check`: ✅ PASS (`No broken requirements found.`)
 - `QT_QPA_PLATFORM=offscreen pytest -q -rs -m release_smoke`: ✅ PASS (`2 passed, 39 deselected`)
-- `QT_QPA_PLATFORM=offscreen pytest -q -rs`: ✅ PASS (`41 passed, 24 subtests passed`)
+- `python -m pip check`: ✅ PASS (`No broken requirements found.`)
 
 ### Известные особенности/ошибки
-- В headless-средах без OpenGL-библиотек возможен `SKIPPED` по PNG/UI smoke с причиной `Qt headless ...`.
-- Для стабильного CI обязательна установка системных зависимостей через `bash scripts/ci/install_test_deps.sh`.
+- Для стабильного Linux CI обязательна установка системных зависимостей через `bash scripts/ci/install_test_deps.sh`.
+- В данном локальном прогоне `SKIPPED ... libGL.so.1` не воспроизведён после установки `libgl1`.
 
 ### Что осталось до freeze release-candidate
-1. Прогнать тот же набор проверок в GitHub Actions и приложить ссылку на конкретный run.
-2. Пройти ручные сценарии импорта/пересчёта/экспорта/merge из этого документа.
-3. Выполнить smoke на «чистом» Windows-профиле (`Smoke Windows (clean profile)`).
-4. Подтвердить сборку `.exe` и запуск на чистом ПК без Python.
+1. Перезапустить релизный CI в GitHub Actions и приложить ссылку на зелёный run `smoke-export` без skip.
+2. Пройти обязательные ручные сценарии импорта/пересчёта/merge/audit из этого документа с артефактами.
+3. Получить зелёный статус `Smoke Windows (clean profile)` и ссылку на run.
+4. Подтвердить сборку `.exe` и запуск на чистом ПК без Python (ссылки на артефакты).
 
 ## CI-автоматизация release-проверок
 
