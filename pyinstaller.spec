@@ -3,7 +3,10 @@
 from pathlib import Path
 
 block_cipher = None
-project_root = Path(__file__).resolve().parent
+try:
+    project_root = Path(SPEC).resolve().parent  # type: ignore[name-defined]
+except Exception:
+    project_root = Path.cwd()
 
 
 a = Analysis(
