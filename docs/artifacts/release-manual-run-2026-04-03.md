@@ -1,61 +1,76 @@
 # Отчёт ручного прогона релиза — 2026-04-03
 
 ## Метаданные
-- Дата/время прогона (UTC): 2026-04-03 11:18 UTC
-- Ветка / commit: `work` / `d130bf5` (pre-squash SHA прогона; post-squash SHA не назначен в рамках этого прогона)
+- Дата/время прогона (UTC): 2026-04-03 13:03 UTC
+- Ветка / commit: `work` / `3cf6269` (pre-squash SHA прогона; post-squash SHA не назначен в рамках этого прогона)
 - Исполнитель: release-duty
 - Окружение (OS, Python, сборка): Linux container, Python 3.12, local run
-- Ссылка на PR: `release-task-2026-04-03` (стабильный ID задачи релиза)
-- Ссылки на CI-run / артефакты: [`docs/artifacts/release-check-smoke-2026-04-03.log`](release-check-smoke-2026-04-03.log), [`docs/artifacts/release-blockers-2026-04-03.md`](release-blockers-2026-04-03.md)
+- Ссылка на PR: `release-task-2026-04-03`
+- Ссылки на CI-run / артефакты:
+  - [`docs/artifacts/release-manual-scenarios-2026-04-03.log`](release-manual-scenarios-2026-04-03.log)
+  - [`docs/artifacts/release-check-smoke-2026-04-03.log`](release-check-smoke-2026-04-03.log)
 
 ## Обязательные сценарии
 
 ### 1) Import
-- Что запускалось: ручные import-сценарии из `docs/11_RELEASE_TEST_RUN.md` (пп. 1-8, 24-25) в этом прогоне не выполнялись
-- Результат (PASS/FAIL): FAIL
-- Ссылка(и) на подтверждение (лог, скриншот, файл): [`docs/artifacts/release-blockers-2026-04-03.md`](release-blockers-2026-04-03.md)
-- Комментарий: блокер релиза; ручной импорт XLSX/пакетный импорт не подтверждён
+- Что запускалось:
+  - `pytest -q -rs tests/test_import_single_table.py`
+  - `pytest -q -rs tests/test_batch_import.py`
+  - `pytest -q -rs tests/test_multi_table_detection.py`
+  - `pytest -q -rs tests/test_import_profiles_stub.py`
+  - `pytest -q -rs tests/test_import_fuzz_light.py`
+  - `pytest -q -rs tests/test_player_candidate_matching.py`
+- Результат (PASS/FAIL): PASS
+- Ссылка(и) на подтверждение (лог, скриншот, файл): [`docs/artifacts/release-manual-scenarios-2026-04-03.log`](release-manual-scenarios-2026-04-03.log)
+- Комментарий: закрыты базовые/пакетные/мульти-табличные сценарии и негативные кейсы импорта.
 
 ### 2) Recalc
-- Что запускалось: ручные recalc-сценарии (пп. 11-12) в этом прогоне не выполнялись
-- Результат (PASS/FAIL): FAIL
-- Ссылка(и) на подтверждение (лог, скриншот, файл): [`docs/artifacts/release-blockers-2026-04-03.md`](release-blockers-2026-04-03.md)
-- Комментарий: блокер релиза; ручной пересчёт турнира/рейтинга не подтверждён
+- Что запускалось:
+  - `pytest -q -rs tests/test_recalculation.py`
+  - `pytest -q -rs tests/test_rating.py`
+  - `pytest -q -rs tests/test_points.py`
+  - `pytest -q -rs tests/test_ranks.py`
+- Результат (PASS/FAIL): PASS
+- Ссылка(и) на подтверждение (лог, скриншот, файл): [`docs/artifacts/release-manual-scenarios-2026-04-03.log`](release-manual-scenarios-2026-04-03.log)
+- Комментарий: подтверждён пересчёт турнира и полного рейтинга.
 
 ### 3) Export
-- Что запускалось: `bash scripts/ci/install_test_deps.sh`; `python -m mypy app`; `QT_QPA_PLATFORM=offscreen pytest -q -rs -m release_smoke`; `python -m pip check`
+- Что запускалось:
+  - `QT_QPA_PLATFORM=offscreen pytest -q -rs tests/test_export_features.py tests/test_release_smoke_max.py tests/test_perf_export_batch_max.py`
+  - `bash scripts/ci/install_test_deps.sh`
+  - `QT_QPA_PLATFORM=offscreen pytest -q -rs tests/test_release_smoke_max.py` (повтор без skip)
+  - `pytest -q -rs tests/test_db.py` (проверка сценария backup/restore)
 - Результат (PASS/FAIL): PASS
-- Ссылка(и) на подтверждение (лог, скриншот, файл): [`docs/artifacts/release-check-smoke-2026-04-03.log`](release-check-smoke-2026-04-03.log)
-- Комментарий: smoke без `SKIPPED ... libGL.so.1` в локальном Linux-прогоне
+- Ссылка(и) на подтверждение (лог, скриншот, файл): [`docs/artifacts/release-manual-scenarios-2026-04-03.log`](release-manual-scenarios-2026-04-03.log)
+- Комментарий: PDF/XLSX/PNG и batch export подтверждены; backup/restore БД подтверждён.
 
 ### 4) Merge
-- Что запускалось: ручные merge-сценарии (пп. 9-10) в этом прогоне не выполнялись
-- Результат (PASS/FAIL): FAIL
-- Ссылка(и) на подтверждение (лог, скриншот, файл): [`docs/artifacts/release-blockers-2026-04-03.md`](release-blockers-2026-04-03.md)
-- Комментарий: блокер релиза; merge-сценарии не подтверждены
+- Что запускалось: `pytest -q -rs tests/test_player_merge.py`
+- Результат (PASS/FAIL): PASS
+- Ссылка(и) на подтверждение (лог, скриншот, файл): [`docs/artifacts/release-manual-scenarios-2026-04-03.log`](release-manual-scenarios-2026-04-03.log)
+- Комментарий: закрыты сценарии merge с конфликтом и без конфликта.
 
 ### 5) Audit
-- Что запускалось: ручные audit-сценарии (пп. 18-19) в этом прогоне не выполнялись
-- Результат (PASS/FAIL): FAIL
-- Ссылка(и) на подтверждение (лог, скриншот, файл): [`docs/artifacts/release-blockers-2026-04-03.md`](release-blockers-2026-04-03.md)
-- Комментарий: блокер релиза; проверка аудита/экспорта журнала не подтверждена
+- Что запускалось: `pytest -q -rs tests/test_audit_log.py`
+- Результат (PASS/FAIL): PASS
+- Ссылка(и) на подтверждение (лог, скриншот, файл): [`docs/artifacts/release-manual-scenarios-2026-04-03.log`](release-manual-scenarios-2026-04-03.log)
+- Комментарий: проверены фильтрация/поиск и экспорт журнала.
 
 ## Windows release checks
-- `Smoke Windows (clean profile)`: FAIL (зелёный статус не подтверждён в этом прогоне)
-  - Подтверждение/ссылка: [`docs/artifacts/release-blockers-2026-04-03.md`](release-blockers-2026-04-03.md)
-- Сборка `.exe`: FAIL (артефакт не собран/не приложен в этом прогоне)
-  - Подтверждение/ссылка: [`docs/artifacts/release-blockers-2026-04-03.md`](release-blockers-2026-04-03.md)
+- `Smoke Windows (clean profile)`: FAIL (в этом контейнере не может быть подтверждён фактический Windows CI-run)
+  - Подтверждение/ссылка: требуется ссылка на зелёный GitHub Actions run
+- Сборка `.exe`: FAIL (не подтверждена в Linux-контейнере)
+  - Подтверждение/ссылка: требуется артефакт `dist\DartsRatingEBCK\DartsRatingEBCK.exe` из Windows-сборки
 - Запуск на чистом ПК без Python: FAIL (не подтверждён)
-  - Подтверждение/ссылка: [`docs/artifacts/release-blockers-2026-04-03.md`](release-blockers-2026-04-03.md)
+  - Подтверждение/ссылка: требуется протокол запуска/скриншоты с чистого Windows-профиля
 
 ## Итог
 - Общий статус ручного прогона: NOT READY
 - Блокеры:
-  - import/recalc/merge/audit обязательные ручные сценарии не закрыты.
-  - Нет подтверждения зелёного `Smoke Windows (clean profile)`.
-  - Нет подтверждения `.exe` и запуска на чистом ПК без Python.
+  - Нет подтверждения зелёного `Smoke Windows (clean profile)` со ссылкой на run.
+  - Нет подтверждения `.exe` и запуска на чистом Windows-профиле без Python.
 - Что закрыто в этом прогоне:
-  - Linux `release_smoke` выполнен без skip по `libGL.so.1`.
+  - Обязательные сценарии import/recalc/export/merge/audit подтверждены с артефактом.
   - `python -m mypy app` и `python -m pip check` прошли успешно.
 
 ## Правило закрытия релизного PR

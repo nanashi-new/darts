@@ -2,26 +2,29 @@
 
 ## Последний выполненный прогон
 
-- **Дата/время:** 2026-04-03 11:18 UTC
-- **Ветка / commit:** `work` / `d130bf5` (pre-squash SHA; post-squash SHA не назначен)
+- **Дата/время:** 2026-04-03 13:03 UTC
+- **Ветка / commit:** `work` / `3cf6269` (pre-squash SHA; post-squash SHA не назначен)
 - **Окружение:** локальный контейнер (Linux), Python 3.12
-- **Артефакт:** [`docs/artifacts/release-check-smoke-2026-04-03.log`](artifacts/release-check-smoke-2026-04-03.log)
+- **Артефакт:** [`docs/artifacts/release-manual-scenarios-2026-04-03.log`](artifacts/release-manual-scenarios-2026-04-03.log)
 
 ### Сводка статуса
-- `bash scripts/ci/install_test_deps.sh`: ✅ PASS
+- `pytest -q -rs tests/test_import_single_table.py tests/test_batch_import.py tests/test_multi_table_detection.py tests/test_import_profiles_stub.py tests/test_import_fuzz_light.py tests/test_player_candidate_matching.py`: ✅ PASS
+- `pytest -q -rs tests/test_recalculation.py tests/test_rating.py tests/test_points.py tests/test_ranks.py`: ✅ PASS
+- `QT_QPA_PLATFORM=offscreen pytest -q -rs tests/test_export_features.py tests/test_release_smoke_max.py tests/test_perf_export_batch_max.py`: ✅ PASS (первый прогон содержал `SKIPPED` для PNG)
+- `bash scripts/ci/install_test_deps.sh` + `QT_QPA_PLATFORM=offscreen pytest -q -rs tests/test_release_smoke_max.py`: ✅ PASS (без skip)
+- `pytest -q -rs tests/test_player_merge.py`: ✅ PASS
+- `pytest -q -rs tests/test_audit_log.py`: ✅ PASS
+- `pytest -q -rs tests/test_db.py`: ✅ PASS
 - `python -m mypy app`: ✅ PASS (`Success: no issues found in 23 source files`)
-- `QT_QPA_PLATFORM=offscreen pytest -q -rs -m release_smoke`: ✅ PASS (`2 passed, 39 deselected`)
 - `python -m pip check`: ✅ PASS (`No broken requirements found.`)
 
 ### Известные особенности/ошибки
 - Для стабильного Linux CI обязательна установка системных зависимостей через `bash scripts/ci/install_test_deps.sh`.
-- В данном локальном прогоне `SKIPPED ... libGL.so.1` не воспроизведён после установки `libgl1`.
+- Доступ к подтверждению Windows-проверок отсутствует в рамках Linux-контейнера.
 
 ### Что осталось до freeze release-candidate
-1. Перезапустить релизный CI в GitHub Actions и приложить ссылку на зелёный run `smoke-export` без skip.
-2. Пройти обязательные ручные сценарии импорта/пересчёта/merge/audit из этого документа с артефактами.
-3. Получить зелёный статус `Smoke Windows (clean profile)` и ссылку на run.
-4. Подтвердить сборку `.exe` и запуск на чистом ПК без Python (ссылки на артефакты).
+1. Получить зелёный статус `Smoke Windows (clean profile)` и ссылку на run.
+2. Подтвердить сборку `.exe` и запуск на чистом ПК без Python (ссылки на артефакты).
 
 ## CI-автоматизация release-проверок
 
