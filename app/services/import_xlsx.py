@@ -671,11 +671,11 @@ def _parse_birth_value(value: object | None) -> tuple[str | None, str | None]:
     if isinstance(value, (int, float)):
         year = int(value)
         if 1900 <= year <= 2100:
-            return str(year), str(year)
+            return None, str(year)
         return None, None
     text = _normalize_text(value)
     if text.isdigit() and len(text) == 4:
-        return text, text
+        return None, text
     for fmt in ("%d.%m.%Y", "%d.%m.%y", "%Y-%m-%d", "%d/%m/%Y"):
         try:
             parsed = datetime.strptime(text, fmt).date()

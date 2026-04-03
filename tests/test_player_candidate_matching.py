@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from app.db.database import get_connection
 from app.db.repositories import PlayerRepository
-from app.services.import_xlsx import find_player_candidates
+from app.services.import_xlsx import _parse_birth_value, find_player_candidates
 
 
 import pytest
@@ -71,3 +71,54 @@ def test_find_player_candidates_returns_two_for_same_fio(tmp_path) -> None:
     )
 
     assert len(candidates) == 2
+
+
+def test_parse_birth_value_returns_year_without_date_for_year_only_values() -> None:
+    assert _parse_birth_value(2010) == (None, "2010")
+    assert _parse_birth_value(2010.0) == (None, "2010")
+    assert _parse_birth_value("2010") == (None, "2010")
+
+
+def test_find_player_candidates_matches_mixed_birth_formats_in_db(tmp_path) -> None:
+    connection = get_connection(tmp_path / "players.db")
+    repo = PlayerRepository(connection)
+
+    repo.create(
+        {
+            "last_name": "Смирнов",
+            "first_name": "Олег",
+            "middle_name": None,
+            "birth_date": "2011",
+            "gender": None,
+            "coach": None,
+            "club": None,
+            "notes": None,
+        }
+    )
+    repo.create(
+        {
+            "last_name": "Смирнов",
+            "first_name": "Олег",
+            "middle_name": None,
+            "birth_date": "2011-04-30",
+            "gender": None,
+            "coach": None,
+            "club": None,
+            "notes": None,
+        }
+    )
+
+    by_year = find_player_candidates(
+        fio="Смирнов Олег",
+        birth_date_or_year="2011",
+        player_repo=repo,
+    )
+    by_full_date = find_player_candidates(
+        fio="Смирнов Олег",
+        birth_date_or_year="2011-04-30",
+        player_repo=repo,
+    )
+
+    assert len(by_year) == 2
+    assert len(by_full_date) == 2
+    assert {candidate["birth_date"] for candidate in by_full_date} == {"2011", "2011-04-30"}
