@@ -22,7 +22,7 @@
 ### Установка зависимостей проекта
 
 ```bat
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-pinned.txt
 ```
 
 ### Установка PyInstaller
@@ -42,6 +42,9 @@ scripts\run_dev.bat
 ```bat
 scripts\build.bat
 ```
+
+> Для release/offline-сборки используется только `requirements-pinned.txt`.
+> `requirements.txt` остаётся для dev-сценариев.
 
 После успешной сборки исполняемый файл находится по пути:
 

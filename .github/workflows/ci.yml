@@ -40,7 +40,7 @@ jobs:
           from pathlib import Path
 
           invalid = []
-          for line in Path('requirements.txt').read_text(encoding='utf-8').splitlines():
+          for line in Path('requirements-pinned.txt').read_text(encoding='utf-8').splitlines():
             entry = line.strip()
             if not entry or entry.startswith('#'):
               continue
@@ -49,10 +49,10 @@ jobs:
 
           if invalid:
             raise SystemExit(
-              'requirements.txt contains non-pinned dependencies for release branch: '
+              'requirements-pinned.txt contains non-pinned dependencies for release branch: '
               + ', '.join(invalid)
             )
-          print('All release dependencies are pinned with ==')
+          print('All release dependencies in requirements-pinned.txt are pinned with ==')
           PYTHON
 
       - name: Run mypy (fail-fast)
@@ -115,7 +115,7 @@ jobs:
           from pathlib import Path
 
           invalid = []
-          for line in Path('requirements.txt').read_text(encoding='utf-8').splitlines():
+          for line in Path('requirements-pinned.txt').read_text(encoding='utf-8').splitlines():
             entry = line.strip()
             if not entry or entry.startswith('#'):
               continue
@@ -124,10 +124,10 @@ jobs:
 
           if invalid:
             raise SystemExit(
-              'requirements.txt contains non-pinned dependencies for release branch: '
+              'requirements-pinned.txt contains non-pinned dependencies for release branch: '
               + ', '.join(invalid)
             )
-          print('All release dependencies are pinned with ==')
+          print('All release dependencies in requirements-pinned.txt are pinned with ==')
           PYTHON
 
       - name: Run release smoke tests (including UI and export)
@@ -171,7 +171,7 @@ jobs:
           from pathlib import Path
 
           invalid = []
-          for line in Path('requirements.txt').read_text(encoding='utf-8').splitlines():
+          for line in Path('requirements-pinned.txt').read_text(encoding='utf-8').splitlines():
             entry = line.strip()
             if not entry or entry.startswith('#'):
               continue
@@ -180,10 +180,10 @@ jobs:
 
           if invalid:
             raise SystemExit(
-              'requirements.txt contains non-pinned dependencies for release branch: '
+              'requirements-pinned.txt contains non-pinned dependencies for release branch: '
               + ', '.join(invalid)
             )
-          print('All release dependencies are pinned with ==')
+          print('All release dependencies in requirements-pinned.txt are pinned with ==')
           PYTHON
 
       - name: Initialize clean Windows profile directories
