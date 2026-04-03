@@ -4,7 +4,16 @@ setlocal
 cd /d %~dp0\..
 
 echo [1/5] Установка зависимостей проекта...
-python -m pip install -r requirements.txt
+if exist vendor\wheels (
+  echo Найден локальный кэш wheel-пакетов: vendor\wheels
+  if exist requirements-pinned.txt (
+    python -m pip install --no-index --find-links vendor\wheels -r requirements-pinned.txt
+  ) else (
+    python -m pip install --no-index --find-links vendor\wheels -r requirements.txt
+  )
+) else (
+  python -m pip install -r requirements.txt
+)
 if errorlevel 1 (
   echo Не удалось установить зависимости из requirements.txt.
   exit /b 1
@@ -14,7 +23,11 @@ echo [2/5] Проверка PyInstaller...
 python -m PyInstaller --version >nul 2>&1
 if errorlevel 1 (
   echo PyInstaller не найден. Выполняется установка...
-  python -m pip install pyinstaller
+  if exist vendor\wheels (
+    python -m pip install --no-index --find-links vendor\wheels pyinstaller==6.19.0
+  ) else (
+    python -m pip install pyinstaller
+  )
   if errorlevel 1 (
     echo Не удалось установить PyInstaller.
     exit /b 1
