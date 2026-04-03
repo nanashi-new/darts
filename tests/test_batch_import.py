@@ -24,3 +24,46 @@ def test_batch_import(tmp_path) -> None:
     assert result["success"] == 2
     assert result["error"] == 1
     assert len(result["items"]) == 3
+
+
+def test_batch_import_empty_folder(tmp_path) -> None:
+    result = import_batch_from_folder(str(tmp_path))
+
+    assert result["success"] == 0
+    assert result["error"] == 0
+    assert result["items"] == []
+
+
+def test_batch_import_invalid_folder_path(tmp_path) -> None:
+    missing_folder = tmp_path / "missing"
+
+    result = import_batch_from_folder(str(missing_folder))
+
+    assert result["success"] == 0
+    assert result["error"] == 1
+    assert result["items"] == [
+        {
+            "path": str(missing_folder),
+            "status": "error",
+            "message": "Путь не существует.",
+            "tables": 0,
+        }
+    ]
+
+
+def test_batch_import_file_path_instead_of_folder(tmp_path) -> None:
+    file_path = tmp_path / "data.xlsx"
+    Workbook().save(file_path)
+
+    result = import_batch_from_folder(str(file_path))
+
+    assert result["success"] == 0
+    assert result["error"] == 1
+    assert result["items"] == [
+        {
+            "path": str(file_path),
+            "status": "error",
+            "message": "Указанный путь не является директорией.",
+            "tables": 0,
+        }
+    ]

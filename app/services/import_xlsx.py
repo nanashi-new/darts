@@ -507,8 +507,35 @@ def parse_tables_from_xlsx_with_report(path: str) -> list[TableBlock]:
 
 def import_batch_from_folder(folder: str, recursive: bool = False) -> dict[str, object]:
     base_path = Path(folder)
+    if not base_path.exists():
+        return {
+            "success": 0,
+            "error": 1,
+            "items": [
+                {
+                    "path": str(base_path),
+                    "status": "error",
+                    "message": "Путь не существует.",
+                    "tables": 0,
+                }
+            ],
+        }
+    if not base_path.is_dir():
+        return {
+            "success": 0,
+            "error": 1,
+            "items": [
+                {
+                    "path": str(base_path),
+                    "status": "error",
+                    "message": "Указанный путь не является директорией.",
+                    "tables": 0,
+                }
+            ],
+        }
+
     pattern = "**/*.xlsx" if recursive else "*.xlsx"
-    files = sorted(base_path.glob(pattern)) if base_path.exists() else []
+    files = sorted(base_path.glob(pattern))
 
     items: list[dict[str, object]] = []
     success = 0
