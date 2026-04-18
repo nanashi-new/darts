@@ -10,6 +10,46 @@ from typing import Any, List
 RowDict = dict[str, Any]
 RowMapper = Callable[[sqlite3.Row], RowDict]
 
+TOURNAMENT_STATUS_DRAFT = "draft"
+TOURNAMENT_STATUS_PUBLISHED = "published"
+TOURNAMENT_STATUS_CONFIRMED = "confirmed"
+TOURNAMENT_STATUS_ARCHIVED = "archived"
+TOURNAMENT_STATUS_CANCELED = "canceled"
+
+TOURNAMENT_ALLOWED_TRANSITIONS: dict[str, set[str]] = {
+    TOURNAMENT_STATUS_DRAFT: {
+        TOURNAMENT_STATUS_PUBLISHED,
+        TOURNAMENT_STATUS_CANCELED,
+    },
+    TOURNAMENT_STATUS_PUBLISHED: {
+        TOURNAMENT_STATUS_DRAFT,
+        TOURNAMENT_STATUS_CONFIRMED,
+        TOURNAMENT_STATUS_ARCHIVED,
+        TOURNAMENT_STATUS_CANCELED,
+    },
+    TOURNAMENT_STATUS_CONFIRMED: {
+        TOURNAMENT_STATUS_ARCHIVED,
+        TOURNAMENT_STATUS_CANCELED,
+    },
+    TOURNAMENT_STATUS_ARCHIVED: set(),
+    TOURNAMENT_STATUS_CANCELED: set(),
+}
+
+TOURNAMENT_LIFECYCLE_DEFAULTS: dict[str, Any] = {
+    "status": TOURNAMENT_STATUS_DRAFT,
+    "type": "standard",
+    "season": None,
+    "series": None,
+    "location": None,
+    "organizer": None,
+    "description": None,
+    "published_by": None,
+    "confirmed_by": None,
+    "has_draft_changes": 1,
+    "warning_state": "none",
+    "error_state": "none",
+}
+
 
 def _row_to_dict(row: sqlite3.Row | None, mapper: RowMapper = dict) -> RowDict | None:
     if row is None:
@@ -24,6 +64,15 @@ def _lastrowid_as_int(cursor: sqlite3.Cursor) -> int:
     if isinstance(lastrowid, int):
         return lastrowid
     return int(lastrowid)
+
+
+def _normalize_tournament_row(row: sqlite3.Row) -> RowDict:
+    data = dict(row)
+    for field, default in TOURNAMENT_LIFECYCLE_DEFAULTS.items():
+        value = data.get(field)
+        if value is None or (isinstance(value, str) and value.strip() == ""):
+            data[field] = default
+    return data
 
 
 class PlayerRepository:
@@ -158,6 +207,7 @@ class TournamentRepository:
         self._connection = connection
 
     def create(self, data: dict[str, Any]) -> int:
+        payload = {**TOURNAMENT_LIFECYCLE_DEFAULTS, **data}
         cursor = self._connection.execute(
             """
             INSERT INTO tournaments (
@@ -165,16 +215,40 @@ class TournamentRepository:
                 date,
                 category_code,
                 league_code,
-                source_files
+                source_files,
+                status,
+                type,
+                season,
+                series,
+                location,
+                organizer,
+                description,
+                published_by,
+                confirmed_by,
+                has_draft_changes,
+                warning_state,
+                error_state
             )
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                data.get("name"),
-                data.get("date"),
-                data.get("category_code"),
-                data.get("league_code"),
-                data.get("source_files"),
+                payload.get("name"),
+                payload.get("date"),
+                payload.get("category_code"),
+                payload.get("league_code"),
+                payload.get("source_files"),
+                payload.get("status"),
+                payload.get("type"),
+                payload.get("season"),
+                payload.get("series"),
+                payload.get("location"),
+                payload.get("organizer"),
+                payload.get("description"),
+                payload.get("published_by"),
+                payload.get("confirmed_by"),
+                payload.get("has_draft_changes"),
+                payload.get("warning_state"),
+                payload.get("error_state"),
             ),
         )
         self._connection.commit()
@@ -184,9 +258,10 @@ class TournamentRepository:
         row = self._connection.execute(
             "SELECT * FROM tournaments WHERE id = ?", (tournament_id,)
         ).fetchone()
-        return _row_to_dict(row)
+        return _row_to_dict(row, _normalize_tournament_row)
 
     def update(self, tournament_id: int, data: dict[str, Any]) -> None:
+        payload = {**TOURNAMENT_LIFECYCLE_DEFAULTS, **data}
         self._connection.execute(
             """
             UPDATE tournaments
@@ -195,15 +270,37 @@ class TournamentRepository:
                 category_code = ?,
                 league_code = ?,
                 source_files = ?,
+                type = ?,
+                season = ?,
+                series = ?,
+                location = ?,
+                organizer = ?,
+                description = ?,
+                published_by = ?,
+                confirmed_by = ?,
+                has_draft_changes = ?,
+                warning_state = ?,
+                error_state = ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
             """,
             (
-                data.get("name"),
-                data.get("date"),
-                data.get("category_code"),
-                data.get("league_code"),
-                data.get("source_files"),
+                payload.get("name"),
+                payload.get("date"),
+                payload.get("category_code"),
+                payload.get("league_code"),
+                payload.get("source_files"),
+                payload.get("type"),
+                payload.get("season"),
+                payload.get("series"),
+                payload.get("location"),
+                payload.get("organizer"),
+                payload.get("description"),
+                payload.get("published_by"),
+                payload.get("confirmed_by"),
+                payload.get("has_draft_changes"),
+                payload.get("warning_state"),
+                payload.get("error_state"),
                 tournament_id,
             ),
         )
@@ -219,7 +316,7 @@ class TournamentRepository:
         rows = self._connection.execute(
             "SELECT * FROM tournaments ORDER BY date DESC, name"
         ).fetchall()
-        return [dict(row) for row in rows]
+        return [_normalize_tournament_row(row) for row in rows]
 
     def search(self, term: str) -> List[RowDict]:
         like_term = f"%{term}%"
@@ -239,7 +336,57 @@ class TournamentRepository:
         row = self._connection.execute(
             "SELECT * FROM tournaments ORDER BY date DESC, id DESC LIMIT 1"
         ).fetchone()
-        return _row_to_dict(row)
+        return _row_to_dict(row, _normalize_tournament_row)
+
+    def set_status(self, tournament_id: int, status: str, *, actor: str | None = None) -> None:
+        current = self.get(tournament_id)
+        if current is None:
+            raise ValueError(f"Tournament with id={tournament_id} does not exist")
+
+        current_status = str(current.get("status") or TOURNAMENT_STATUS_DRAFT)
+        if status not in TOURNAMENT_ALLOWED_TRANSITIONS:
+            raise ValueError(f"Unknown tournament status: {status}")
+
+        if status == current_status:
+            return
+
+        allowed = TOURNAMENT_ALLOWED_TRANSITIONS.get(current_status, set())
+        if status not in allowed:
+            raise ValueError(
+                f"Invalid tournament status transition: {current_status} -> {status}"
+            )
+
+        published_by = current.get("published_by")
+        confirmed_by = current.get("confirmed_by")
+        if status == TOURNAMENT_STATUS_PUBLISHED:
+            published_by = actor or published_by
+        if status == TOURNAMENT_STATUS_CONFIRMED:
+            confirmed_by = actor or confirmed_by
+
+        self._connection.execute(
+            """
+            UPDATE tournaments
+            SET status = ?,
+                published_by = ?,
+                confirmed_by = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (status, published_by, confirmed_by, tournament_id),
+        )
+        self._connection.commit()
+
+    def publish(self, tournament_id: int, *, actor: str | None = None) -> None:
+        self.set_status(tournament_id, TOURNAMENT_STATUS_PUBLISHED, actor=actor)
+
+    def confirm(self, tournament_id: int, *, actor: str | None = None) -> None:
+        self.set_status(tournament_id, TOURNAMENT_STATUS_CONFIRMED, actor=actor)
+
+    def archive(self, tournament_id: int, *, actor: str | None = None) -> None:
+        self.set_status(tournament_id, TOURNAMENT_STATUS_ARCHIVED, actor=actor)
+
+    def cancel(self, tournament_id: int, *, actor: str | None = None) -> None:
+        self.set_status(tournament_id, TOURNAMENT_STATUS_CANCELED, actor=actor)
 
     def list_category_codes(self) -> List[str]:
         rows = self._connection.execute(
