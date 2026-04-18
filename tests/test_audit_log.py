@@ -11,7 +11,19 @@ def test_log_event_writes_and_filters_records(tmp_path: Path) -> None:
     connection = get_connection(tmp_path / "app.db")
     service = AuditLogService(connection)
 
-    service.log_event(IMPORT_FILE, "Импорт", "Файл A", context={"path": "A.xlsx"})
+    service.log_event(
+        IMPORT_FILE,
+        "Импорт",
+        "Файл A",
+        context={"path": "A.xlsx"},
+        entity_type="tournament",
+        entity_id="101",
+        reason="initial import",
+        old_value_json='{"status":"draft"}',
+        new_value_json='{"status":"review"}',
+        source="tests",
+        operation_group_id="op-1",
+    )
     service.log_event(EXPORT_FILE, "Экспорт", "Файл B", level="warning", context={"path": "B.xlsx"})
 
     all_events = service.list_events()
@@ -21,6 +33,13 @@ def test_log_event_writes_and_filters_records(tmp_path: Path) -> None:
     import_events = service.list_events(event_type=IMPORT_FILE)
     assert len(import_events) == 1
     assert import_events[0].details == "Файл A"
+    assert import_events[0].entity_type == "tournament"
+    assert import_events[0].entity_id == "101"
+    assert import_events[0].reason == "initial import"
+    assert import_events[0].old_value_json == '{"status":"draft"}'
+    assert import_events[0].new_value_json == '{"status":"review"}'
+    assert import_events[0].source == "tests"
+    assert import_events[0].operation_group_id == "op-1"
 
     search_events = service.list_events(query="B")
     assert len(search_events) == 1

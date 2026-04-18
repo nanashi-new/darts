@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from app.db.repositories import TournamentRepository
 from app.domain.tournament_lifecycle import TournamentStatus, can_transition
+from app.services.audit_log import (
+    AuditLogService,
+    TOURNAMENT_CORRECTED,
+    TOURNAMENT_PUBLISHED,
+    TOURNAMENT_UPDATED,
+)
 
 
 def transition_tournament_status(
@@ -18,6 +25,7 @@ def transition_tournament_status(
     """Change tournament status with UI-friendly structured errors."""
 
     tournament_repo = TournamentRepository(connection)
+    audit_log_service = AuditLogService(connection)
     current = tournament_repo.get(tournament_id)
     if current is None:
         return {
@@ -70,6 +78,31 @@ def transition_tournament_status(
         context=payload,
     )
 
+    reason = str(payload.get("reason") or "").strip() or None
+    source = str(payload.get("actor") or "").strip() or "tournament_lifecycle"
+    operation_group_id = str(payload.get("operation_group_id") or "").strip() or None
+    old_value_json = json.dumps({"status": from_status}, ensure_ascii=False)
+    new_value_json = json.dumps({"status": target_status}, ensure_ascii=False)
+    event_type = _resolve_tournament_event_type(from_status=from_status, to_status=target_status)
+    audit_log_service.log_event(
+        event_type,
+        "Статус турнира изменён",
+        f"Турнир ID: {tournament_id}; {from_status} -> {target_status}",
+        context={
+            "tournament_id": tournament_id,
+            "from_status": from_status,
+            "to_status": target_status,
+            "reason": reason,
+        },
+        entity_type="tournament",
+        entity_id=str(tournament_id),
+        reason=reason,
+        old_value_json=old_value_json,
+        new_value_json=new_value_json,
+        source=source,
+        operation_group_id=operation_group_id,
+    )
+
     return {
         "ok": True,
         "data": {
@@ -78,3 +111,15 @@ def transition_tournament_status(
             "to_status": target_status,
         },
     }
+
+
+def _resolve_tournament_event_type(*, from_status: str, to_status: str) -> str:
+    if to_status == TournamentStatus.PUBLISHED.value:
+        return TOURNAMENT_PUBLISHED
+    if to_status == TournamentStatus.REVIEW.value and from_status in {
+        TournamentStatus.PUBLISHED.value,
+        TournamentStatus.ARCHIVED.value,
+        TournamentStatus.CONFIRMED.value,
+    }:
+        return TOURNAMENT_CORRECTED
+    return TOURNAMENT_UPDATED

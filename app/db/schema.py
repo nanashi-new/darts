@@ -86,6 +86,13 @@ CREATE TABLE IF NOT EXISTS audit_log (
     details TEXT,
     level TEXT NOT NULL DEFAULT 'info',
     context_json TEXT NOT NULL DEFAULT '{}',
+    entity_type TEXT,
+    entity_id TEXT,
+    reason TEXT,
+    old_value_json TEXT,
+    new_value_json TEXT,
+    source TEXT,
+    operation_group_id TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 """
@@ -121,6 +128,16 @@ TOURNAMENT_LIFECYCLE_COLUMNS: list[tuple[str, str]] = [
     ("error_state", "TEXT NOT NULL DEFAULT 'none'"),
 ]
 
+AUDIT_LOG_EPIC_COLUMNS: list[tuple[str, str]] = [
+    ("entity_type", "TEXT"),
+    ("entity_id", "TEXT"),
+    ("reason", "TEXT"),
+    ("old_value_json", "TEXT"),
+    ("new_value_json", "TEXT"),
+    ("source", "TEXT"),
+    ("operation_group_id", "TEXT"),
+]
+
 
 def _column_exists(
     connection: sqlite3.Connection, *, table: str, column: str
@@ -149,9 +166,17 @@ def _migrate_tournaments_schema(connection: sqlite3.Connection) -> None:
     )
 
 
+def _migrate_audit_log_schema(connection: sqlite3.Connection) -> None:
+    for column_name, column_sql in AUDIT_LOG_EPIC_COLUMNS:
+        if _column_exists(connection, table="audit_log", column=column_name):
+            continue
+        connection.execute(f"ALTER TABLE audit_log ADD COLUMN {column_name} {column_sql}")
+
+
 def initialize_schema(connection: sqlite3.Connection) -> None:
     """Initialize database schema if needed."""
     with connection:
         for statement in SCHEMA_SQL:
             connection.execute(statement)
         _migrate_tournaments_schema(connection)
+        _migrate_audit_log_schema(connection)
