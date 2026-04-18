@@ -6,33 +6,26 @@ import sqlite3
 from collections.abc import Callable
 from typing import Any, List
 
+from app.domain.tournament_lifecycle import (
+    TournamentStatus,
+    allowed_targets,
+    can_transition,
+)
+
 
 RowDict = dict[str, Any]
 RowMapper = Callable[[sqlite3.Row], RowDict]
 
-TOURNAMENT_STATUS_DRAFT = "draft"
-TOURNAMENT_STATUS_PUBLISHED = "published"
-TOURNAMENT_STATUS_CONFIRMED = "confirmed"
-TOURNAMENT_STATUS_ARCHIVED = "archived"
-TOURNAMENT_STATUS_CANCELED = "canceled"
+TOURNAMENT_STATUS_DRAFT = TournamentStatus.DRAFT.value
+TOURNAMENT_STATUS_REVIEW = TournamentStatus.REVIEW.value
+TOURNAMENT_STATUS_PUBLISHED = TournamentStatus.PUBLISHED.value
+TOURNAMENT_STATUS_CONFIRMED = TournamentStatus.CONFIRMED.value
+TOURNAMENT_STATUS_ARCHIVED = TournamentStatus.ARCHIVED.value
+TOURNAMENT_STATUS_CANCELED = TournamentStatus.CANCELED.value
 
 TOURNAMENT_ALLOWED_TRANSITIONS: dict[str, set[str]] = {
-    TOURNAMENT_STATUS_DRAFT: {
-        TOURNAMENT_STATUS_PUBLISHED,
-        TOURNAMENT_STATUS_CANCELED,
-    },
-    TOURNAMENT_STATUS_PUBLISHED: {
-        TOURNAMENT_STATUS_DRAFT,
-        TOURNAMENT_STATUS_CONFIRMED,
-        TOURNAMENT_STATUS_ARCHIVED,
-        TOURNAMENT_STATUS_CANCELED,
-    },
-    TOURNAMENT_STATUS_CONFIRMED: {
-        TOURNAMENT_STATUS_ARCHIVED,
-        TOURNAMENT_STATUS_CANCELED,
-    },
-    TOURNAMENT_STATUS_ARCHIVED: set(),
-    TOURNAMENT_STATUS_CANCELED: set(),
+    status.value: allowed_targets(status)
+    for status in TournamentStatus
 }
 
 TOURNAMENT_LIFECYCLE_DEFAULTS: dict[str, Any] = {
@@ -338,7 +331,14 @@ class TournamentRepository:
         ).fetchone()
         return _row_to_dict(row, _normalize_tournament_row)
 
-    def set_status(self, tournament_id: int, status: str, *, actor: str | None = None) -> None:
+    def set_status(
+        self,
+        tournament_id: int,
+        status: str,
+        *,
+        actor: str | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> None:
         current = self.get(tournament_id)
         if current is None:
             raise ValueError(f"Tournament with id={tournament_id} does not exist")
@@ -350,8 +350,7 @@ class TournamentRepository:
         if status == current_status:
             return
 
-        allowed = TOURNAMENT_ALLOWED_TRANSITIONS.get(current_status, set())
-        if status not in allowed:
+        if not can_transition(current_status, status, context):
             raise ValueError(
                 f"Invalid tournament status transition: {current_status} -> {status}"
             )
