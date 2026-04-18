@@ -18,6 +18,10 @@ from app.domain.tournament_lifecycle import TournamentStatus, allowed_targets
 from app.services.audit_log import AuditLogService, ERROR, EXPORT_FILE, RECALC_TOURNAMENT
 from app.services.export_service import ExportService
 from app.services.recalculate_tournament import recalculate_tournament_results
+from app.services.tournament_correction import (
+    TournamentCorrectionError,
+    correct_tournament,
+)
 from app.services.tournament_lifecycle import transition_tournament_status
 
 
@@ -54,6 +58,7 @@ class TournamentsView(QWidget):
         self._confirm_btn = QPushButton("Подтвердить", self)
         self._publish_btn = QPushButton("Опубликовать", self)
         self._archive_btn = QPushButton("Архивировать", self)
+        self._correction_btn = QPushButton("Коррекция", self)
         self._format_combo = QComboBox(self)
         self._format_combo.addItems(["PDF", "XLSX", "PNG"])
         self._image_mode_combo = QComboBox(self)
@@ -76,6 +81,7 @@ class TournamentsView(QWidget):
         self._archive_btn.clicked.connect(
             lambda: self._transition_tournament(TournamentStatus.ARCHIVED.value, "Архивация")
         )
+        self._correction_btn.clicked.connect(self._start_correction)
         self._export_btn.clicked.connect(self._export_selected_format)
         self._print_btn.clicked.connect(self._print_table)
 
@@ -84,6 +90,7 @@ class TournamentsView(QWidget):
         actions_layout.addWidget(self._confirm_btn)
         actions_layout.addWidget(self._publish_btn)
         actions_layout.addWidget(self._archive_btn)
+        actions_layout.addWidget(self._correction_btn)
         actions_layout.addWidget(QLabel("Формат:"))
         actions_layout.addWidget(self._format_combo)
         actions_layout.addWidget(self._image_mode_combo)
@@ -332,12 +339,40 @@ class TournamentsView(QWidget):
             for button, _ in action_buttons:
                 button.setEnabled(False)
                 button.setToolTip("Турнир не выбран.")
+            self._correction_btn.setEnabled(False)
+            self._correction_btn.setVisible(False)
             self._lifecycle_hint_label.setText("Переходы жизненного цикла недоступны: турнир не выбран.")
             return
 
         current_status = str(self._current_tournament.get("status") or TournamentStatus.DRAFT.value)
+        is_published = current_status == TournamentStatus.PUBLISHED.value
+
+        self._correction_btn.setVisible(is_published)
+        self._correction_btn.setEnabled(is_published)
+        self._correction_btn.setToolTip(
+            "Единственная точка входа для изменения опубликованного турнира."
+            if is_published
+            else ""
+        )
+
+        if is_published:
+            self._recalc_btn.setEnabled(False)
+            self._recalc_btn.setToolTip(
+                "Для published-турнира используйте операцию «Коррекция»."
+            )
+        else:
+            self._recalc_btn.setEnabled(True)
+            self._recalc_btn.setToolTip("")
+
         disabled_messages: list[str] = []
         for button, target_status in action_buttons:
+            if is_published:
+                button.setEnabled(False)
+                button.setToolTip("Для published-турнира доступна только операция «Коррекция».")
+                disabled_messages.append(
+                    f"{button.text()}: отключено для published; используйте «Коррекция»."
+                )
+                continue
             reason = self._transition_block_reason(current_status, target_status)
             if reason:
                 button.setEnabled(False)
@@ -395,6 +430,45 @@ class TournamentsView(QWidget):
 
         self.refresh_latest_tournament(tournament_id)
         QMessageBox.information(self, action_title, f"Статус турнира обновлён: {target_status}.")
+
+    def _start_correction(self) -> None:
+        if not self._current_tournament:
+            QMessageBox.warning(self, "Коррекция", "Турнир не выбран.")
+            return
+        tournament_id = int(self._current_tournament["id"])
+        reason, accepted = QInputDialog.getText(
+            self,
+            "Коррекция опубликованного турнира",
+            "Укажите reason коррекции:",
+        )
+        if not accepted:
+            return
+        normalized_reason = reason.strip()
+        if not normalized_reason:
+            QMessageBox.warning(self, "Коррекция", "Reason обязателен.")
+            return
+
+        try:
+            correction_result = correct_tournament(
+                connection=self._connection,
+                tournament_id=tournament_id,
+                reason=normalized_reason,
+                actor="tournaments_view",
+            )
+        except TournamentCorrectionError as exc:
+            QMessageBox.warning(self, "Коррекция", str(exc))
+            return
+
+        self.refresh_latest_tournament(tournament_id)
+        QMessageBox.information(
+            self,
+            "Коррекция",
+            (
+                "Коррекция применена.\n"
+                f"Статус: {correction_result['to_status']}\n"
+                f"Пересчитано результатов: {correction_result['results_recalculated']}"
+            ),
+        )
 
     def _build_export_header(self) -> list[str]:
         if not self._current_tournament:
