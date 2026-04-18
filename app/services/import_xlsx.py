@@ -11,7 +11,12 @@ from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
 
 from app.db.database import get_default_database_path
-from app.db.repositories import PlayerRepository, ResultRepository, TournamentRepository
+from app.db.repositories import (
+    TOURNAMENT_STATUS_DRAFT,
+    PlayerRepository,
+    ResultRepository,
+    TournamentRepository,
+)
 from app.domain.points import points_for_place
 from app.domain.ranks import calculate_points_classification
 from app.services.norms_loader import load_norms_from_settings
@@ -62,6 +67,20 @@ class TableBlock:
     needs_mapping: bool
     confidence: float
     missing_required_columns: list[str]
+
+
+@dataclass(frozen=True)
+class ImportApplyReport:
+    tournament_id: int
+    tournament_name: str
+    tournament_status: str
+    has_draft_changes: bool
+    imported_rows: int
+    skipped_rows: int
+    total_rows: int
+    warnings: list[str]
+    norms_loaded: bool
+    source_files: list[str]
 
 
 SUPPORTED_MAPPING_KEYS = (
@@ -830,30 +849,36 @@ def import_tournament_rows(
     category_code: str | None,
     source_files: list[str] | None = None,
     player_match_resolver: Callable[[str, str | None, list[dict[str, object]]], PlayerMatchResolution | None] | None = None,
-) -> tuple[int, bool]:
+) -> ImportApplyReport:
     tournament_repo = TournamentRepository(connection)
     player_repo = PlayerRepository(connection)
     result_repo = ResultRepository(connection)
     norms_load = load_norms_from_settings()
     norms, norms_loaded = norms_load.norms, norms_load.loaded
 
+    source_files_payload = list(source_files or [])
     tournament_id = tournament_repo.create(
         {
             "name": tournament_name,
             "date": tournament_date,
             "category_code": category_code,
             "league_code": None,
-            "source_files": json.dumps(source_files or []),
+            "source_files": json.dumps(source_files_payload),
+            "status": TOURNAMENT_STATUS_DRAFT,
+            "has_draft_changes": 1,
         }
     )
     remembered_rules = _load_player_match_rules()
+    parsed_rows = [row for row in rows if isinstance(row, dict)]
+    warnings = validate_rows(parsed_rows)
+    imported_rows = 0
+    skipped_rows = 0
 
-    for row_data in rows:
-        if not isinstance(row_data, dict):
-            continue
+    for row_data in parsed_rows:
         row = cast(ImportRow, row_data)
         fio = row.get("fio")
         if fio is None or _normalize_text(fio) == "":
+            skipped_rows += 1
             continue
         last_name, first_name, middle_name = _parse_fio(fio)
         birth_date, birth_year = _parse_birth_value(row.get("birth"))
@@ -967,8 +992,20 @@ def import_tournament_rows(
                 "calc_version": "v2",
             }
         )
+        imported_rows += 1
 
-    return tournament_id, norms_loaded
+    return ImportApplyReport(
+        tournament_id=tournament_id,
+        tournament_name=tournament_name,
+        tournament_status=TOURNAMENT_STATUS_DRAFT,
+        has_draft_changes=True,
+        imported_rows=imported_rows,
+        skipped_rows=skipped_rows,
+        total_rows=len(parsed_rows),
+        warnings=warnings,
+        norms_loaded=norms_loaded,
+        source_files=source_files_payload,
+    )
 
 
 def import_tournament_results(
@@ -979,7 +1016,7 @@ def import_tournament_results(
     tournament_date: str | None,
     category_code: str | None,
     player_match_resolver: Callable[[str, str | None, list[dict[str, object]]], PlayerMatchResolution | None] | None = None,
-) -> tuple[int, bool]:
+) -> ImportApplyReport:
     _, rows = parse_first_table_from_xlsx(file_path)
     if not rows:
         raise ValueError("Не удалось найти таблицу в файле.")
