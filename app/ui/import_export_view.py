@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 from dataclasses import replace
+from uuid import uuid4
 
 from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import (
+    QDateEdit,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
@@ -9,10 +13,9 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QInputDialog,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QDateEdit,
-    QLineEdit,
     QMessageBox,
     QPushButton,
     QVBoxLayout,
@@ -23,21 +26,24 @@ from app.db.database import get_connection
 from app.db.repositories import TournamentRepository
 from app.domain.tournament_lifecycle import TournamentStatus
 from app.services.audit_log import AuditLogService, ERROR, IMPORT_FILE, IMPORT_FOLDER
+from app.services.import_report import build_import_session_report, persist_import_session_report
+from app.services.import_review import build_import_rating_preview
 from app.services.import_xlsx import (
     ImportApplyReport,
     TableBlock,
+    delete_import_profile,
     import_batch_from_folder,
     import_tournament_results,
     import_tournament_rows,
-    read_table_block_preview,
-    parse_table_block_with_mapping,
     list_import_profiles,
+    parse_table_block_with_mapping,
     parse_tables_from_xlsx_with_report,
+    read_table_block_preview,
     save_import_profile,
-    delete_import_profile,
 )
 from app.services.tournament_lifecycle import transition_tournament_status
 from app.ui.column_mapping_dialog import ColumnMappingDialog
+from app.ui.import_apply_review_dialog import ImportApplyReviewDialog
 from app.ui.import_preview_dialog import ImportPreviewDialog
 from app.ui.player_match_dialog import PlayerMatchDialog
 
@@ -160,8 +166,8 @@ class ImportExportView(QWidget):
         self._tournament_repo = TournamentRepository(self._connection)
         self._audit_log_service = AuditLogService(self._connection)
         self._tournaments_view = tournaments_view
-        layout = QVBoxLayout(self)
 
+        layout = QVBoxLayout(self)
         layout.addWidget(QLabel("Демо-импорт Excel: выберите файл для предпросмотра."))
 
         form_layout = QFormLayout()
@@ -178,21 +184,19 @@ class ImportExportView(QWidget):
         self.category_code_input = QLineEdit(self)
         self.category_code_input.setPlaceholderText("Например, U12-M")
         form_layout.addRow("Категория:", self.category_code_input)
-
         layout.addLayout(form_layout)
 
-        self.import_button = QPushButton("Импорт файла (демо)")
+        self.import_button = QPushButton("Импорт файла (демо)", self)
         self.import_button.clicked.connect(self._on_import_clicked)
         layout.addWidget(self.import_button)
 
-        self.import_folder_button = QPushButton("Импорт папки")
+        self.import_folder_button = QPushButton("Импорт папки", self)
         self.import_folder_button.clicked.connect(self._on_import_folder_clicked)
         layout.addWidget(self.import_folder_button)
 
-        self.import_profiles_button = QPushButton("Профили импорта")
+        self.import_profiles_button = QPushButton("Профили импорта", self)
         self.import_profiles_button.clicked.connect(self._on_import_profiles_clicked)
         layout.addWidget(self.import_profiles_button)
-
 
     def _resolve_player_match(
         self,
@@ -208,6 +212,14 @@ class ImportExportView(QWidget):
         )
         dialog.exec()
         return dialog.resolution()
+
+    def _persist_import_session_report(self, apply_report: ImportApplyReport, *, apply_status: str) -> None:
+        report = build_import_session_report(
+            connection=self._connection,
+            apply_report=apply_report,
+            apply_status=apply_status,
+        )
+        persist_import_session_report(connection=self._connection, report=report)
 
     def _on_import_clicked(self) -> None:
         file_path, _ = QFileDialog.getOpenFileName(self, "Выберите XLSX", "", "Excel файлы (*.xlsx)")
@@ -242,11 +254,7 @@ class ImportExportView(QWidget):
                 return
 
             selected_mapping = mapping_dialog.mapping()
-            header_aliases = {
-                key: [header]
-                for key, header in selected_mapping.items()
-                if header
-            }
+            header_aliases = {key: [header] for key, header in selected_mapping.items() if header}
             save_import_profile(
                 {
                     "name": f"wizard:{preview_block.sheet_name}:{preview_block.start_row}",
@@ -276,6 +284,7 @@ class ImportExportView(QWidget):
 
         tournament_date = self.tournament_date_input.date().toString("yyyy-MM-dd")
         category_code = self.category_code_input.text().strip() or None
+        operation_group_id = uuid4().hex
 
         try:
             if preview_block.rows:
@@ -287,6 +296,7 @@ class ImportExportView(QWidget):
                     category_code=category_code,
                     source_files=[file_path],
                     player_match_resolver=self._resolve_player_match,
+                    operation_group_id=operation_group_id,
                 )
             else:
                 apply_report = import_tournament_results(
@@ -296,6 +306,7 @@ class ImportExportView(QWidget):
                     tournament_date=tournament_date,
                     category_code=category_code,
                     player_match_resolver=self._resolve_player_match,
+                    operation_group_id=operation_group_id,
                 )
         except ValueError as exc:
             self._audit_log_service.log_event(
@@ -304,6 +315,7 @@ class ImportExportView(QWidget):
                 str(exc),
                 level="error",
                 context={"path": file_path},
+                operation_group_id=operation_group_id,
             )
             QMessageBox.warning(self, "Импорт", str(exc))
             return
@@ -321,7 +333,9 @@ class ImportExportView(QWidget):
                 "Нормативы не загружены.",
                 level="warning",
                 context={"path": file_path, "tournament_id": tournament_id},
+                operation_group_id=apply_report.operation_group_id or None,
             )
+
         self._audit_log_service.log_event(
             IMPORT_FILE,
             "Импорт файла: применено в draft",
@@ -330,47 +344,33 @@ class ImportExportView(QWidget):
                 f"пропущено: {apply_report.skipped_rows}; warnings: {len(apply_report.warnings)}"
             ),
             context={"path": file_path, "tournament_id": tournament_id},
+            operation_group_id=apply_report.operation_group_id or None,
         )
-
         self._show_apply_review(apply_report)
 
     def _show_apply_review(self, apply_report: ImportApplyReport) -> None:
-        lines = [
-            "Данные применены в черновик турнира.",
-            f"Турнир: {apply_report.tournament_name} (ID: {apply_report.tournament_id})",
-            f"Статус: {apply_report.tournament_status}; has_draft_changes={int(apply_report.has_draft_changes)}",
-            f"Импортировано строк: {apply_report.imported_rows} из {apply_report.total_rows}",
-        ]
-        if apply_report.skipped_rows:
-            lines.append(f"Пропущено строк: {apply_report.skipped_rows}")
-        if not apply_report.norms_loaded:
-            lines.append("Внимание: нормативы не загружены.")
-        if apply_report.warnings:
-            lines.append("")
-            lines.append("Предупреждения:")
-            lines.extend(f"• {warning}" for warning in apply_report.warnings[:10])
-            if len(apply_report.warnings) > 10:
-                lines.append(f"• ... ещё {len(apply_report.warnings) - 10}")
-
-        lines.append("")
-        lines.append("Опубликовать турнир сейчас?")
-        answer = QMessageBox.question(
-            self,
-            "Импорт завершён: review/apply",
-            "\n".join(lines),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
+        rating_preview = build_import_rating_preview(
+            connection=self._connection,
+            tournament_id=apply_report.tournament_id,
+            n_value=6,
         )
-        if answer == QMessageBox.StandardButton.Yes:
+        dialog = ImportApplyReviewDialog(
+            apply_report=apply_report,
+            rating_preview=rating_preview,
+            parent=self,
+        )
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             self._publish_imported_tournament(apply_report)
             return
 
+        self._persist_import_session_report(apply_report, apply_status="draft_applied")
         self._audit_log_service.log_event(
             IMPORT_FILE,
             "Импорт файла завершён без publish",
             f"Турнир ID: {apply_report.tournament_id} оставлен в статусе draft",
             level="warning",
             context={"tournament_id": apply_report.tournament_id, "status": apply_report.tournament_status},
+            operation_group_id=apply_report.operation_group_id or None,
         )
         QMessageBox.information(self, "Импорт", "Импорт завершён. Турнир оставлен в статусе draft.")
 
@@ -385,7 +385,10 @@ class ImportExportView(QWidget):
                 connection=self._connection,
                 tournament_id=apply_report.tournament_id,
                 to_status=target_status,
-                context={"actor": "import_wizard"},
+                context={
+                    "actor": "import_wizard",
+                    "operation_group_id": apply_report.operation_group_id,
+                },
             )
             if not transition_result.get("ok"):
                 error_payload = transition_result.get("error") or {}
@@ -397,6 +400,7 @@ class ImportExportView(QWidget):
                     f"{message}; details={details}",
                     level="error",
                     context={"tournament_id": apply_report.tournament_id, "target_status": target_status},
+                    operation_group_id=apply_report.operation_group_id or None,
                 )
                 QMessageBox.warning(
                     self,
@@ -405,13 +409,19 @@ class ImportExportView(QWidget):
                 )
                 return
 
+        self._persist_import_session_report(apply_report, apply_status="published")
+
         if self._tournaments_view is not None:
             refresh = getattr(self._tournaments_view, "refresh_latest_tournament", None)
             if callable(refresh):
                 refresh(apply_report.tournament_id)
 
         tournament = self._tournament_repo.get(apply_report.tournament_id)
-        published_status = str(tournament.get("status")) if tournament is not None else TournamentStatus.PUBLISHED.value
+        published_status = (
+            str(tournament.get("status"))
+            if tournament is not None
+            else TournamentStatus.PUBLISHED.value
+        )
         self._audit_log_service.log_event(
             IMPORT_FILE,
             "Импорт файла завершён + publish подтверждён",
@@ -420,6 +430,7 @@ class ImportExportView(QWidget):
                 f"status={published_status}; imported={apply_report.imported_rows}; warnings={len(apply_report.warnings)}"
             ),
             context={"tournament_id": apply_report.tournament_id, "status": published_status},
+            operation_group_id=apply_report.operation_group_id or None,
         )
         QMessageBox.information(
             self,

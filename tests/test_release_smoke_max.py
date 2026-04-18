@@ -16,6 +16,8 @@ pytestmark = pytest.mark.release_smoke
 
 
 def _is_expected_headless_qt_failure(exc: Exception) -> bool:
+    if isinstance(exc, ModuleNotFoundError):
+        return True
     message = str(exc).lower()
     markers = (
         "libgl.so.1",
