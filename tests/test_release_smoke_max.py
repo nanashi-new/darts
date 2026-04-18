@@ -45,13 +45,16 @@ def test_release_smoke_critical_path(tmp_path: Path) -> None:
     result_repo = ResultRepository(connection)
 
     import_file = _create_import_file(tmp_path / "import.xlsx")
-    tournament_id, _ = import_tournament_results(
+    apply_report = import_tournament_results(
         connection=connection,
         file_path=str(import_file),
         tournament_name="Release E2E",
         tournament_date="2025-01-15",
         category_code="U12-M",
     )
+    tournament_id = apply_report.tournament_id
+    assert apply_report.tournament_status == "draft"
+    assert apply_report.has_draft_changes is True
 
     imported_results = result_repo.search(tournament_id=tournament_id)
     assert len(imported_results) == 2

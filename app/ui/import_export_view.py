@@ -20,8 +20,11 @@ from PySide6.QtWidgets import (
 )
 
 from app.db.database import get_connection
+from app.db.repositories import TournamentRepository
+from app.domain.tournament_lifecycle import TournamentStatus
 from app.services.audit_log import AuditLogService, ERROR, IMPORT_FILE, IMPORT_FOLDER
 from app.services.import_xlsx import (
+    ImportApplyReport,
     TableBlock,
     import_batch_from_folder,
     import_tournament_results,
@@ -33,6 +36,7 @@ from app.services.import_xlsx import (
     save_import_profile,
     delete_import_profile,
 )
+from app.services.tournament_lifecycle import transition_tournament_status
 from app.ui.column_mapping_dialog import ColumnMappingDialog
 from app.ui.import_preview_dialog import ImportPreviewDialog
 from app.ui.player_match_dialog import PlayerMatchDialog
@@ -153,6 +157,7 @@ class ImportExportView(QWidget):
     def __init__(self, tournaments_view: QWidget | None = None) -> None:
         super().__init__()
         self._connection = get_connection()
+        self._tournament_repo = TournamentRepository(self._connection)
         self._audit_log_service = AuditLogService(self._connection)
         self._tournaments_view = tournaments_view
         layout = QVBoxLayout(self)
@@ -274,7 +279,7 @@ class ImportExportView(QWidget):
 
         try:
             if preview_block.rows:
-                tournament_id, norms_loaded = import_tournament_rows(
+                apply_report = import_tournament_rows(
                     connection=self._connection,
                     rows=preview_block.rows,
                     tournament_name=tournament_name,
@@ -284,7 +289,7 @@ class ImportExportView(QWidget):
                     player_match_resolver=self._resolve_player_match,
                 )
             else:
-                tournament_id, norms_loaded = import_tournament_results(
+                apply_report = import_tournament_results(
                     connection=self._connection,
                     file_path=file_path,
                     tournament_name=tournament_name,
@@ -303,12 +308,13 @@ class ImportExportView(QWidget):
             QMessageBox.warning(self, "Импорт", str(exc))
             return
 
+        tournament_id = apply_report.tournament_id
         if self._tournaments_view is not None:
             refresh = getattr(self._tournaments_view, "refresh_latest_tournament", None)
             if callable(refresh):
                 refresh(tournament_id)
 
-        if not norms_loaded:
+        if not apply_report.norms_loaded:
             self._audit_log_service.log_event(
                 IMPORT_FILE,
                 "Импорт файла выполнен с предупреждением",
@@ -316,14 +322,110 @@ class ImportExportView(QWidget):
                 level="warning",
                 context={"path": file_path, "tournament_id": tournament_id},
             )
-            QMessageBox.warning(self, "Импорт", "Нормативы не загружены.")
         self._audit_log_service.log_event(
             IMPORT_FILE,
-            "Импорт файла завершён",
-            f"Турнир ID: {tournament_id}",
+            "Импорт файла: применено в draft",
+            (
+                f"Турнир ID: {tournament_id}; импортировано: {apply_report.imported_rows}; "
+                f"пропущено: {apply_report.skipped_rows}; warnings: {len(apply_report.warnings)}"
+            ),
             context={"path": file_path, "tournament_id": tournament_id},
         )
-        QMessageBox.information(self, "Импорт", "Импорт завершён.")
+
+        self._show_apply_review(apply_report)
+
+    def _show_apply_review(self, apply_report: ImportApplyReport) -> None:
+        lines = [
+            "Данные применены в черновик турнира.",
+            f"Турнир: {apply_report.tournament_name} (ID: {apply_report.tournament_id})",
+            f"Статус: {apply_report.tournament_status}; has_draft_changes={int(apply_report.has_draft_changes)}",
+            f"Импортировано строк: {apply_report.imported_rows} из {apply_report.total_rows}",
+        ]
+        if apply_report.skipped_rows:
+            lines.append(f"Пропущено строк: {apply_report.skipped_rows}")
+        if not apply_report.norms_loaded:
+            lines.append("Внимание: нормативы не загружены.")
+        if apply_report.warnings:
+            lines.append("")
+            lines.append("Предупреждения:")
+            lines.extend(f"• {warning}" for warning in apply_report.warnings[:10])
+            if len(apply_report.warnings) > 10:
+                lines.append(f"• ... ещё {len(apply_report.warnings) - 10}")
+
+        lines.append("")
+        lines.append("Опубликовать турнир сейчас?")
+        answer = QMessageBox.question(
+            self,
+            "Импорт завершён: review/apply",
+            "\n".join(lines),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer == QMessageBox.StandardButton.Yes:
+            self._publish_imported_tournament(apply_report)
+            return
+
+        self._audit_log_service.log_event(
+            IMPORT_FILE,
+            "Импорт файла завершён без publish",
+            f"Турнир ID: {apply_report.tournament_id} оставлен в статусе draft",
+            level="warning",
+            context={"tournament_id": apply_report.tournament_id, "status": apply_report.tournament_status},
+        )
+        QMessageBox.information(self, "Импорт", "Импорт завершён. Турнир оставлен в статусе draft.")
+
+    def _publish_imported_tournament(self, apply_report: ImportApplyReport) -> None:
+        transitions = (
+            TournamentStatus.REVIEW.value,
+            TournamentStatus.CONFIRMED.value,
+            TournamentStatus.PUBLISHED.value,
+        )
+        for target_status in transitions:
+            transition_result = transition_tournament_status(
+                connection=self._connection,
+                tournament_id=apply_report.tournament_id,
+                to_status=target_status,
+                context={"actor": "import_wizard"},
+            )
+            if not transition_result.get("ok"):
+                error_payload = transition_result.get("error") or {}
+                message = str(error_payload.get("message") or "Не удалось изменить статус турнира.")
+                details = error_payload.get("details")
+                self._audit_log_service.log_event(
+                    ERROR,
+                    "Ошибка publish после импорта",
+                    f"{message}; details={details}",
+                    level="error",
+                    context={"tournament_id": apply_report.tournament_id, "target_status": target_status},
+                )
+                QMessageBox.warning(
+                    self,
+                    "Publish",
+                    f"Не удалось перейти в статус '{target_status}'.\n{message}",
+                )
+                return
+
+        if self._tournaments_view is not None:
+            refresh = getattr(self._tournaments_view, "refresh_latest_tournament", None)
+            if callable(refresh):
+                refresh(apply_report.tournament_id)
+
+        tournament = self._tournament_repo.get(apply_report.tournament_id)
+        published_status = str(tournament.get("status")) if tournament is not None else TournamentStatus.PUBLISHED.value
+        self._audit_log_service.log_event(
+            IMPORT_FILE,
+            "Импорт файла завершён + publish подтверждён",
+            (
+                f"Турнир ID: {apply_report.tournament_id}; "
+                f"status={published_status}; imported={apply_report.imported_rows}; warnings={len(apply_report.warnings)}"
+            ),
+            context={"tournament_id": apply_report.tournament_id, "status": published_status},
+        )
+        QMessageBox.information(
+            self,
+            "Импорт",
+            f"Импорт завершён и турнир опубликован.\nТурнир ID: {apply_report.tournament_id}",
+        )
 
     def _on_import_folder_clicked(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, "Выберите папку с XLSX")
