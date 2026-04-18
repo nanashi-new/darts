@@ -33,6 +33,18 @@ CREATE TABLE IF NOT EXISTS tournaments (
     category_code TEXT,
     league_code TEXT,
     source_files TEXT,
+    status TEXT NOT NULL DEFAULT 'draft',
+    type TEXT NOT NULL DEFAULT 'standard',
+    season TEXT,
+    series TEXT,
+    location TEXT,
+    organizer TEXT,
+    description TEXT,
+    published_by TEXT,
+    confirmed_by TEXT,
+    has_draft_changes INTEGER NOT NULL DEFAULT 1,
+    warning_state TEXT NOT NULL DEFAULT 'none',
+    error_state TEXT NOT NULL DEFAULT 'none',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -94,9 +106,52 @@ SCHEMA_SQL = [
     *AUDIT_LOG_INDEXES_SQL,
 ]
 
+TOURNAMENT_LIFECYCLE_COLUMNS: list[tuple[str, str]] = [
+    ("status", "TEXT NOT NULL DEFAULT 'draft'"),
+    ("type", "TEXT NOT NULL DEFAULT 'standard'"),
+    ("season", "TEXT"),
+    ("series", "TEXT"),
+    ("location", "TEXT"),
+    ("organizer", "TEXT"),
+    ("description", "TEXT"),
+    ("published_by", "TEXT"),
+    ("confirmed_by", "TEXT"),
+    ("has_draft_changes", "INTEGER NOT NULL DEFAULT 1"),
+    ("warning_state", "TEXT NOT NULL DEFAULT 'none'"),
+    ("error_state", "TEXT NOT NULL DEFAULT 'none'"),
+]
+
+
+def _column_exists(
+    connection: sqlite3.Connection, *, table: str, column: str
+) -> bool:
+    rows = connection.execute(f"PRAGMA table_info({table})").fetchall()
+    return any(row[1] == column for row in rows)
+
+
+def _migrate_tournaments_schema(connection: sqlite3.Connection) -> None:
+    for column_name, column_sql in TOURNAMENT_LIFECYCLE_COLUMNS:
+        if _column_exists(connection, table="tournaments", column=column_name):
+            continue
+        connection.execute(
+            f"ALTER TABLE tournaments ADD COLUMN {column_name} {column_sql}"
+        )
+
+    connection.execute(
+        """
+        UPDATE tournaments
+        SET status = COALESCE(NULLIF(status, ''), 'draft'),
+            type = COALESCE(NULLIF(type, ''), 'standard'),
+            has_draft_changes = COALESCE(has_draft_changes, 1),
+            warning_state = COALESCE(NULLIF(warning_state, ''), 'none'),
+            error_state = COALESCE(NULLIF(error_state, ''), 'none')
+        """
+    )
+
 
 def initialize_schema(connection: sqlite3.Connection) -> None:
     """Initialize database schema if needed."""
     with connection:
         for statement in SCHEMA_SQL:
             connection.execute(statement)
+        _migrate_tournaments_schema(connection)
