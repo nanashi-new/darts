@@ -13,9 +13,13 @@ class RecalculateRatingService:
     def run(
         self,
         *,
-        connection,
+        connection=None,
+        db_connection=None,
         tournament_id: int | None = None,
     ) -> RecalculationReport:
+        if connection is None and db_connection is not None:
+            connection = db_connection
+
         if connection is None:
             raise ValueError("connection is required")
 
@@ -26,3 +30,8 @@ class RecalculateRatingService:
             raise ValueError("tournament_id must be a positive integer")
 
         return recalculate_tournament_results(connection=connection, tournament_id=tournament_id)
+
+    def recalculate(self, *, connection=None, db_connection=None, tournament_id: int | None = None) -> RecalculationReport:
+        """Backwards-compatible alias for older integrations."""
+
+        return self.run(connection=connection, db_connection=db_connection, tournament_id=tournament_id)
