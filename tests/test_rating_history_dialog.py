@@ -77,7 +77,7 @@ def _create_snapshot_fixture(connection) -> None:
             "name": "History Cup",
             "date": "2026-04-09",
             "category_code": "U14",
-            "league_code": None,
+            "league_code": "PREMIER",
             "source_files": "[]",
             "status": "published",
             "has_draft_changes": 0,
@@ -184,3 +184,38 @@ def test_rating_view_opens_history_dialog_for_selected_category(monkeypatch, tmp
 
     view._open_rating_history()
     assert opened == [("category", "U14")]
+
+
+def test_rating_view_opens_history_dialog_for_selected_league(monkeypatch, tmp_path) -> None:
+    try:
+        _ensure_app()
+        from app.ui.rating_view import RatingView
+    except Exception as exc:  # noqa: BLE001
+        if _is_expected_headless_qt_failure(exc):
+            pytest.skip(f"Qt headless UI smoke unavailable: {exc}")
+        raise
+
+    connection = get_connection(tmp_path / "rating-view-league-history.db")
+    _create_snapshot_fixture(connection)
+
+    opened: list[tuple[str, str]] = []
+
+    class FakeRatingHistoryDialog:
+        def __init__(self, *, connection, scope_type, scope_key, parent=None) -> None:
+            opened.append((scope_type, scope_key))
+
+        def exec(self) -> int:
+            return 0
+
+    monkeypatch.setattr("app.ui.rating_view.get_connection", lambda: connection)
+    monkeypatch.setattr("app.ui.rating_view.RatingHistoryDialog", FakeRatingHistoryDialog)
+
+    view = RatingView()
+    view._scope_type_combo.setCurrentIndex(1)
+    view._refresh_scope_key_options()
+    view._category_combo.setCurrentIndex(1)
+    view._refresh_history_button_state()
+
+    assert view._history_button.isEnabled() is True
+    view._open_rating_history()
+    assert opened == [("league", "PREMIER")]

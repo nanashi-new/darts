@@ -162,6 +162,62 @@ def test_publish_creates_category_snapshot_and_audit_event(tmp_path: Path) -> No
     assert payload["scope_key"] == "U14"
 
 
+def test_publish_creates_league_snapshot_for_linked_league_scope(tmp_path: Path) -> None:
+    connection = get_connection(tmp_path / "rating-snapshot-league.db")
+    tournament_id = _create_tournament_with_results(
+        connection=connection,
+        category_code="U18",
+        status="draft",
+        tournament_date="2026-04-08",
+        rows=[("League", "Leader", 110), ("League", "Runner", 95)],
+    )
+    connection.execute(
+        "UPDATE tournaments SET league_code = ? WHERE id = ?",
+        ("PREMIER", tournament_id),
+    )
+    connection.commit()
+    operation_group_id = "op-league-snapshot"
+
+    for status in ("review", "confirmed", "published"):
+        assert transition_tournament_status(
+            connection=connection,
+            tournament_id=tournament_id,
+            to_status=status,
+            context={"actor": "tests", "operation_group_id": operation_group_id},
+        )["ok"] is True
+
+    from app.services.rating_snapshot import list_rating_snapshot_rows, list_rating_snapshot_sessions
+
+    league_sessions = list_rating_snapshot_sessions(
+        connection,
+        scope_type="league",
+        scope_key="PREMIER",
+    )
+    assert len(league_sessions) == 1
+    league_rows = list_rating_snapshot_rows(
+        connection,
+        snapshot_created_at=league_sessions[0].created_at,
+        scope_type="league",
+        scope_key="PREMIER",
+    )
+    assert [(row.position, row.fio, row.points) for row in league_rows] == [
+        (1, "League Leader", 110),
+        (2, "League Runner", 95),
+    ]
+
+    audit_rows = connection.execute(
+        """
+        SELECT context_json
+        FROM audit_log
+        WHERE event_type = ?
+        ORDER BY id ASC
+        """,
+        (RATING_SNAPSHOT_CREATED,),
+    ).fetchall()
+    scopes = [json.loads(str(row["context_json"]))["scope_type"] for row in audit_rows]
+    assert scopes == ["category", "league"]
+
+
 def test_import_publish_reuses_operation_group_id_for_snapshot_event(tmp_path: Path) -> None:
     connection = get_connection(tmp_path / "rating-snapshot-import-publish.db")
     apply_report = import_tournament_rows(

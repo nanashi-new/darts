@@ -398,6 +398,17 @@ class TournamentRepository:
         ).fetchall()
         return [str(row[0]) for row in rows]
 
+    def list_league_codes(self) -> List[str]:
+        rows = self._connection.execute(
+            """
+            SELECT DISTINCT league_code
+            FROM tournaments
+            WHERE league_code IS NOT NULL AND league_code != ''
+            ORDER BY league_code
+            """
+        ).fetchall()
+        return [str(row[0]) for row in rows]
+
 
 class ResultRepository:
     """Repository for tournament results data access."""
@@ -562,6 +573,7 @@ class ResultRepository:
         self,
         *,
         category_code: str | None = None,
+        league_code: str | None = None,
         search_term: str | None = None,
         statuses: Iterable[str] | None = None,
     ) -> List[RowDict]:
@@ -577,6 +589,9 @@ class ResultRepository:
         if category_code:
             clauses.append("tournaments.category_code = ?")
             params.append(category_code)
+        if league_code:
+            clauses.append("tournaments.league_code = ?")
+            params.append(league_code)
 
         if search_term:
             like_term = f"%{search_term}%"

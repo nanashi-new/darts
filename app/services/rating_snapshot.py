@@ -9,6 +9,7 @@ from app.domain.rating import RatingBasisItem, build_rating_basis, build_rating_
 from app.services.audit_log import AuditLogService, RATING_SNAPSHOT_CREATED
 
 CATEGORY_SCOPE = "category"
+LEAGUE_SCOPE = "league"
 SNAPSHOT_REASON_PUBLISH = "publish"
 
 
@@ -46,6 +47,7 @@ class SnapshotCreateResult:
     reason: str | None
     session: RatingSnapshotSession | None
     entries_created: int = 0
+    sessions: tuple[RatingSnapshotSession, ...] = ()
 
 
 def create_rating_snapshot_for_tournament_publish(
@@ -63,88 +65,93 @@ def create_rating_snapshot_for_tournament_publish(
     if tournament is None:
         return SnapshotCreateResult(created=False, reason="Tournament not found.", session=None)
 
-    category_code = str(tournament.get("category_code") or "").strip()
-    if not category_code:
+    scope_requests = _build_scope_requests(tournament)
+    if not scope_requests:
         return SnapshotCreateResult(
             created=False,
-            reason="Tournament category is required for category snapshot creation.",
+            reason="Tournament category or league is required for snapshot creation.",
             session=None,
         )
-
-    published_results = result_repo.list_results_for_rating(category_code=category_code)
-    if not published_results:
-        return SnapshotCreateResult(
-            created=False,
-            reason="No published results available for this category scope.",
-            session=None,
-        )
-
-    snapshot_rows = build_rating_snapshot(published_results, n_value)
-    if not snapshot_rows:
-        return SnapshotCreateResult(
-            created=False,
-            reason="No rating rows available for snapshot creation.",
-            session=None,
-        )
-
-    basis_by_player = build_rating_basis(published_results, n_value)
     created_at = datetime.now(timezone.utc).isoformat(timespec="microseconds")
     reason = SNAPSHOT_REASON_PUBLISH
-    payload_rows = [
-        {
-            "scope_type": CATEGORY_SCOPE,
-            "scope_key": category_code,
-            "player_id": row.player_id,
-            "position": row.place,
-            "points": row.points,
-            "tournaments_count": row.tournaments_count,
-            "rolling_basis_json": json.dumps(
-                [asdict(item) for item in basis_by_player.get(row.player_id, [])],
-                ensure_ascii=False,
+    created_sessions: list[RatingSnapshotSession] = []
+    created_count = 0
+    for scope_type, scope_key, filters in scope_requests:
+        published_results = result_repo.list_results_for_rating(**filters)
+        if not published_results:
+            continue
+
+        snapshot_rows = build_rating_snapshot(published_results, n_value)
+        if not snapshot_rows:
+            continue
+
+        basis_by_player = build_rating_basis(published_results, n_value)
+        payload_rows = [
+            {
+                "scope_type": scope_type,
+                "scope_key": scope_key,
+                "player_id": row.player_id,
+                "position": row.place,
+                "points": row.points,
+                "tournaments_count": row.tournaments_count,
+                "rolling_basis_json": json.dumps(
+                    [asdict(item) for item in basis_by_player.get(row.player_id, [])],
+                    ensure_ascii=False,
+                ),
+                "source_tournament_id": tournament_id,
+                "reason": reason,
+                "operation_group_id": operation_group_id,
+                "created_at": created_at,
+            }
+            for row in snapshot_rows
+        ]
+        scope_count = snapshot_repo.create_many(payload_rows)
+        created_count += scope_count
+        session = RatingSnapshotSession(
+            scope_type=scope_type,
+            scope_key=scope_key,
+            source_tournament_id=tournament_id,
+            reason=reason,
+            operation_group_id=operation_group_id,
+            created_at=created_at,
+            entries_count=scope_count,
+        )
+        created_sessions.append(session)
+        audit_log_service.log_event(
+            RATING_SNAPSHOT_CREATED,
+            "Rating snapshot created",
+            (
+                f"Tournament ID: {tournament_id}; "
+                f"scope={scope_type}:{scope_key}; "
+                f"entries={scope_count}"
             ),
-            "source_tournament_id": tournament_id,
-            "reason": reason,
-            "operation_group_id": operation_group_id,
-            "created_at": created_at,
-        }
-        for row in snapshot_rows
-    ]
-    created_count = snapshot_repo.create_many(payload_rows)
-    session = RatingSnapshotSession(
-        scope_type=CATEGORY_SCOPE,
-        scope_key=category_code,
-        source_tournament_id=tournament_id,
-        reason=reason,
-        operation_group_id=operation_group_id,
-        created_at=created_at,
-        entries_count=created_count,
-    )
-    audit_log_service.log_event(
-        RATING_SNAPSHOT_CREATED,
-        "Rating snapshot created",
-        (
-            f"Tournament ID: {tournament_id}; "
-            f"scope={CATEGORY_SCOPE}:{category_code}; "
-            f"entries={created_count}"
-        ),
-        context={
-            "scope_type": CATEGORY_SCOPE,
-            "scope_key": category_code,
-            "source_tournament_id": tournament_id,
-            "reason": reason,
-            "created_at": created_at,
-            "entries_count": created_count,
-        },
-        entity_type="tournament",
-        entity_id=str(tournament_id),
-        source="rating_snapshot",
-        operation_group_id=operation_group_id,
-    )
+            context={
+                "scope_type": scope_type,
+                "scope_key": scope_key,
+                "source_tournament_id": tournament_id,
+                "reason": reason,
+                "created_at": created_at,
+                "entries_count": scope_count,
+            },
+            entity_type="tournament",
+            entity_id=str(tournament_id),
+            source="rating_snapshot",
+            operation_group_id=operation_group_id,
+        )
+
+    if not created_sessions:
+        return SnapshotCreateResult(
+            created=False,
+            reason="No published results available for supported scopes.",
+            session=None,
+        )
+
     return SnapshotCreateResult(
         created=True,
         reason=None,
-        session=session,
+        session=created_sessions[0],
         entries_created=created_count,
+        sessions=tuple(created_sessions),
     )
 
 
@@ -225,3 +232,29 @@ def _parse_basis_json(raw_value: object) -> list[RatingBasisItem]:
             )
         )
     return basis_items
+
+
+def _build_scope_requests(
+    tournament: dict[str, object],
+) -> list[tuple[str, str, dict[str, str]]]:
+    requests: list[tuple[str, str, dict[str, str]]] = []
+    category_code = str(tournament.get("category_code") or "").strip()
+    if category_code:
+        requests.append(
+            (
+                CATEGORY_SCOPE,
+                category_code,
+                {"category_code": category_code},
+            )
+        )
+
+    league_code = str(tournament.get("league_code") or "").strip()
+    if league_code:
+        requests.append(
+            (
+                LEAGUE_SCOPE,
+                league_code,
+                {"league_code": league_code},
+            )
+        )
+    return requests
