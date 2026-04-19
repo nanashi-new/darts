@@ -78,6 +78,30 @@ RESULT_INDEXES_SQL = [
     "CREATE INDEX IF NOT EXISTS idx_results_player ON results (player_id);",
 ]
 
+RATING_SNAPSHOTS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS rating_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    scope_type TEXT NOT NULL,
+    scope_key TEXT NOT NULL,
+    player_id INTEGER NOT NULL,
+    position INTEGER NOT NULL,
+    points INTEGER NOT NULL,
+    tournaments_count INTEGER NOT NULL,
+    rolling_basis_json TEXT NOT NULL DEFAULT '[]',
+    source_tournament_id INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    operation_group_id TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+    FOREIGN KEY (source_tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
+);
+"""
+
+RATING_SNAPSHOTS_INDEXES_SQL = [
+    "CREATE INDEX IF NOT EXISTS idx_rating_snapshots_scope_created ON rating_snapshots (scope_type, scope_key, created_at DESC);",
+    "CREATE INDEX IF NOT EXISTS idx_rating_snapshots_source_tournament ON rating_snapshots (source_tournament_id);",
+]
+
 AUDIT_LOG_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -107,9 +131,11 @@ SCHEMA_SQL = [
     PLAYER_TABLE_SQL,
     TOURNAMENT_TABLE_SQL,
     RESULT_TABLE_SQL,
+    RATING_SNAPSHOTS_TABLE_SQL,
     AUDIT_LOG_TABLE_SQL,
     *PLAYER_INDEXES_SQL,
     *RESULT_INDEXES_SQL,
+    *RATING_SNAPSHOTS_INDEXES_SQL,
     *AUDIT_LOG_INDEXES_SQL,
 ]
 

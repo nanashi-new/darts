@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
@@ -23,16 +21,10 @@ from PySide6.QtWidgets import (
 
 from app.db.database import get_connection
 from app.db.repositories import ResultRepository, TournamentRepository
+from app.domain.rating import RatingSnapshotRow, build_rating_snapshot
 from app.services.audit_log import AuditLogService, ERROR, EXPORT_FILE
 from app.services.export_service import ExportService
-
-
-@dataclass
-class RatingRow:
-    place: int
-    fio: str
-    points: int
-    tournaments_count: int
+from app.ui.rating_history_dialog import RatingHistoryDialog
 
 
 class RatingView(QWidget):
@@ -82,6 +74,7 @@ class RatingView(QWidget):
         grid.addWidget(self._search_input, 0, 5)
 
         self._category_combo.currentIndexChanged.connect(self._refresh_table)
+        self._category_combo.currentIndexChanged.connect(self._refresh_history_button_state)
         self._n_spin.valueChanged.connect(self._refresh_table)
         self._search_input.textChanged.connect(self._refresh_table)
 
@@ -98,17 +91,21 @@ class RatingView(QWidget):
 
         export_btn = QPushButton("Экспорт", self)
         print_btn = QPushButton("Печать", self)
+        self._history_button = QPushButton("История рейтинга", self)
 
         export_btn.clicked.connect(self._export_selected_format)
         print_btn.clicked.connect(self._print_table)
+        self._history_button.clicked.connect(self._open_rating_history)
 
         actions_layout.addWidget(QLabel("Формат:"))
         actions_layout.addWidget(self._format_combo)
         actions_layout.addWidget(self._image_mode_combo)
         actions_layout.addWidget(export_btn)
         actions_layout.addWidget(print_btn)
+        actions_layout.addWidget(self._history_button)
 
         actions_layout.addStretch(1)
+        self._refresh_history_button_state()
         return actions_layout
 
     def _refresh_table(self) -> None:
@@ -121,46 +118,10 @@ class RatingView(QWidget):
             search_term=search_term or None,
         )
 
-        rating_rows = self._calculate_rating_rows(raw_results, n_value)
+        rating_rows = build_rating_snapshot(raw_results, n_value)
         self._set_table(rating_rows)
 
-    @staticmethod
-    def _calculate_rating_rows(
-        results: list[dict[str, object]], n_value: int
-    ) -> list[RatingRow]:
-        players: dict[int, dict[str, object]] = {}
-        for entry in results:
-            player_id = int(entry["player_id"])
-            players.setdefault(player_id, {"entries": [], "fio": ""})
-            players[player_id]["entries"].append(entry)
-
-            last_name = str(entry.get("last_name") or "")
-            first_name = str(entry.get("first_name") or "")
-            middle_name = str(entry.get("middle_name") or "")
-            fio = " ".join(part for part in [last_name, first_name, middle_name] if part)
-            players[player_id]["fio"] = fio
-
-        rating_rows: list[RatingRow] = []
-        for player in players.values():
-            entries = player["entries"]
-            points_list = [int(entry.get("points_total") or 0) for entry in entries]
-            points_sum = sum(points_list[:n_value])
-            tournaments_count = min(len(points_list), n_value)
-            rating_rows.append(
-                RatingRow(
-                    place=0,
-                    fio=str(player["fio"]),
-                    points=points_sum,
-                    tournaments_count=tournaments_count,
-                )
-            )
-
-        rating_rows.sort(key=lambda row: (-row.points, row.fio))
-        for index, row in enumerate(rating_rows, start=1):
-            row.place = index
-        return rating_rows
-
-    def _set_table(self, rows: list[RatingRow]) -> None:
+    def _set_table(self, rows: list[RatingSnapshotRow]) -> None:
         header_order = [
             ("place", "Место"),
             ("fio", "ФИО"),
@@ -273,3 +234,25 @@ class RatingView(QWidget):
             f"Категория: {category}",
             f"N: {n_value}",
         ]
+
+    def _refresh_history_button_state(self) -> None:
+        category_code = self._category_combo.currentData()
+        is_enabled = bool(category_code)
+        self._history_button.setEnabled(is_enabled)
+        if is_enabled:
+            self._history_button.setToolTip("")
+            return
+        self._history_button.setToolTip("Выберите категорию, чтобы открыть историю рейтинга.")
+
+    def _open_rating_history(self) -> None:
+        category_code = self._category_combo.currentData()
+        if not category_code:
+            QMessageBox.information(self, "История рейтинга", "Сначала выберите категорию.")
+            return
+        dialog = RatingHistoryDialog(
+            connection=self._connection,
+            scope_type="category",
+            scope_key=str(category_code),
+            parent=self,
+        )
+        dialog.exec()

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Callable
-from typing import Any, List
+from typing import Any, Iterable, List
 
 from app.domain.tournament_lifecycle import (
     TournamentStatus,
@@ -563,9 +563,17 @@ class ResultRepository:
         *,
         category_code: str | None = None,
         search_term: str | None = None,
+        statuses: Iterable[str] | None = None,
     ) -> List[RowDict]:
         clauses: list[str] = []
         params: list[Any] = []
+        status_values = list(statuses) if statuses is not None else [TOURNAMENT_STATUS_PUBLISHED]
+        if not status_values:
+            return []
+
+        status_placeholders = ", ".join("?" for _ in status_values)
+        clauses.append(f"tournaments.status IN ({status_placeholders})")
+        params.extend(status_values)
         if category_code:
             clauses.append("tournaments.category_code = ?")
             params.append(category_code)
@@ -584,8 +592,10 @@ class ResultRepository:
         rows = self._connection.execute(
             f"""
             SELECT results.player_id,
+                   results.tournament_id,
                    results.points_total,
                    tournaments.date AS tournament_date,
+                   tournaments.status AS tournament_status,
                    players.last_name,
                    players.first_name,
                    players.middle_name
@@ -596,5 +606,103 @@ class ResultRepository:
             ORDER BY tournaments.date DESC, tournaments.id DESC
             """,
             params,
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+class RatingSnapshotRepository:
+    """Repository for persisted rating snapshot rows."""
+
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self._connection = connection
+
+    def create_many(self, entries: list[dict[str, Any]]) -> int:
+        if not entries:
+            return 0
+        with self._connection:
+            self._connection.executemany(
+                """
+                INSERT INTO rating_snapshots (
+                    scope_type,
+                    scope_key,
+                    player_id,
+                    position,
+                    points,
+                    tournaments_count,
+                    rolling_basis_json,
+                    source_tournament_id,
+                    reason,
+                    operation_group_id,
+                    created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        entry.get("scope_type"),
+                        entry.get("scope_key"),
+                        entry.get("player_id"),
+                        entry.get("position"),
+                        entry.get("points"),
+                        entry.get("tournaments_count"),
+                        entry.get("rolling_basis_json"),
+                        entry.get("source_tournament_id"),
+                        entry.get("reason"),
+                        entry.get("operation_group_id"),
+                        entry.get("created_at"),
+                    )
+                    for entry in entries
+                ],
+            )
+        return len(entries)
+
+    def list_sessions(self, *, scope_type: str, scope_key: str) -> List[RowDict]:
+        rows = self._connection.execute(
+            """
+            SELECT
+                created_at,
+                scope_type,
+                scope_key,
+                source_tournament_id,
+                reason,
+                operation_group_id,
+                COUNT(*) AS entries_count
+            FROM rating_snapshots
+            WHERE scope_type = ? AND scope_key = ?
+            GROUP BY
+                created_at,
+                scope_type,
+                scope_key,
+                source_tournament_id,
+                reason,
+                operation_group_id
+            ORDER BY created_at DESC
+            """,
+            (scope_type, scope_key),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_rows(
+        self,
+        *,
+        snapshot_created_at: str,
+        scope_type: str,
+        scope_key: str,
+    ) -> List[RowDict]:
+        rows = self._connection.execute(
+            """
+            SELECT
+                rating_snapshots.*,
+                players.last_name,
+                players.first_name,
+                players.middle_name
+            FROM rating_snapshots
+            JOIN players ON players.id = rating_snapshots.player_id
+            WHERE rating_snapshots.created_at = ?
+              AND rating_snapshots.scope_type = ?
+              AND rating_snapshots.scope_key = ?
+            ORDER BY rating_snapshots.position ASC, rating_snapshots.id ASC
+            """,
+            (snapshot_created_at, scope_type, scope_key),
         ).fetchall()
         return [dict(row) for row in rows]

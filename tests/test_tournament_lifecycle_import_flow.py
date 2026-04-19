@@ -33,7 +33,9 @@ def _fetch_audit_status_events(connection, tournament_id: int) -> list[dict[str,
         """
         SELECT event_type, reason, old_value_json, new_value_json, source
         FROM audit_log
-        WHERE entity_type = 'tournament' AND entity_id = ?
+        WHERE entity_type = 'tournament'
+          AND entity_id = ?
+          AND event_type IN ('tournament_updated', 'tournament_published', 'tournament_corrected')
         ORDER BY id ASC
         """,
         (str(tournament_id),),

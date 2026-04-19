@@ -6,6 +6,7 @@ from datetime import date, datetime
 import json
 from pathlib import Path
 from typing import Callable, Iterable, TypedDict, cast
+from uuid import uuid4
 
 from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
@@ -81,6 +82,13 @@ class ImportApplyReport:
     warnings: list[str]
     norms_loaded: bool
     source_files: list[str]
+    operation_group_id: str = ""
+    files_processed: int = 1
+    tables_processed: int = 1
+    rows_read: int = 0
+    players_created: int = 0
+    players_reused: int = 0
+    players_matched_manually: int = 0
 
 
 SUPPORTED_MAPPING_KEYS = (
@@ -849,6 +857,7 @@ def import_tournament_rows(
     category_code: str | None,
     source_files: list[str] | None = None,
     player_match_resolver: Callable[[str, str | None, list[dict[str, object]]], PlayerMatchResolution | None] | None = None,
+    operation_group_id: str | None = None,
 ) -> ImportApplyReport:
     tournament_repo = TournamentRepository(connection)
     player_repo = PlayerRepository(connection)
@@ -857,6 +866,7 @@ def import_tournament_rows(
     norms, norms_loaded = norms_load.norms, norms_load.loaded
 
     source_files_payload = list(source_files or [])
+    operation_group_id_value = str(operation_group_id or "").strip() or uuid4().hex
     tournament_id = tournament_repo.create(
         {
             "name": tournament_name,
@@ -873,6 +883,9 @@ def import_tournament_rows(
     warnings = validate_rows(parsed_rows)
     imported_rows = 0
     skipped_rows = 0
+    players_created = 0
+    players_reused = 0
+    players_matched_manually = 0
 
     for row_data in parsed_rows:
         row = cast(ImportRow, row_data)
@@ -890,6 +903,7 @@ def import_tournament_rows(
         )
 
         player: dict[str, object] | None = None
+        selected_manually = False
         if len(candidates) == 1:
             player = candidates[0]
         elif len(candidates) > 1:
@@ -932,6 +946,7 @@ def import_tournament_rows(
                     )
                     if player is None:
                         raise ValueError("Выбранный игрок отсутствует в списке кандидатов.")
+                    selected_manually = True
                     if bool(resolution.get("remember")):
                         remembered_rules[match_key] = selected_player_id
                         _save_player_match_rules(remembered_rules)
@@ -951,11 +966,15 @@ def import_tournament_rows(
                     "notes": None,
                 }
             )
+            players_created += 1
         else:
             parsed_player_id = parse_int(player.get("id"))
             if parsed_player_id is None:
                 raise ValueError("У найденного игрока отсутствует корректный id.")
             player_id = parsed_player_id
+            players_reused += 1
+            if selected_manually:
+                players_matched_manually += 1
 
         place = parse_int(row.get("place"))
         score_set = parse_int(row.get("score_set"))
@@ -1005,6 +1024,13 @@ def import_tournament_rows(
         warnings=warnings,
         norms_loaded=norms_loaded,
         source_files=source_files_payload,
+        operation_group_id=operation_group_id_value,
+        files_processed=len(source_files_payload) if source_files_payload else 1,
+        tables_processed=1,
+        rows_read=len(parsed_rows),
+        players_created=players_created,
+        players_reused=players_reused,
+        players_matched_manually=players_matched_manually,
     )
 
 
@@ -1016,6 +1042,7 @@ def import_tournament_results(
     tournament_date: str | None,
     category_code: str | None,
     player_match_resolver: Callable[[str, str | None, list[dict[str, object]]], PlayerMatchResolution | None] | None = None,
+    operation_group_id: str | None = None,
 ) -> ImportApplyReport:
     _, rows = parse_first_table_from_xlsx(file_path)
     if not rows:
@@ -1029,4 +1056,5 @@ def import_tournament_results(
         category_code=category_code,
         source_files=[file_path],
         player_match_resolver=player_match_resolver,
+        operation_group_id=operation_group_id,
     )

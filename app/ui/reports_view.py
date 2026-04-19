@@ -15,6 +15,7 @@ from app.services.audit_log import AuditLogService, EXPORT_BATCH, RECALC_ALL
 from app.services.batch_export import BatchExportService
 from app.services.recalculate_tournament import recalculate_all_tournaments
 from app.ui.audit_log_dialog import AuditLogDialog
+from app.ui.import_reports_dialog import ImportReportsDialog
 
 
 class ReportsView(QWidget):
@@ -42,6 +43,10 @@ class ReportsView(QWidget):
         journal_btn = QPushButton("Журнал", self)
         journal_btn.clicked.connect(self._open_journal)
         layout.addWidget(journal_btn)
+
+        import_history_btn = QPushButton("История импортов", self)
+        import_history_btn.clicked.connect(self._open_import_history)
+        layout.addWidget(import_history_btn)
         layout.addStretch(1)
 
     def _export_batch(self) -> None:
@@ -102,4 +107,8 @@ class ReportsView(QWidget):
 
     def _open_journal(self) -> None:
         dialog = AuditLogDialog(self._audit_log_service, self)
+        dialog.exec()
+
+    def _open_import_history(self) -> None:
+        dialog = ImportReportsDialog(connection=self._connection, parent=self)
         dialog.exec()
