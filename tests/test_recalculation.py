@@ -133,6 +133,59 @@ class RecalculationTests(unittest.TestCase):
         self.assertEqual(updated["points_total"], updated["points_place"] + updated["points_classification"])
         self.assertEqual(report.results_updated, 1)
 
+    def test_recalculate_adult_tournament_keeps_manual_totals(self) -> None:
+        player_id = self.players.create(
+            {
+                "last_name": "Adultov",
+                "first_name": "Alex",
+                "middle_name": None,
+                "birth_date": "1989-01-01",
+                "gender": None,
+                "coach": None,
+                "club": None,
+                "notes": None,
+            }
+        )
+        tournament_id = self.tournaments.create(
+            {
+                "name": "Adult Cup",
+                "date": "2026-04-20",
+                "category_code": None,
+                "league_code": None,
+                "is_adult_mode": 1,
+                "source_files": "[]",
+            }
+        )
+        result_id = self.results.create(
+            {
+                "tournament_id": tournament_id,
+                "player_id": player_id,
+                "place": 1,
+                "score_set": 999,
+                "score_sector20": 999,
+                "score_big_round": 999,
+                "rank_set": "X",
+                "rank_sector20": "Y",
+                "rank_big_round": "Z",
+                "points_classification": 50,
+                "points_place": 70,
+                "points_total": 120,
+                "calc_version": "manual",
+            }
+        )
+
+        report = recalculate_tournament_results(
+            connection=self.connection,
+            tournament_id=tournament_id,
+        )
+
+        updated = self.results.get(result_id)
+        self.assertEqual(updated["points_classification"], 0)
+        self.assertEqual(updated["points_place"], 120)
+        self.assertEqual(updated["points_total"], 120)
+        self.assertEqual(updated["calc_version"], "manual_adult_v1")
+        self.assertEqual(report.results_updated, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

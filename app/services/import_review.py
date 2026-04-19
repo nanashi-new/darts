@@ -48,8 +48,9 @@ def build_import_rating_preview(
     if tournament is None:
         return _preview_unavailable("Tournament was not found.")
 
+    is_adult_mode = bool(int(tournament.get("is_adult_mode") or 0))
     category_code = str(tournament.get("category_code") or "").strip()
-    if not category_code:
+    if not is_adult_mode and not category_code:
         return _preview_unavailable("Rating impact preview is unavailable because category code is missing.")
 
     current_rows = result_repo.list_with_players(tournament_id)
@@ -59,7 +60,8 @@ def build_import_rating_preview(
     baseline_rows = [
         row
         for row in result_repo.list_results_for_rating(
-            category_code=category_code,
+            category_code=category_code if not is_adult_mode else None,
+            is_adult_mode=True if is_adult_mode else None,
             statuses=[TOURNAMENT_STATUS_PUBLISHED],
         )
         if int(row.get("tournament_id") or 0) != tournament_id

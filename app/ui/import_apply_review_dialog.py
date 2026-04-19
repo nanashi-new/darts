@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.services.import_review import ImportRatingImpactPreview
+from app.services.league_transfer import LeagueTransferPreview
 from app.services.import_xlsx import ImportApplyReport
 
 
@@ -30,6 +31,7 @@ class ImportApplyReviewDialog(QDialog):
         *,
         apply_report: ImportApplyReport,
         rating_preview: ImportRatingImpactPreview,
+        league_preview: LeagueTransferPreview | None = None,
         parent=None,
     ) -> None:
         super().__init__(parent)
@@ -40,6 +42,7 @@ class ImportApplyReviewDialog(QDialog):
         layout.addWidget(self._build_summary_group(apply_report))
         layout.addWidget(self._build_warnings_group(apply_report))
         layout.addWidget(self._build_rating_group(rating_preview))
+        layout.addWidget(self._build_league_group(league_preview))
 
         buttons = QDialogButtonBox(self)
         self.leave_button = QPushButton("Оставить draft", self)
@@ -156,4 +159,47 @@ class ImportApplyReviewDialog(QDialog):
                 self.impact_table.setItem(row_index, column, item)
 
         layout.addWidget(self.impact_table)
+        return group
+
+    def _build_league_group(self, league_preview: LeagueTransferPreview | None) -> QGroupBox:
+        preview = league_preview or LeagueTransferPreview(available=False, reason="Preview unavailable.", rows=[])
+        group = QGroupBox("League Transfer Preview", self)
+        layout = QVBoxLayout(group)
+
+        self.league_status_label = QLabel(group)
+        self.league_status_label.setWordWrap(True)
+        if preview.available:
+            if preview.rows:
+                self.league_status_label.setText(
+                    "Показаны игроки, у которых после publish изменится league state."
+                )
+            else:
+                self.league_status_label.setText("После publish league transfer changes не появятся.")
+        else:
+            self.league_status_label.setText(preview.reason or "Preview unavailable.")
+        layout.addWidget(self.league_status_label)
+
+        self.league_table = QTableWidget(0, 3, group)
+        self.league_table.setHorizontalHeaderLabels(["Игрок", "Из лиги", "В лигу"])
+        self.league_table.verticalHeader().setVisible(False)
+        self.league_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.league_table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        self.league_table.setAlternatingRowColors(True)
+        header = self.league_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        for column in range(1, self.league_table.columnCount()):
+            header.setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)
+
+        for preview_row in preview.rows:
+            row_index = self.league_table.rowCount()
+            self.league_table.insertRow(row_index)
+            values = [preview_row.fio, preview_row.from_league_code or "", preview_row.to_league_code]
+            for column, value in enumerate(values):
+                item = QTableWidgetItem(value)
+                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                if column == 0:
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+                self.league_table.setItem(row_index, column, item)
+
+        layout.addWidget(self.league_table)
         return group

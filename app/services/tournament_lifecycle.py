@@ -104,13 +104,20 @@ def transition_tournament_status(
     )
 
     snapshot_result = None
+    transfer_result = None
     if target_status == TournamentStatus.PUBLISHED.value:
         from app.services.rating_snapshot import create_rating_snapshot_for_tournament_publish
+        from app.services.league_transfer import record_league_transfers_for_tournament_publish
 
         snapshot_result = create_rating_snapshot_for_tournament_publish(
             connection=connection,
             tournament_id=tournament_id,
             n_value=6,
+            operation_group_id=operation_group_id,
+        )
+        transfer_result = record_league_transfers_for_tournament_publish(
+            connection=connection,
+            tournament_id=tournament_id,
             operation_group_id=operation_group_id,
         )
 
@@ -122,6 +129,7 @@ def transition_tournament_status(
             "to_status": target_status,
             "snapshot_created": bool(snapshot_result.created) if snapshot_result is not None else False,
             "snapshot_reason": snapshot_result.reason if snapshot_result is not None else None,
+            "league_transfers_recorded": transfer_result.recorded_count if transfer_result is not None else 0,
         },
     }
 

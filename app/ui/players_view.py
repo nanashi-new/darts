@@ -20,6 +20,8 @@ from PySide6.QtWidgets import (
 from app.db.database import get_connection
 from app.db.repositories import PlayerRepository, ResultRepository
 from app.services.audit_log import AuditLogService, ERROR
+from app.services.league_transfer import list_player_league_transfers
+from app.ui.player_card_dialog import PlayerCardDialog
 from app.ui.player_edit_dialog import PlayerEditDialog
 
 PLAYER_CREATE = "PLAYER_CREATE"
@@ -45,14 +47,17 @@ class PlayersView(QWidget):
         self._search_input.textChanged.connect(self._refresh_players)
         toolbar.addWidget(self._search_input)
 
+        self._card_btn = QPushButton("Карточка", self)
         add_btn = QPushButton("Добавить", self)
         edit_btn = QPushButton("Редактировать", self)
         delete_btn = QPushButton("Удалить", self)
 
+        self._card_btn.clicked.connect(self._open_player_card)
         add_btn.clicked.connect(self._add_player)
         edit_btn.clicked.connect(self._edit_selected_player)
         delete_btn.clicked.connect(self._delete_selected_player)
 
+        toolbar.addWidget(self._card_btn)
         toolbar.addWidget(add_btn)
         toolbar.addWidget(edit_btn)
         toolbar.addWidget(delete_btn)
@@ -64,16 +69,21 @@ class PlayersView(QWidget):
         self._players_table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self._players_table.setSelectionMode(QTableView.SelectionMode.SingleSelection)
         self._players_table.setSortingEnabled(False)
+        self._players_table.doubleClicked.connect(lambda *_args: self._open_player_card())
         splitter.addWidget(self._players_table)
-
-        self._history_title = QLabel("История игрока", self)
-        self._history_table = QTableView(self)
-        self._history_table.setSortingEnabled(False)
 
         history_container = QWidget(self)
         history_layout = QVBoxLayout(history_container)
+        self._history_title = QLabel("История игрока", self)
+        self._history_table = QTableView(self)
+        self._history_table.setSortingEnabled(False)
+        self._league_history_title = QLabel("История лиг", self)
+        self._league_history_table = QTableView(self)
+        self._league_history_table.setSortingEnabled(False)
         history_layout.addWidget(self._history_title)
         history_layout.addWidget(self._history_table)
+        history_layout.addWidget(self._league_history_title)
+        history_layout.addWidget(self._league_history_table)
         splitter.addWidget(history_container)
 
         splitter.setStretchFactor(0, 3)
@@ -133,11 +143,14 @@ class PlayersView(QWidget):
         if selection_model is not None:
             selection_model.selectionChanged.connect(self._on_player_selected)
 
+        self._card_btn.setEnabled(model.rowCount() > 0)
         if model.rowCount() > 0:
             self._players_table.selectRow(0)
         else:
             self._set_history([])
+            self._set_league_history([])
             self._history_title.setText("История игрока")
+            self._league_history_title.setText("История лиг")
 
     def _selected_player(self) -> dict[str, object] | None:
         selection_model = self._players_table.selectionModel()
@@ -153,24 +166,22 @@ class PlayersView(QWidget):
 
     def _on_player_selected(self, *_args) -> None:
         player = self._selected_player()
+        self._card_btn.setEnabled(player is not None)
         if player is None:
             self._set_history([])
+            self._set_league_history([])
             self._history_title.setText("История игрока")
+            self._league_history_title.setText("История лиг")
             return
 
         player_id = int(player["id"])
-        fio = " ".join(
-            part
-            for part in [
-                str(player.get("last_name") or ""),
-                str(player.get("first_name") or ""),
-                str(player.get("middle_name") or ""),
-            ]
-            if part
-        )
+        fio = self._build_fio(player)
         history = self._result_repo.list_player_history(player_id)
+        league_history = list_player_league_transfers(self._connection, player_id)
         self._history_title.setText(f"История игрока: {fio} (записей: {len(history)})")
+        self._league_history_title.setText(f"История лиг: {fio} (записей: {len(league_history)})")
         self._set_history(history)
+        self._set_league_history(league_history)
 
     def _set_history(self, history_rows: list[dict[str, object]]) -> None:
         columns = [
@@ -195,6 +206,43 @@ class PlayersView(QWidget):
 
         self._history_table.setModel(model)
         self._history_table.resizeColumnsToContents()
+
+    def _set_league_history(self, history_rows: list[object]) -> None:
+        columns = [
+            ("created_at", "Дата"),
+            ("from_league_code", "Из лиги"),
+            ("to_league_code", "В лигу"),
+            ("tournament_name", "Турнир"),
+        ]
+        model = QStandardItemModel(self)
+        model.setColumnCount(len(columns))
+        model.setHorizontalHeaderLabels([label for _, label in columns])
+
+        for row_data in history_rows:
+            row_items = []
+            for key, _ in columns:
+                value = getattr(row_data, key, None)
+                if key == "created_at" and value:
+                    value = str(value).replace("T", " ")[:19]
+                item = QStandardItem("" if value is None else str(value))
+                item.setEditable(False)
+                row_items.append(item)
+            model.appendRow(row_items)
+
+        self._league_history_table.setModel(model)
+        self._league_history_table.resizeColumnsToContents()
+
+    def _open_player_card(self) -> None:
+        player = self._selected_player()
+        if player is None:
+            QMessageBox.information(self, "Игроки", "Выберите игрока для открытия карточки.")
+            return
+        dialog = PlayerCardDialog(
+            connection=self._connection,
+            player_id=int(player["id"]),
+            parent=self,
+        )
+        dialog.exec()
 
     def _add_player(self) -> None:
         dialog = PlayerEditDialog(self)
@@ -272,15 +320,7 @@ class PlayersView(QWidget):
             return
 
         player_id = int(player["id"])
-        fio = " ".join(
-            part
-            for part in [
-                str(player.get("last_name") or ""),
-                str(player.get("first_name") or ""),
-                str(player.get("middle_name") or ""),
-            ]
-            if part
-        )
+        fio = self._build_fio(player)
         confirm = QMessageBox.question(
             self,
             "Удаление игрока",
@@ -306,3 +346,15 @@ class PlayersView(QWidget):
             context={"player_id": player_id},
         )
         self._refresh_players()
+
+    @staticmethod
+    def _build_fio(player: dict[str, object]) -> str:
+        return " ".join(
+            part
+            for part in [
+                str(player.get("last_name") or "").strip(),
+                str(player.get("first_name") or "").strip(),
+                str(player.get("middle_name") or "").strip(),
+            ]
+            if part
+        )

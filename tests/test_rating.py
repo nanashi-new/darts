@@ -9,6 +9,7 @@ from app.domain.rating import (
     build_rating_basis,
     build_rating_impact,
     build_rating_snapshot,
+    normalize_adult_gender_scope,
     rolling_rating,
 )
 
@@ -212,6 +213,14 @@ class RollingRatingTests(unittest.TestCase):
                 RatingBasisItem(tournament_id=12, tournament_date="2026-03-01", points_total=25),
             ],
         )
+
+    def test_normalize_adult_gender_scope_uses_existing_gender_rules(self) -> None:
+        self.assertEqual(normalize_adult_gender_scope("male"), "men")
+        self.assertEqual(normalize_adult_gender_scope("мужской"), "men")
+        self.assertEqual(normalize_adult_gender_scope("female"), "women")
+        self.assertEqual(normalize_adult_gender_scope("женский"), "women")
+        self.assertIsNone(normalize_adult_gender_scope(None))
+        self.assertIsNone(normalize_adult_gender_scope("unknown"))
 
 
 if __name__ == "__main__":

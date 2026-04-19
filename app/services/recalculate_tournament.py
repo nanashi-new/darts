@@ -61,21 +61,34 @@ def recalculate_tournament_results(*, connection, tournament_id: int) -> Recalcu
         cast(ResultRow, result) for result in results_raw if isinstance(result, dict)
     ]
     report.tournaments_processed = 1
+    is_adult_mode = bool(int(tournament.get("is_adult_mode") or 0))
     for result in results:
         try:
             place = _as_int_or_none(result.get("place"))
-            points_place = points_for_place(place) if place is not None else 0
+            if is_adult_mode:
+                points_total = _as_int_or_none(result.get("points_total")) or 0
+                points_place = points_total
+                points_classification = 0
+                ranks = {
+                    "rank_set": result.get("rank_set"),
+                    "rank_sector20": result.get("rank_sector20"),
+                    "rank_big_round": result.get("rank_big_round"),
+                }
+                calc_version = "manual_adult_v1"
+            else:
+                points_place = points_for_place(place) if place is not None else 0
 
-            ranks, points_classification = calculate_points_classification(
-                score_set=result.get("score_set"),
-                score_sector20=result.get("score_sector20"),
-                score_big_round=result.get("score_big_round"),
-                gender=result.get("gender"),
-                birth_date=result.get("birth_date"),
-                tournament_date=tournament.get("date"),
-                norms=norms or {},
-            )
-            points_total = points_place + points_classification
+                ranks, points_classification = calculate_points_classification(
+                    score_set=result.get("score_set"),
+                    score_sector20=result.get("score_sector20"),
+                    score_big_round=result.get("score_big_round"),
+                    gender=result.get("gender"),
+                    birth_date=result.get("birth_date"),
+                    tournament_date=tournament.get("date"),
+                    norms=norms or {},
+                )
+                points_total = points_place + points_classification
+                calc_version = "v2"
 
             result_id = _as_int_or_none(result.get("id"))
             if result_id is None:
@@ -96,7 +109,7 @@ def recalculate_tournament_results(*, connection, tournament_id: int) -> Recalcu
                     "points_classification": points_classification,
                     "points_place": points_place,
                     "points_total": points_total,
-                    "calc_version": "v2",
+                    "calc_version": calc_version,
                 },
             )
             report.results_updated += 1

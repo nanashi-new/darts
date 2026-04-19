@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import (
+    QCheckBox,
     QDateEdit,
     QDialog,
     QDialogButtonBox,
@@ -28,6 +29,7 @@ from app.domain.tournament_lifecycle import TournamentStatus
 from app.services.audit_log import AuditLogService, ERROR, IMPORT_FILE, IMPORT_FOLDER
 from app.services.import_report import build_import_session_report, persist_import_session_report
 from app.services.import_review import build_import_rating_preview
+from app.services.league_transfer import build_league_transfer_preview
 from app.services.import_xlsx import (
     ImportApplyReport,
     TableBlock,
@@ -184,6 +186,9 @@ class ImportExportView(QWidget):
         self.category_code_input = QLineEdit(self)
         self.category_code_input.setPlaceholderText("Например, U12-M")
         form_layout.addRow("Категория:", self.category_code_input)
+
+        self.is_adult_mode_checkbox = QCheckBox("Adult mode", self)
+        form_layout.addRow("Режим:", self.is_adult_mode_checkbox)
         layout.addLayout(form_layout)
 
         self.import_button = QPushButton("Импорт файла (демо)", self)
@@ -284,6 +289,7 @@ class ImportExportView(QWidget):
 
         tournament_date = self.tournament_date_input.date().toString("yyyy-MM-dd")
         category_code = self.category_code_input.text().strip() or None
+        is_adult_mode = self.is_adult_mode_checkbox.isChecked()
         operation_group_id = uuid4().hex
 
         try:
@@ -294,6 +300,7 @@ class ImportExportView(QWidget):
                     tournament_name=tournament_name,
                     tournament_date=tournament_date,
                     category_code=category_code,
+                    is_adult_mode=is_adult_mode,
                     source_files=[file_path],
                     player_match_resolver=self._resolve_player_match,
                     operation_group_id=operation_group_id,
@@ -305,6 +312,7 @@ class ImportExportView(QWidget):
                     tournament_name=tournament_name,
                     tournament_date=tournament_date,
                     category_code=category_code,
+                    is_adult_mode=is_adult_mode,
                     player_match_resolver=self._resolve_player_match,
                     operation_group_id=operation_group_id,
                 )
@@ -354,9 +362,14 @@ class ImportExportView(QWidget):
             tournament_id=apply_report.tournament_id,
             n_value=6,
         )
+        league_preview = build_league_transfer_preview(
+            connection=self._connection,
+            tournament_id=apply_report.tournament_id,
+        )
         dialog = ImportApplyReviewDialog(
             apply_report=apply_report,
             rating_preview=rating_preview,
+            league_preview=league_preview,
             parent=self,
         )
         if dialog.exec() == QDialog.DialogCode.Accepted:

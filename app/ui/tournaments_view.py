@@ -1,6 +1,7 @@
 from PySide6.QtGui import QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
     QComboBox,
+    QDialog,
     QFileDialog,
     QHBoxLayout,
     QInputDialog,
@@ -17,12 +18,17 @@ from app.db.repositories import ResultRepository, TournamentRepository
 from app.domain.tournament_lifecycle import TournamentStatus, allowed_targets
 from app.services.audit_log import AuditLogService, ERROR, EXPORT_FILE, RECALC_TOURNAMENT
 from app.services.export_service import ExportService
+from app.services.league_transfer import build_league_transfer_preview
+from app.services.manual_tournament import create_manual_adult_tournament
+from app.services.notes import EntityNoteDefaults
 from app.services.recalculate_tournament import recalculate_tournament_results
 from app.services.tournament_correction import (
     TournamentCorrectionError,
     correct_tournament,
 )
 from app.services.tournament_lifecycle import transition_tournament_status
+from app.ui.entity_notes_dialog import EntityNotesDialog
+from app.ui.manual_tournament_dialog import ManualTournamentDialog
 
 
 class TournamentsView(QWidget):
@@ -53,6 +59,8 @@ class TournamentsView(QWidget):
 
     def _build_actions(self) -> QHBoxLayout:
         actions_layout = QHBoxLayout()
+        self._create_adult_btn = QPushButton("Adult draft", self)
+        self._notes_btn = QPushButton("Notes", self)
         self._recalc_btn = QPushButton("Пересчитать турнир", self)
         self._submit_review_btn = QPushButton("Отправить на проверку", self)
         self._confirm_btn = QPushButton("Подтвердить", self)
@@ -68,6 +76,8 @@ class TournamentsView(QWidget):
         self._lifecycle_hint_label = QLabel("", self)
         self._lifecycle_hint_label.setWordWrap(True)
 
+        self._create_adult_btn.clicked.connect(self._create_manual_adult_tournament)
+        self._notes_btn.clicked.connect(self._open_tournament_notes)
         self._recalc_btn.clicked.connect(self._recalculate_tournament)
         self._submit_review_btn.clicked.connect(
             lambda: self._transition_tournament(TournamentStatus.REVIEW.value, "Отправка на проверку")
@@ -85,6 +95,8 @@ class TournamentsView(QWidget):
         self._export_btn.clicked.connect(self._export_selected_format)
         self._print_btn.clicked.connect(self._print_table)
 
+        actions_layout.addWidget(self._create_adult_btn)
+        actions_layout.addWidget(self._notes_btn)
         actions_layout.addWidget(self._recalc_btn)
         actions_layout.addWidget(self._submit_review_btn)
         actions_layout.addWidget(self._confirm_btn)
@@ -113,6 +125,7 @@ class TournamentsView(QWidget):
             self.status_label.setText("Статус: —")
             self.metadata_label.setText("Метаданные: —")
             self.results_table.setModel(QStandardItemModel(self))
+            self._notes_btn.setEnabled(False)
             self._refresh_lifecycle_controls()
             return
 
@@ -128,6 +141,7 @@ class TournamentsView(QWidget):
 
         results = self._result_repo.list_with_players(int(tournament["id"]))
         self._set_results_table(results)
+        self._notes_btn.setEnabled(True)
         self._refresh_lifecycle_controls()
 
     def _set_results_table(self, results: list[dict[str, object]]) -> None:
@@ -341,6 +355,7 @@ class TournamentsView(QWidget):
                 button.setToolTip("Турнир не выбран.")
             self._correction_btn.setEnabled(False)
             self._correction_btn.setVisible(False)
+            self._notes_btn.setEnabled(False)
             self._lifecycle_hint_label.setText("Переходы жизненного цикла недоступны: турнир не выбран.")
             return
 
@@ -385,6 +400,22 @@ class TournamentsView(QWidget):
             "\n".join(disabled_messages) if disabled_messages else "Все переходы статусов доступны."
         )
 
+    def _open_tournament_notes(self) -> None:
+        if not self._current_tournament:
+            QMessageBox.warning(self, "Notes", "Турнир не выбран.")
+            return
+        dialog = EntityNotesDialog(
+            connection=self._connection,
+            entity_type="tournament",
+            entity_id=str(self._current_tournament["id"]),
+            defaults=EntityNoteDefaults(
+                note_type="tournament_note",
+                visibility="internal_service",
+            ),
+            parent=self,
+        )
+        dialog.exec()
+
     def _transition_block_reason(self, current_status: str, target_status: str) -> str | None:
         if current_status == target_status:
             return "Турнир уже находится в этом статусе."
@@ -399,6 +430,29 @@ class TournamentsView(QWidget):
             QMessageBox.warning(self, action_title, "Турнир не выбран.")
             return
         tournament_id = int(self._current_tournament["id"])
+        if target_status == TournamentStatus.PUBLISHED.value:
+            preview = build_league_transfer_preview(
+                connection=self._connection,
+                tournament_id=tournament_id,
+            )
+            if preview.available and preview.rows:
+                preview_lines = [
+                    f"{row.fio}: {row.from_league_code or '-'} -> {row.to_league_code}"
+                    for row in preview.rows[:5]
+                ]
+                if len(preview.rows) > 5:
+                    preview_lines.append(f"... и ещё {len(preview.rows) - 5}")
+                confirm = QMessageBox.question(
+                    self,
+                    action_title,
+                    (
+                        f"Будет зафиксировано переходов между лигами: {len(preview.rows)}.\n\n"
+                        + "\n".join(preview_lines)
+                        + "\n\nПродолжить publish?"
+                    ),
+                )
+                if confirm != QMessageBox.StandardButton.Yes:
+                    return
         transition_result = transition_tournament_status(
             connection=self._connection,
             tournament_id=tournament_id,
@@ -469,6 +523,34 @@ class TournamentsView(QWidget):
                 f"Пересчитано результатов: {correction_result['results_recalculated']}"
             ),
         )
+
+    def _create_manual_adult_tournament(self) -> None:
+        dialog = ManualTournamentDialog(self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        try:
+            payload = dialog.form_data()
+            report = create_manual_adult_tournament(
+                connection=self._connection,
+                tournament_name=payload.tournament_name,
+                tournament_date=payload.tournament_date,
+                league_code=payload.league_code,
+                rows=payload.rows,
+            )
+        except ValueError as exc:
+            QMessageBox.warning(self, "Adult tournament", str(exc))
+            return
+
+        self.refresh_latest_tournament(report.tournament_id)
+        message_lines = [
+            f"Created draft adult tournament: {report.tournament_name}",
+            f"Imported rows: {report.imported_rows}",
+            f"Skipped rows: {report.skipped_rows}",
+        ]
+        if report.warnings:
+            message_lines.append("\n".join(report.warnings[:3]))
+        QMessageBox.information(self, "Adult tournament", "\n".join(message_lines))
 
     def _build_export_header(self) -> list[str]:
         if not self._current_tournament:

@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping
 
+from app.domain.ranks import _normalize_gender
+
 
 def compute_tournament_points(points_classification: int | None, points_place: int | None) -> int:
     """Compute total tournament points."""
@@ -42,6 +44,15 @@ class RatingImpactRow:
     old_points: int
     new_points: int
     points_delta: int
+
+
+def normalize_adult_gender_scope(value: object | None) -> str | None:
+    normalized_gender = _normalize_gender(value)
+    if normalized_gender == "M":
+        return "men"
+    if normalized_gender == "F":
+        return "women"
+    return None
 
 
 def _build_fio(entry: Mapping[str, Any]) -> str:
