@@ -2,13 +2,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 from app.db.database import get_connection
 from app.db.repositories import PlayerRepository, ResultRepository, TournamentRepository
 
 
-import pytest
-
 pytestmark = pytest.mark.integration
+
 
 class DatabaseCrudTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -26,9 +27,9 @@ class DatabaseCrudTests(unittest.TestCase):
     def test_player_crud(self) -> None:
         player_id = self.players.create(
             {
-                "last_name": "Иванов",
-                "first_name": "Иван",
-                "middle_name": "Иванович",
+                "last_name": "Ivanov",
+                "first_name": "Ivan",
+                "middle_name": "Ivanovich",
                 "birth_date": "2000-01-01",
                 "gender": "M",
                 "coach": "Coach",
@@ -38,13 +39,13 @@ class DatabaseCrudTests(unittest.TestCase):
         )
         player = self.players.get(player_id)
         self.assertIsNotNone(player)
-        self.assertEqual(player["last_name"], "Иванов")
+        self.assertEqual(player["last_name"], "Ivanov")
 
         self.players.update(
             player_id,
             {
-                "last_name": "Петров",
-                "first_name": "Пётр",
+                "last_name": "Petrov",
+                "first_name": "Petr",
                 "middle_name": None,
                 "birth_date": "2001-01-01",
                 "gender": "M",
@@ -54,9 +55,9 @@ class DatabaseCrudTests(unittest.TestCase):
             },
         )
         updated = self.players.get(player_id)
-        self.assertEqual(updated["last_name"], "Петров")
+        self.assertEqual(updated["last_name"], "Petrov")
 
-        results = self.players.search("Пет")
+        results = self.players.search("Pet")
         self.assertEqual(len(results), 1)
 
         self.players.delete(player_id)
@@ -65,8 +66,8 @@ class DatabaseCrudTests(unittest.TestCase):
     def test_tournament_and_result_crud(self) -> None:
         player_id = self.players.create(
             {
-                "last_name": "Сидоров",
-                "first_name": "Сидор",
+                "last_name": "Sidorov",
+                "first_name": "Sidor",
                 "middle_name": None,
                 "birth_date": "1999-12-31",
                 "gender": "M",
@@ -77,13 +78,17 @@ class DatabaseCrudTests(unittest.TestCase):
         )
         tournament_id = self.tournaments.create(
             {
-                "name": "Кубок",
+                "name": "Cup",
                 "date": "2024-01-01",
                 "category_code": "A",
                 "league_code": "PREMIER",
+                "is_adult_mode": 1,
                 "source_files": "[]",
             }
         )
+        tournament = self.tournaments.get(tournament_id)
+        self.assertIsNotNone(tournament)
+        self.assertEqual(tournament["is_adult_mode"], 1)
 
         result_id = self.results.create(
             {
@@ -132,6 +137,20 @@ class DatabaseCrudTests(unittest.TestCase):
 
         self.results.delete(result_id)
         self.assertIsNone(self.results.get(result_id))
+
+        self.tournaments.update(
+            tournament_id,
+            {
+                "name": "Cup",
+                "date": "2024-01-01",
+                "category_code": "A",
+                "league_code": "PREMIER",
+                "is_adult_mode": 0,
+                "source_files": "[]",
+            },
+        )
+        updated_tournament = self.tournaments.get(tournament_id)
+        self.assertEqual(updated_tournament["is_adult_mode"], 0)
 
         self.tournaments.delete(tournament_id)
         self.assertIsNone(self.tournaments.get(tournament_id))

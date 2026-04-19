@@ -6,6 +6,7 @@ import sqlite3
 from collections.abc import Callable
 from typing import Any, Iterable, List
 
+from app.domain.rating import normalize_adult_gender_scope
 from app.domain.tournament_lifecycle import (
     TournamentStatus,
     allowed_targets,
@@ -29,6 +30,7 @@ TOURNAMENT_ALLOWED_TRANSITIONS: dict[str, set[str]] = {
 }
 
 TOURNAMENT_LIFECYCLE_DEFAULTS: dict[str, Any] = {
+    "is_adult_mode": 0,
     "status": TOURNAMENT_STATUS_DRAFT,
     "type": "standard",
     "season": None,
@@ -208,6 +210,7 @@ class TournamentRepository:
                 date,
                 category_code,
                 league_code,
+                is_adult_mode,
                 source_files,
                 status,
                 type,
@@ -222,13 +225,14 @@ class TournamentRepository:
                 warning_state,
                 error_state
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 payload.get("name"),
                 payload.get("date"),
                 payload.get("category_code"),
                 payload.get("league_code"),
+                payload.get("is_adult_mode"),
                 payload.get("source_files"),
                 payload.get("status"),
                 payload.get("type"),
@@ -262,6 +266,7 @@ class TournamentRepository:
                 date = ?,
                 category_code = ?,
                 league_code = ?,
+                is_adult_mode = ?,
                 source_files = ?,
                 type = ?,
                 season = ?,
@@ -282,6 +287,7 @@ class TournamentRepository:
                 payload.get("date"),
                 payload.get("category_code"),
                 payload.get("league_code"),
+                payload.get("is_adult_mode"),
                 payload.get("source_files"),
                 payload.get("type"),
                 payload.get("season"),
@@ -392,7 +398,9 @@ class TournamentRepository:
             """
             SELECT DISTINCT category_code
             FROM tournaments
-            WHERE category_code IS NOT NULL AND category_code != ''
+            WHERE category_code IS NOT NULL
+              AND category_code != ''
+              AND COALESCE(is_adult_mode, 0) = 0
             ORDER BY category_code
             """
         ).fetchall()
@@ -574,6 +582,8 @@ class ResultRepository:
         *,
         category_code: str | None = None,
         league_code: str | None = None,
+        is_adult_mode: bool | None = None,
+        adult_gender_scope: str | None = None,
         search_term: str | None = None,
         statuses: Iterable[str] | None = None,
     ) -> List[RowDict]:
@@ -592,6 +602,13 @@ class ResultRepository:
         if league_code:
             clauses.append("tournaments.league_code = ?")
             params.append(league_code)
+        if adult_gender_scope is not None and is_adult_mode is None:
+            is_adult_mode = True
+        if is_adult_mode is None and category_code:
+            is_adult_mode = False
+        if is_adult_mode is not None:
+            clauses.append("COALESCE(tournaments.is_adult_mode, 0) = ?")
+            params.append(1 if is_adult_mode else 0)
 
         if search_term:
             like_term = f"%{search_term}%"
@@ -613,7 +630,8 @@ class ResultRepository:
                    tournaments.status AS tournament_status,
                    players.last_name,
                    players.first_name,
-                   players.middle_name
+                   players.middle_name,
+                   players.gender
             FROM results
             JOIN tournaments ON tournaments.id = results.tournament_id
             JOIN players ON players.id = results.player_id
@@ -622,7 +640,17 @@ class ResultRepository:
             """,
             params,
         ).fetchall()
-        return [dict(row) for row in rows]
+        result_rows = [dict(row) for row in rows]
+        normalized_scope = str(adult_gender_scope or "").strip().lower() or None
+        if normalized_scope not in {None, "overall", "men", "women"}:
+            return []
+        if normalized_scope in {"men", "women"}:
+            result_rows = [
+                row
+                for row in result_rows
+                if normalize_adult_gender_scope(row.get("gender")) == normalized_scope
+            ]
+        return result_rows
 
 
 class RatingSnapshotRepository:
@@ -719,5 +747,180 @@ class RatingSnapshotRepository:
             ORDER BY rating_snapshots.position ASC, rating_snapshots.id ASC
             """,
             (snapshot_created_at, scope_type, scope_key),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_latest_rows_for_player(self, player_id: int) -> List[RowDict]:
+        rows = self._connection.execute(
+            """
+            SELECT
+                rating_snapshots.*,
+                players.last_name,
+                players.first_name,
+                players.middle_name
+            FROM rating_snapshots
+            JOIN players ON players.id = rating_snapshots.player_id
+            JOIN (
+                SELECT
+                    scope_type,
+                    scope_key,
+                    MAX(created_at) AS latest_created_at
+                FROM rating_snapshots
+                WHERE player_id = ?
+                GROUP BY scope_type, scope_key
+            ) latest
+              ON latest.scope_type = rating_snapshots.scope_type
+             AND latest.scope_key = rating_snapshots.scope_key
+             AND latest.latest_created_at = rating_snapshots.created_at
+            WHERE rating_snapshots.player_id = ?
+            ORDER BY rating_snapshots.scope_type ASC, rating_snapshots.scope_key ASC
+            """,
+            (player_id, player_id),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+class LeagueTransferRepository:
+    """Repository for persisted league transfer events."""
+
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self._connection = connection
+
+    def create_many(self, entries: list[dict[str, Any]]) -> int:
+        if not entries:
+            return 0
+        with self._connection:
+            self._connection.executemany(
+                """
+                INSERT INTO league_transfer_events (
+                    player_id,
+                    from_league_code,
+                    to_league_code,
+                    source_tournament_id,
+                    reason,
+                    operation_group_id,
+                    created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        entry.get("player_id"),
+                        entry.get("from_league_code"),
+                        entry.get("to_league_code"),
+                        entry.get("source_tournament_id"),
+                        entry.get("reason"),
+                        entry.get("operation_group_id"),
+                        entry.get("created_at"),
+                    )
+                    for entry in entries
+                ],
+            )
+        return len(entries)
+
+    def get_latest_for_player(self, player_id: int) -> RowDict | None:
+        row = self._connection.execute(
+            """
+            SELECT *
+            FROM league_transfer_events
+            WHERE player_id = ?
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
+            """,
+            (player_id,),
+        ).fetchone()
+        return None if row is None else dict(row)
+
+    def list_for_player(self, player_id: int) -> List[RowDict]:
+        rows = self._connection.execute(
+            """
+            SELECT
+                league_transfer_events.*,
+                tournaments.name AS tournament_name,
+                tournaments.date AS tournament_date
+            FROM league_transfer_events
+            JOIN tournaments ON tournaments.id = league_transfer_events.source_tournament_id
+            WHERE league_transfer_events.player_id = ?
+            ORDER BY league_transfer_events.created_at DESC, league_transfer_events.id DESC
+            """,
+            (player_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+class NoteRepository:
+    """Repository for first-class notes attached to entities."""
+
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self._connection = connection
+
+    def create(self, data: dict[str, Any]) -> int:
+        cursor = self._connection.execute(
+            """
+            INSERT INTO notes (
+                entity_type,
+                entity_id,
+                note_type,
+                visibility,
+                author,
+                title,
+                body,
+                priority,
+                is_pinned,
+                is_archived
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                data.get("entity_type"),
+                data.get("entity_id"),
+                data.get("note_type"),
+                data.get("visibility"),
+                data.get("author"),
+                data.get("title"),
+                data.get("body"),
+                data.get("priority"),
+                int(bool(data.get("is_pinned"))),
+                int(bool(data.get("is_archived"))),
+            ),
+        )
+        self._connection.commit()
+        return _lastrowid_as_int(cursor)
+
+    def list_for_entity(
+        self,
+        *,
+        entity_type: str,
+        entity_id: str,
+        include_archived: bool = False,
+        note_types: list[str] | None = None,
+        visibilities: list[str] | None = None,
+        query: str | None = None,
+    ) -> List[RowDict]:
+        clauses = ["entity_type = ?", "entity_id = ?"]
+        params: list[Any] = [entity_type, entity_id]
+        if not include_archived:
+            clauses.append("is_archived = 0")
+        if note_types:
+            placeholders = ", ".join("?" for _ in note_types)
+            clauses.append(f"note_type IN ({placeholders})")
+            params.extend(note_types)
+        if visibilities:
+            placeholders = ", ".join("?" for _ in visibilities)
+            clauses.append(f"visibility IN ({placeholders})")
+            params.extend(visibilities)
+        normalized_query = (query or "").strip()
+        if normalized_query:
+            like_value = f"%{normalized_query}%"
+            clauses.append("(title LIKE ? OR body LIKE ?)")
+            params.extend([like_value, like_value])
+        rows = self._connection.execute(
+            f"""
+            SELECT *
+            FROM notes
+            WHERE {' AND '.join(clauses)}
+            ORDER BY is_pinned DESC, created_at DESC, id DESC
+            """,
+            params,
         ).fetchall()
         return [dict(row) for row in rows]

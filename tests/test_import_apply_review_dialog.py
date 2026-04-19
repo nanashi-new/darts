@@ -6,6 +6,7 @@ import pytest
 
 from app.domain.rating import RatingImpactRow, RatingSnapshotRow
 from app.services.import_review import ImportRatingImpactPreview
+from app.services.league_transfer import LeagueTransferPreview, LeagueTransferPreviewRow
 from app.services.import_xlsx import ImportApplyReport
 
 
@@ -109,6 +110,18 @@ def test_import_apply_review_dialog_shows_summary_warnings_and_rating_impact() -
                 ),
             ],
         ),
+        league_preview=LeagueTransferPreview(
+            available=True,
+            reason=None,
+            rows=[
+                LeagueTransferPreviewRow(
+                    player_id=2,
+                    fio="Brown Bob",
+                    from_league_code="FIRST",
+                    to_league_code="PREMIER",
+                )
+            ],
+        ),
     )
 
     assert dialog.summary_list.count() >= 4
@@ -121,5 +134,6 @@ def test_import_apply_review_dialog_shows_summary_warnings_and_rating_impact() -
     assert dialog.warnings_list.count() == 2
     assert dialog.impact_table.rowCount() == 2
     assert dialog.impact_table.columnCount() == 7
+    assert dialog.league_table.rowCount() == 1
     assert dialog.leave_button.text() == "Оставить draft"
     assert dialog.publish_button.text() == "Опубликовать сейчас"

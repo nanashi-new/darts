@@ -10,6 +10,10 @@ from app.services.audit_log import AuditLogService, RATING_SNAPSHOT_CREATED
 
 CATEGORY_SCOPE = "category"
 LEAGUE_SCOPE = "league"
+ADULT_SCOPE = "adult"
+ADULT_OVERALL_SCOPE_KEY = "overall"
+ADULT_MEN_SCOPE_KEY = "men"
+ADULT_WOMEN_SCOPE_KEY = "women"
 SNAPSHOT_REASON_PUBLISH = "publish"
 
 
@@ -50,6 +54,19 @@ class SnapshotCreateResult:
     sessions: tuple[RatingSnapshotSession, ...] = ()
 
 
+@dataclass(frozen=True)
+class PlayerRatingStateEntry:
+    scope_type: str
+    scope_key: str
+    player_id: int
+    fio: str
+    position: int
+    points: int
+    tournaments_count: int
+    source_tournament_id: int
+    created_at: str
+
+
 def create_rating_snapshot_for_tournament_publish(
     connection,
     tournament_id: int,
@@ -69,7 +86,7 @@ def create_rating_snapshot_for_tournament_publish(
     if not scope_requests:
         return SnapshotCreateResult(
             created=False,
-            reason="Tournament category or league is required for snapshot creation.",
+            reason="Tournament category, league, or adult mode is required for snapshot creation.",
             session=None,
         )
     created_at = datetime.now(timezone.utc).isoformat(timespec="microseconds")
@@ -191,18 +208,33 @@ def list_rating_snapshot_rows(
     return [_snapshot_entry_from_row(row) for row in rows]
 
 
+def list_latest_player_rating_states(connection, *, player_id: int) -> list[PlayerRatingStateEntry]:
+    snapshot_repo = RatingSnapshotRepository(connection)
+    rows = snapshot_repo.list_latest_rows_for_player(player_id)
+    return [
+        PlayerRatingStateEntry(
+            scope_type=str(row["scope_type"]),
+            scope_key=str(row["scope_key"]),
+            player_id=int(row["player_id"]),
+            fio=_build_fio(row),
+            position=int(row["position"]),
+            points=int(row["points"]),
+            tournaments_count=int(row["tournaments_count"]),
+            source_tournament_id=int(row["source_tournament_id"]),
+            created_at=str(row["created_at"]),
+        )
+        for row in rows
+    ]
+
+
 def _snapshot_entry_from_row(row: dict[str, object]) -> RatingSnapshotEntry:
-    last_name = str(row.get("last_name") or "").strip()
-    first_name = str(row.get("first_name") or "").strip()
-    middle_name = str(row.get("middle_name") or "").strip()
-    fio = " ".join(part for part in (last_name, first_name, middle_name) if part)
     return RatingSnapshotEntry(
         id=int(row["id"]),
         scope_type=str(row["scope_type"]),
         scope_key=str(row["scope_key"]),
         player_id=int(row["player_id"]),
         position=int(row["position"]),
-        fio=fio,
+        fio=_build_fio(row),
         points=int(row["points"]),
         tournaments_count=int(row["tournaments_count"]),
         rolling_basis=_parse_basis_json(row.get("rolling_basis_json")),
@@ -234,12 +266,20 @@ def _parse_basis_json(raw_value: object) -> list[RatingBasisItem]:
     return basis_items
 
 
+def _build_fio(row: dict[str, object]) -> str:
+    last_name = str(row.get("last_name") or "").strip()
+    first_name = str(row.get("first_name") or "").strip()
+    middle_name = str(row.get("middle_name") or "").strip()
+    return " ".join(part for part in (last_name, first_name, middle_name) if part)
+
+
 def _build_scope_requests(
     tournament: dict[str, object],
-) -> list[tuple[str, str, dict[str, str]]]:
-    requests: list[tuple[str, str, dict[str, str]]] = []
+) -> list[tuple[str, str, dict[str, object]]]:
+    requests: list[tuple[str, str, dict[str, object]]] = []
+    is_adult_mode = bool(int(tournament.get("is_adult_mode") or 0))
     category_code = str(tournament.get("category_code") or "").strip()
-    if category_code:
+    if category_code and not is_adult_mode:
         requests.append(
             (
                 CATEGORY_SCOPE,
@@ -255,6 +295,28 @@ def _build_scope_requests(
                 LEAGUE_SCOPE,
                 league_code,
                 {"league_code": league_code},
+            )
+        )
+    if is_adult_mode:
+        requests.append(
+            (
+                ADULT_SCOPE,
+                ADULT_OVERALL_SCOPE_KEY,
+                {"is_adult_mode": True},
+            )
+        )
+        requests.append(
+            (
+                ADULT_SCOPE,
+                ADULT_MEN_SCOPE_KEY,
+                {"is_adult_mode": True, "adult_gender_scope": ADULT_MEN_SCOPE_KEY},
+            )
+        )
+        requests.append(
+            (
+                ADULT_SCOPE,
+                ADULT_WOMEN_SCOPE_KEY,
+                {"is_adult_mode": True, "adult_gender_scope": ADULT_WOMEN_SCOPE_KEY},
             )
         )
     return requests

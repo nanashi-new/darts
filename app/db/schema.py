@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS tournaments (
     date TEXT,
     category_code TEXT,
     league_code TEXT,
+    is_adult_mode INTEGER NOT NULL DEFAULT 0,
     source_files TEXT,
     status TEXT NOT NULL DEFAULT 'draft',
     type TEXT NOT NULL DEFAULT 'standard',
@@ -102,6 +103,49 @@ RATING_SNAPSHOTS_INDEXES_SQL = [
     "CREATE INDEX IF NOT EXISTS idx_rating_snapshots_source_tournament ON rating_snapshots (source_tournament_id);",
 ]
 
+LEAGUE_TRANSFER_EVENTS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS league_transfer_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id INTEGER NOT NULL,
+    from_league_code TEXT,
+    to_league_code TEXT NOT NULL,
+    source_tournament_id INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    operation_group_id TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+    FOREIGN KEY (source_tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
+);
+"""
+
+LEAGUE_TRANSFER_EVENTS_INDEXES_SQL = [
+    "CREATE INDEX IF NOT EXISTS idx_league_transfer_events_player_created ON league_transfer_events (player_id, created_at DESC, id DESC);",
+    "CREATE INDEX IF NOT EXISTS idx_league_transfer_events_tournament ON league_transfer_events (source_tournament_id);",
+]
+
+NOTES_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    note_type TEXT NOT NULL,
+    visibility TEXT NOT NULL,
+    author TEXT,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    priority TEXT NOT NULL DEFAULT 'normal',
+    is_pinned INTEGER NOT NULL DEFAULT 0,
+    is_archived INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+NOTES_INDEXES_SQL = [
+    "CREATE INDEX IF NOT EXISTS idx_notes_entity_created ON notes (entity_type, entity_id, is_archived, is_pinned DESC, created_at DESC);",
+    "CREATE INDEX IF NOT EXISTS idx_notes_created ON notes (created_at DESC);",
+]
+
 AUDIT_LOG_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -132,14 +176,19 @@ SCHEMA_SQL = [
     TOURNAMENT_TABLE_SQL,
     RESULT_TABLE_SQL,
     RATING_SNAPSHOTS_TABLE_SQL,
+    LEAGUE_TRANSFER_EVENTS_TABLE_SQL,
+    NOTES_TABLE_SQL,
     AUDIT_LOG_TABLE_SQL,
     *PLAYER_INDEXES_SQL,
     *RESULT_INDEXES_SQL,
     *RATING_SNAPSHOTS_INDEXES_SQL,
+    *LEAGUE_TRANSFER_EVENTS_INDEXES_SQL,
+    *NOTES_INDEXES_SQL,
     *AUDIT_LOG_INDEXES_SQL,
 ]
 
 TOURNAMENT_LIFECYCLE_COLUMNS: list[tuple[str, str]] = [
+    ("is_adult_mode", "INTEGER NOT NULL DEFAULT 0"),
     ("status", "TEXT NOT NULL DEFAULT 'draft'"),
     ("type", "TEXT NOT NULL DEFAULT 'standard'"),
     ("season", "TEXT"),
@@ -184,6 +233,7 @@ def _migrate_tournaments_schema(connection: sqlite3.Connection) -> None:
         """
         UPDATE tournaments
         SET status = COALESCE(NULLIF(status, ''), 'draft'),
+            is_adult_mode = COALESCE(is_adult_mode, 0),
             type = COALESCE(NULLIF(type, ''), 'standard'),
             has_draft_changes = COALESCE(has_draft_changes, 1),
             warning_state = COALESCE(NULLIF(warning_state, ''), 'none'),
