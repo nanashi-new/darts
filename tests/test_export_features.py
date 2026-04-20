@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from pathlib import Path
 
@@ -86,3 +88,37 @@ def test_batch_export_creates_folder_and_files(tmp_path: Path) -> None:
     assert result.run_directory.exists()
     assert len(result.files_created) == 2
     assert all(path.exists() for path in result.files_created)
+
+
+def test_export_dataset_pdf_uses_qt_renderer_on_windows(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    if os.name != "nt":
+        pytest.skip("Qt PDF renderer regression is only enforced on Windows")
+
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    try:
+        from PySide6.QtWidgets import QApplication
+    except Exception as exc:  # noqa: BLE001
+        pytest.skip(f"PySide6 unavailable: {exc}")
+
+    if QApplication.instance() is None:
+        QApplication([])
+
+    path = tmp_path / "rating.pdf"
+    service = ExportService()
+
+    def _fail_fallback(*args, **kwargs) -> None:  # noqa: ANN002, ANN003
+        raise AssertionError("fallback PDF renderer was used instead of Qt printer")
+
+    monkeypatch.setattr(service, "_write_fallback_pdf", _fail_fallback)
+    monkeypatch.setattr(service, "_should_use_qt_pdf_renderer", lambda: True)
+
+    service.export_dataset_pdf(
+        str(path),
+        header_lines=["\u041f\u0440\u043e\u0442\u043e\u043a\u043e\u043b \u0442\u0443\u0440\u043d\u0438\u0440\u0430"],
+        columns=["\u041c\u0435\u0441\u0442\u043e", "\u0424\u0418\u041e", "\u041e\u0447\u043a\u0438"],
+        rows=[["1", "\u0418\u0432\u0430\u043d\u043e\u0432 \u0418\u0432\u0430\u043d", "20"]],
+        column_widths=[80, 200, 80],
+    )
+
+    assert path.exists()
+    assert path.stat().st_size > 0
