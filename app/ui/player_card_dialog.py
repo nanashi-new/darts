@@ -19,8 +19,10 @@ from app.db.repositories import PlayerRepository, ResultRepository
 from app.services.league_transfer import LeagueTransferEvent, list_player_league_transfers
 from app.services.notes import EntityNoteDefaults, NoteRecord, create_note, list_entity_notes
 from app.services.rating_snapshot import PlayerRatingStateEntry, list_latest_player_rating_states
+from app.services.training_journal import TrainingEntryRecord, create_training_entry, list_player_training_entries
 from app.ui.entity_notes_dialog import EntityNoteDialog, EntityNotesDialog
 from app.ui.rating_history_dialog import RatingHistoryDialog
+from app.ui.training_entry_dialog import TrainingEntryDialog
 
 
 class PlayerCardDialog(QDialog):
@@ -42,6 +44,7 @@ class PlayerCardDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addWidget(self._build_overview_group())
         layout.addWidget(self._build_notes_group())
+        layout.addWidget(self._build_training_group())
         layout.addWidget(self._build_rating_group())
         layout.addWidget(self._build_tournament_history_group())
         layout.addWidget(self._build_league_history_group())
@@ -102,6 +105,26 @@ class PlayerCardDialog(QDialog):
         layout.addWidget(self.rating_state_table)
         return group
 
+    def _build_training_group(self) -> QGroupBox:
+        group = QGroupBox("Training journal", self)
+        layout = QVBoxLayout(group)
+        controls = QHBoxLayout()
+        self.add_training_button = QPushButton("Add training", group)
+        self.add_training_button.clicked.connect(self._add_training_entry)
+        controls.addWidget(self.add_training_button)
+        controls.addStretch(1)
+        layout.addLayout(controls)
+
+        self.training_table = QTableWidget(0, 5, group)
+        self.training_table.setHorizontalHeaderLabels(
+            ["Date", "Coach", "Type", "Summary", "Next action"]
+        )
+        self.training_table.verticalHeader().setVisible(False)
+        self.training_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.training_table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        layout.addWidget(self.training_table)
+        return group
+
     def _build_tournament_history_group(self) -> QGroupBox:
         group = QGroupBox("Tournament history", self)
         layout = QVBoxLayout(group)
@@ -130,6 +153,9 @@ class PlayerCardDialog(QDialog):
         self.overview_label.setText(self._build_overview_text())
         self._fill_tournament_history(self._result_repo.list_player_history(self._player_id))
         self._reload_notes()
+        self._fill_training_entries(
+            list_player_training_entries(connection=self._connection, player_id=self._player_id)
+        )
         self._fill_league_history(list_player_league_transfers(self._connection, self._player_id))
         self._rating_states = list_latest_player_rating_states(self._connection, player_id=self._player_id)
         self._fill_rating_states(self._rating_states)
@@ -179,6 +205,23 @@ class PlayerCardDialog(QDialog):
                     row_data.visibility,
                     row_data.priority,
                     str(row_data.created_at).replace("T", " ")[:19],
+                ],
+            )
+
+    def _fill_training_entries(self, rows: list[TrainingEntryRecord]) -> None:
+        self.training_table.setRowCount(0)
+        for row_data in rows:
+            row_index = self.training_table.rowCount()
+            self.training_table.insertRow(row_index)
+            self._set_table_row(
+                self.training_table,
+                row_index,
+                [
+                    row_data.training_date,
+                    row_data.coach_name or "",
+                    row_data.session_type,
+                    row_data.summary,
+                    row_data.next_action or "",
                 ],
             )
 
@@ -290,6 +333,30 @@ class PlayerCardDialog(QDialog):
                 entity_type="player",
                 entity_id=str(self._player_id),
             )
+        )
+
+    def _add_training_entry(self) -> None:
+        dialog = TrainingEntryDialog(
+            default_coach_name=str(self._player.get("coach") or "").strip() or None,
+            parent=self,
+        )
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        form_data = dialog.form_data()
+        create_training_entry(
+            connection=self._connection,
+            player_id=self._player_id,
+            coach_name=form_data.coach_name,
+            training_date=form_data.training_date,
+            session_type=form_data.session_type,
+            summary=form_data.summary,
+            goals=form_data.goals,
+            metrics=form_data.metrics,
+            related_tournament_id=None,
+            next_action=form_data.next_action,
+        )
+        self._fill_training_entries(
+            list_player_training_entries(connection=self._connection, player_id=self._player_id)
         )
 
     @staticmethod

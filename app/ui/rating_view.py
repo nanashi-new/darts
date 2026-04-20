@@ -27,6 +27,7 @@ from app.services.export_service import ExportService
 from app.services.notes import EntityNoteDefaults
 from app.ui.entity_notes_dialog import EntityNotesDialog
 from app.ui.rating_history_dialog import RatingHistoryDialog
+from app.ui_state import get_view_state, update_view_state
 
 
 CATEGORY_SCOPE = "category"
@@ -54,6 +55,7 @@ class RatingView(QWidget):
         root_layout.addWidget(self._table)
 
         root_layout.addLayout(self._build_actions())
+        self._restore_state()
         self._refresh_table()
 
     def _build_filters(self) -> QHBoxLayout:
@@ -91,10 +93,14 @@ class RatingView(QWidget):
         self._scope_type_combo.currentIndexChanged.connect(self._refresh_scope_key_options)
         self._scope_type_combo.currentIndexChanged.connect(self._refresh_table)
         self._scope_type_combo.currentIndexChanged.connect(self._refresh_history_button_state)
+        self._scope_type_combo.currentIndexChanged.connect(self._persist_state)
         self._category_combo.currentIndexChanged.connect(self._refresh_table)
         self._category_combo.currentIndexChanged.connect(self._refresh_history_button_state)
+        self._category_combo.currentIndexChanged.connect(self._persist_state)
         self._n_spin.valueChanged.connect(self._refresh_table)
+        self._n_spin.valueChanged.connect(self._persist_state)
         self._search_input.textChanged.connect(self._refresh_table)
+        self._search_input.textChanged.connect(self._persist_state)
 
         self._refresh_scope_key_options()
 
@@ -130,6 +136,42 @@ class RatingView(QWidget):
         actions_layout.addStretch(1)
         self._refresh_history_button_state()
         return actions_layout
+
+    def _restore_state(self) -> None:
+        state = get_view_state("rating")
+        scope_type = state.get("scope_type")
+        if isinstance(scope_type, str):
+            self._select_combo_value(self._scope_type_combo, scope_type)
+        self._refresh_scope_key_options()
+
+        scope_key = state.get("scope_key")
+        if isinstance(scope_key, str):
+            self._select_combo_value(self._category_combo, scope_key)
+
+        search = state.get("search")
+        if isinstance(search, str):
+            self._search_input.blockSignals(True)
+            self._search_input.setText(search)
+            self._search_input.blockSignals(False)
+
+        n_value = state.get("n_value")
+        if isinstance(n_value, int):
+            self._n_spin.blockSignals(True)
+            self._n_spin.setValue(max(self._n_spin.minimum(), min(self._n_spin.maximum(), n_value)))
+            self._n_spin.blockSignals(False)
+
+        self._refresh_history_button_state()
+
+    def _persist_state(self, *_args) -> None:
+        update_view_state(
+            "rating",
+            {
+                "scope_type": self._selected_scope_type(),
+                "scope_key": self._category_combo.currentData(),
+                "search": self._search_input.text(),
+                "n_value": int(self._n_spin.value()),
+            },
+        )
 
     def _refresh_table(self) -> None:
         scope_type = self._selected_scope_type()
@@ -355,3 +397,12 @@ class RatingView(QWidget):
                 target_index = index
         self._category_combo.setCurrentIndex(target_index)
         self._category_combo.blockSignals(False)
+
+    @staticmethod
+    def _select_combo_value(combo: QComboBox, value: str) -> None:
+        combo.blockSignals(True)
+        for index in range(combo.count()):
+            if combo.itemData(index) == value:
+                combo.setCurrentIndex(index)
+                break
+        combo.blockSignals(False)

@@ -243,6 +243,7 @@ def test_rating_view_opens_history_dialog_for_selected_category(monkeypatch, tmp
             pytest.skip(f"Qt headless UI smoke unavailable: {exc}")
         raise
 
+    monkeypatch.setenv("DARTS_PROFILE_ROOT", str(tmp_path / "profile"))
     connection = get_connection(tmp_path / "rating-view-history.db")
     _create_snapshot_fixture(connection)
 

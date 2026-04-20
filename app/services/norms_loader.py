@@ -8,7 +8,8 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 from app.domain.ranks import Norms, load_norms_from_xlsx
-from app.settings import BASE_DIR, get_norms_xlsx_path
+from app.runtime_paths import get_bundled_resource_path
+from app.settings import get_norms_xlsx_path
 
 
 @dataclass(frozen=True)
@@ -25,7 +26,7 @@ def _ensure_norms_file(path: Path) -> bool:
     if path.exists():
         return True
     path.parent.mkdir(parents=True, exist_ok=True)
-    base64_path = BASE_DIR / "resources" / "norms.xlsx.b64"
+    base64_path = get_bundled_resource_path("resources/norms.xlsx.b64")
     if not base64_path.exists():
         return False
     try:

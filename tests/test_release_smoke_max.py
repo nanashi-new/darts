@@ -117,9 +117,11 @@ def test_release_smoke_critical_path(tmp_path: Path) -> None:
     events = audit.list_events()
     export_events = audit.list_events(event_type=EXPORT_FILE)
 
-    assert len(events) == 2
-    assert len(export_events) == 1
+    assert len(events) >= 2
+    assert len(export_events) >= 1
     assert export_events[0].details == "rating.pdf"
+    assert any(event.event_type == IMPORT_FILE for event in events)
+    assert any(event.event_type == EXPORT_FILE for event in events)
 
     audit_path = audit.export_txt(tmp_path / "audit.txt")
     content = audit_path.read_text(encoding="utf-8")

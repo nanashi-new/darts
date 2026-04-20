@@ -1,214 +1,70 @@
-# 11 — Release Test Run (MAX)
+# 11 - Release Test Run
 
-## Последний выполненный прогон
+## Latest packaged finish pass
 
-- **Дата/время:** 2026-04-03 13:03 UTC
-- **Ветка / commit:** `work` / `3cf6269` (pre-squash SHA; post-squash SHA не назначен)
-- **Окружение:** локальный контейнер (Linux), Python 3.12
-- **Артефакт:** [`docs/artifacts/release-manual-scenarios-2026-04-03.log`](artifacts/release-manual-scenarios-2026-04-03.log)
+- Date: 2026-04-20
+- Branch: `feature/adult-league-rating-transitions`
+- Base commit before final close-out commit: `a9af253`
+- Environment: local Windows workstation, Python 3.13, one-file PyInstaller build
+- Main artifact: `dist/DartsRatingEBCK.exe`
+- Packed bundle: `release/DartsRatingEBCK-release.zip`
+- Detailed report: [`artifacts/release-manual-run-2026-04-20-packaged-finish.md`](artifacts/release-manual-run-2026-04-20-packaged-finish.md)
 
-### Сводка статуса
-- `pytest -q -rs tests/test_import_single_table.py tests/test_batch_import.py tests/test_multi_table_detection.py tests/test_import_profiles_stub.py tests/test_import_fuzz_light.py tests/test_player_candidate_matching.py`: ✅ PASS
-- `pytest -q -rs tests/test_recalculation.py tests/test_rating.py tests/test_points.py tests/test_ranks.py`: ✅ PASS
-- `QT_QPA_PLATFORM=offscreen pytest -q -rs tests/test_export_features.py tests/test_release_smoke_max.py tests/test_perf_export_batch_max.py`: ✅ PASS (первый прогон содержал `SKIPPED` для PNG)
-- `bash scripts/ci/install_test_deps.sh` + `QT_QPA_PLATFORM=offscreen pytest -q -rs tests/test_release_smoke_max.py`: ✅ PASS (без skip)
-- `pytest -q -rs tests/test_player_merge.py`: ✅ PASS
-- `pytest -q -rs tests/test_audit_log.py`: ✅ PASS
-- `pytest -q -rs tests/test_db.py`: ✅ PASS
-- `python -m mypy app`: ✅ PASS (`Success: no issues found in 23 source files`)
-- `python -m pip check`: ✅ PASS (`No broken requirements found.`)
+## Commands executed
 
-### Известные особенности/ошибки
-- Для стабильного Linux CI обязательна установка системных зависимостей через `bash scripts/ci/install_test_deps.sh`.
-- Доступ к подтверждению Windows-проверок отсутствует в рамках Linux-контейнера.
+### Functional regression
 
-### Что осталось до freeze release-candidate
-1. Получить зелёный статус `Smoke Windows (clean profile)` и ссылку на run.
-2. Подтвердить сборку `.exe` и запуск на чистом ПК без Python (ссылки на артефакты).
-
-## CI-автоматизация release-проверок
-
-Release-проверки автоматизированы в GitHub Actions workflow:
-
-- [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
-
-В workflow есть отдельные smoke-джобы:
-
-- Linux: `smoke-export`
-- Windows: `Smoke Windows (clean profile)`
-- Gate релизного PR: `Validate release manual run report` (проверяет наличие/обновление `docs/artifacts/release-manual-run-*.md`)
-
-Обе джобы выполняют `tests/test_release_smoke_max.py`, а Windows-джоба дополнительно
-переинициализирует `USERPROFILE`/`APPDATA`/`LOCALAPPDATA` на временный путь runner'а,
-чтобы имитировать запуск на «чистом» профиле.
-
-### Branch protection перед freeze release-candidate
-
-Перед freeze ветки release-candidate в GitHub Branch protection / Rulesets нужно добавить
-обязательный required check:
-
-- `Smoke Windows (clean profile)`
-
-Без зелёного статуса этой проверки freeze/merge в release-candidate не выполняется.
-
-## Зависимости headless Qt/PNG
-
-Для Linux-агентов, где прогоняется `pytest -q -rs`, обязателен системный OpenGL runtime
-с библиотекой `libGL.so.1`.
-
-Для CI/контейнера на Debian/Ubuntu используйте скрипт:
-
-```bash
-bash scripts/ci/install_test_deps.sh
+```powershell
+pytest -q
 ```
 
-Скрипт устанавливает пакет `libgl1` (Mesa/OpenGL runtime), который нужен для Qt-offscreen
-экспорта PNG в `tests/test_release_smoke_max.py`.
+Expected result for this finish pass:
+- all tests green
+- Qt smoke tests may be skipped only in headless situations
 
-### Когда skip допустим
+### Bytecode verification
 
-`tests/test_release_smoke_max.py` **не должен** быть skip в целевом Linux CI, где можно
-установить системные пакеты (`apt-get`) и выполнен шаг установки `libgl1`.
-
-Skip допустим только в ограниченных окружениях, где нельзя установить системные
-библиотеки OpenGL (например, sandbox/ephemeral runner без доступа к apt-репозиториям).
-Ожидаемое поведение в таких окружениях: `pytest -q -rs` показывает
-`Qt headless PNG export unavailable: libGL.so.1 ...` как `SKIPPED`.
-
-## Обязательный шаг типизации в release pipeline
-
-Перед `pytest -q -rs` в release pipeline обязательно запускайте:
-
-```bash
-python -m mypy app
+```powershell
+Get-ChildItem app -Recurse -Filter *.py | ForEach-Object { python -m py_compile $_.FullName }
+Get-ChildItem tests -Recurse -Filter *.py | ForEach-Object { python -m py_compile $_.FullName }
 ```
 
-Пайплайн должен считаться успешным только при результате `Success: no issues found`.
+### One-file release build
 
-## Обязательный отчёт ручного прогона для релизного PR
+```powershell
+cmd /c scripts\BUILD_RELEASE.bat
+```
 
-Для каждого PR в release/release-candidate обязателен заполненный отчёт по шаблону:
+Expected result:
+- validates pinned requirements
+- validates offline wheel manifest when `vendor/wheels` is present
+- generates `build/build_info.json`
+- produces `dist/DartsRatingEBCK.exe`
 
-- [`docs/release_manual_run_template.md`](release_manual_run_template.md)
+### Packaged clean-profile smoke
 
-Требования:
-1. Отчёт размещён в репозитории (рекомендуется `docs/artifacts/release-manual-run-YYYY-MM-DD.md`).
-2. Разделы `import`, `recalc`, `export`, `merge`, `audit` заполнены.
-3. В каждом разделе добавлены ссылки на результаты (логи/артефакты/скриншоты/CI-run).
-4. PR/релиз не закрывается, пока отчёт не заполнен полностью.
+```powershell
+cmd /c scripts\SMOKE_TEST.bat
+```
 
-## Ручные сценарии перед релизом
+Expected result:
+- packaged app starts with a fresh `DARTS_PROFILE_ROOT`
+- `app.db`, `settings.json`, `norms.xlsx`, and `logs/startup.log` are created
+- second run also succeeds
 
-1. **Импорт одного XLSX (базовый happy-path)**
-   - Действия: Импорт/Экспорт → «Импорт файла» → выбрать корректный XLSX с колонками ФИО/Место/Очки.
-   - Ожидаемо: показывается предпросмотр, импорт завершается без ошибок, турнир и результаты появляются в списках.
-   - Ошибка: падение, пустой импорт при валидном файле, некорректные очки.
+### Release bundle
 
-2. **Импорт XLSX с пустыми строками в середине**
-   - Ожидаемо: пустые строки не ломают парсинг; данные до/после обрабатываются корректно.
-   - Ошибка: обрыв импорта на первой пустой строке, исключение.
+```powershell
+cmd /c scripts\PACK_RELEASE.bat
+```
 
-3. **Импорт папки (много файлов)**
-   - Действия: «Импорт папки», выбрать каталог с валидными/невалидными файлами.
-   - Ожидаемо: пакет обрабатывается полностью, есть отчёт success/error по файлам.
-   - Ошибка: прерывание на первом битом файле.
+Expected result:
+- produces `release/DartsRatingEBCK-release.zip`
 
-4. **Импорт мульти-табличного XLSX**
-   - Ожидаемо: каждая таблица распознаётся блоком, есть статус/уверенность для маппинга.
-   - Ошибка: берётся только первый блок или перепутаны строки между блоками.
+## Acceptance criteria for release close-out
 
-5. **Нестандартные заголовки + Mapping Wizard**
-   - Ожидаемо: можно вручную сопоставить столбцы и продолжить импорт.
-   - Ошибка: мастер не позволяет завершить на корректном маппинге.
-
-6. **Профили импорта: создание**
-   - Ожидаемо: профиль сохраняется, виден в списке и повторно применим.
-   - Ошибка: профиль не сохраняется после перезапуска.
-
-7. **Профили импорта: удаление/переиспользование**
-   - Ожидаемо: удалённый профиль исчезает; выбранный профиль корректно подставляет маппинг.
-   - Ошибка: «фантомные» профили или неправильные поля.
-
-8. **Дубли игроков: выбор существующего игрока и remember choice**
-   - Ожидаемо: при повторе ключа ФИО+дата выбор подхватывается автоматически.
-   - Ошибка: повторный диалог при включённом remember.
-
-9. **Слияние игроков (merge players) без конфликта результатов**
-   - Ожидаемо: результаты переносатся к primary, duplicate удаляется.
-   - Ошибка: потеря результатов или падение.
-
-10. **Слияние игроков с конфликтом UNIQUE(tournament_id, player_id)**
-    - Ожидаемо: конфликт разрешается по стратегии (prefer_primary/prefer_duplicate), приложение не падает.
-    - Ошибка: IntegrityError, «осиротевшие» записи.
-
-11. **Пересчёт одного турнира**
-    - Ожидаемо: обновляются points_place/points_classification/points_total, есть запись в журнале.
-    - Ошибка: часть результатов остаётся со старой версией calc_version.
-
-12. **Пересчёт всего рейтинга**
-    - Ожидаемо: пересчитаны все турниры, статус без фатальных ошибок.
-    - Ошибка: пропуски турниров, неконсистентные totals.
-
-13. **Экспорт PDF протокола**
-    - Ожидаемо: файл создаётся, не пустой, таблица не обрезана.
-    - Ошибка: пустой/битый PDF, обрезанные колонки.
-
-14. **Экспорт XLSX рейтинга**
-    - Ожидаемо: корректные заголовки/строки, файл открывается Excel/openpyxl.
-    - Ошибка: повреждённый файл, потеря строк.
-
-15. **Экспорт PNG видимой области**
-    - Ожидаемо: изображение соответствует viewport таблицы.
-    - Ошибка: чёрный/пустой кадр.
-
-16. **Экспорт PNG всей таблицы**
-    - Ожидаемо: влезают все строки/колонки, читаемый рендер.
-    - Ошибка: обрезка данных, падение в headless-среде без обработки.
-
-17. **Batch export всех отчётов**
-    - Ожидаемо: создаётся run-директория с подпапками ratings/tournaments и файлами.
-    - Ошибка: неполный набор файлов, пустые файлы.
-
-18. **Журнал аудита: фильтрация и поиск**
-    - Ожидаемо: фильтр по типу события и текстовый поиск дают ожидаемые записи.
-    - Ошибка: пропажа релевантных событий.
-
-19. **Экспорт журнала в TXT**
-    - Ожидаемо: TXT создаётся и содержит последовательность операций.
-    - Ошибка: пустой файл при непустом журнале.
-
-20. **Бэкап/восстановление БД на другой ПК**
-    - Действия: сделать копию app.db, перенести, открыть приложением на чистом профиле.
-    - Ожидаемо: игроки/турниры/результаты и журнал доступны.
-    - Ошибка: несовместимость схемы, missing table/index.
-
-21. **Проверка FAQ из меню**
-    - Ожидаемо: FAQ открывается без ошибок и с корректной кодировкой.
-    - Ошибка: не открывается или «кракозябры».
-
-22. **Проверка отображения версии приложения**
-    - Ожидаемо: версия видна в About/статусе (по принятому UX).
-    - Ошибка: версия отсутствует или пустая.
-
-23. **Проверка запуска на «чистом» профиле пользователя**
-    - Ожидаемо: автоматически создаются рабочие файлы/директории (db/settings/norms/profiles/logs/exports по сценарию использования).
-    - Ошибка: ошибки прав/пути, отсутствие критичных артефактов.
-
-24. **Негативный импорт: битый XLSX**
-    - Ожидаемо: файл помечается как error, процесс продолжает обработку остальных файлов.
-    - Ошибка: фатальный останов batch.
-
-25. **Негативный импорт: дробные значения в целочисленных полях (например 1.5)**
-    - Ожидаемо: warning о некорректном целочисленном значении; приложение не падает.
-    - Ошибка: crash/traceback.
-
-## Процесс обновления зависимостей для release-ветки
-
-1. Обновлять зависимости в `requirements.txt` только отдельным PR перед freeze релиза.
-2. Для release-ветки фиксировать версии без диапазонов (`==` вместо `>=`, `~=` и т.п.).
-3. После обновления выполнять локально:
-   - `pip install -r requirements.txt`
-   - `python -m pip check`
-4. Убедиться, что CI-шаг `Validate pinned dependencies for release branches` проходит без ошибок.
-5. Зафиксировать результат в `10_RELEASE_CHECKLIST.md` пунктом `dependency integrity check passed`.
-
+- `pytest -q` passes
+- `BUILD_RELEASE.bat` produces the one-file exe
+- `SMOKE_TEST.bat` passes on a clean profile
+- release docs point to the packaged finish-pass artifact
+- checklist in `10_RELEASE_CHECKLIST.md` is fully green

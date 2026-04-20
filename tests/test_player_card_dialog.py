@@ -111,6 +111,7 @@ def test_player_card_dialog_shows_overview_and_context_tables(tmp_path) -> None:
     connection = get_connection(tmp_path / "player-card-dialog.db")
     player_id = _create_player_context_fixture(connection)
     from app.services.notes import create_note
+    from app.services.training_journal import create_training_entry
 
     create_note(
         connection=connection,
@@ -123,6 +124,18 @@ def test_player_card_dialog_shows_overview_and_context_tables(tmp_path) -> None:
         priority="normal",
         author="tests",
     )
+    create_training_entry(
+        connection=connection,
+        player_id=player_id,
+        coach_name="Coach Zero",
+        training_date="2026-04-27",
+        session_type="follow_up",
+        summary="Training journal row",
+        goals="Keep form stable",
+        metrics={"sets": 3},
+        related_tournament_id=None,
+        next_action="Review after weekend",
+    )
 
     dialog = PlayerCardDialog(connection=connection, player_id=player_id)
 
@@ -132,5 +145,7 @@ def test_player_card_dialog_shows_overview_and_context_tables(tmp_path) -> None:
     assert dialog.league_history_table.rowCount() == 1
     assert dialog.rating_state_table.rowCount() >= 1
     assert dialog.notes_table.rowCount() == 1
+    assert dialog.training_table.rowCount() == 1
     assert hasattr(dialog, "coach_note_button")
     assert hasattr(dialog, "all_notes_button")
+    assert hasattr(dialog, "add_training_button")
