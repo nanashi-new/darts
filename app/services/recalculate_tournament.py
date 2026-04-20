@@ -120,8 +120,16 @@ def recalculate_tournament_results(*, connection, tournament_id: int) -> Recalcu
 
 
 def recalculate_all_tournaments(*, connection) -> RecalculationReport:
+    from app.services.restore_points import create_restore_point
+
     tournament_repo = TournamentRepository(connection)
     report = RecalculationReport()
+    create_restore_point(
+        connection=connection,
+        title="Before recalculate all tournaments",
+        reason="recalculate_all",
+        source="recalculate_tournament",
+    )
     tournaments_raw = tournament_repo.list()
     tournaments: list[TournamentRow] = [
         cast(TournamentRow, item) for item in tournaments_raw if isinstance(item, dict)

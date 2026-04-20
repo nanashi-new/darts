@@ -1,60 +1,55 @@
 # PROJECT STATUS
 
-## Общая информация
-Проект **Darts Rating EBCK** — это локальная программа для Windows для судей и тренеров по дартсу. Программа ведёт базу игроков и турниров, импортирует результаты из Excel, автоматически считает разряды и рейтинг, а также формирует удобные отчёты и файлы для передачи и печати.
+## Current State
 
-## Реализованный функционал
-- Локальная работа без интернета и без внешних сервисов.
-- Учёт игроков (PlayersView v1): список игроков, поиск по ФИО, create/edit/delete, базовая read-only история игрока.
-- Учёт турниров: создание, просмотр, редактирование, хранение результатов.
-- Импорт результатов из Excel:
-  - один файл;
-  - папка с файлами;
-  - поддержка нескольких таблиц внутри одного файла.
-- Мастер сопоставления колонок при нестандартной структуре файла.
-- Профили импорта для повторного использования настроек.
-- Автоматический расчёт:
-  - разрядов по нормам;
-  - очков за разряд и за место;
-  - итоговых очков турнира;
-  - рейтинга по последним N турнирам (значение настраивается).
-- Пересчёт по одному турниру и массовый пересчёт по всем данным.
-- Экспорт таблиц и отчётов в PDF / XLSX / PNG.
-- Экспорт как видимой части таблицы, так и всей таблицы целиком.
-- Пакетный экспорт (batch export) для нескольких отчётов за один запуск.
-- Работа с дублями игроков: поиск и слияние карточек.
-- Журнал действий и ошибок с выгрузкой в отдельный файл.
-- Раздел настроек с ключевыми параметрами работы.
-- Реализованы вкладки «О программе» (версия, сборка, поддержка) и «FAQ» с загрузкой из FAQ.txt.
+`Darts Rating EBCK` has reached a minimal finished desktop v1 on the current branch.
 
-## Качество и стабильность
-В проекте предусмотрены несколько видов проверки качества:
-- функциональные проверки ключевых сценариев (импорт, пересчёт, экспорт, отчёты, настройки);
-- ручные сценарии перед релизом по чек-листу;
-- негативные сценарии (битые файлы, пустые строки, частично некорректные данные);
-- проверка стабильности пакетных операций (импорт папки, batch export);
-- проверка первого запуска на «чистом» профиле пользователя;
-- проверка сохранности и переносимости данных (бэкап/восстановление).
+Implemented in the current repository state:
+- tournament lifecycle foundation
+- import review, import session reports, and import history
+- published-only rating
+- rating snapshots/history for category, league, and adult scopes
+- adult overall and split scopes
+- manual adult draft flow
+- league transfer history and preview
+- player card base
+- generic notes surfaces and coach-note entry points
+- training journal foundation
+- global context hub for notes and training
+- diagnostics/runtime foundation
+- restore points, pending restore, and safe profile reset
+- dashboard and diagnostics top-level tabs
+- minimal workspace persistence for main tab and key view filters
+- one-file release spec and release scripts
+- packaged clean-profile smoke validation
 
-Контроль релизной готовности и тест-прогона ведётся по документам:
-- [10_RELEASE_CHECKLIST.md](10_RELEASE_CHECKLIST.md)
-- [docs/11_RELEASE_TEST_RUN.md](docs/11_RELEASE_TEST_RUN.md)
+## Release-Ready Outputs
 
-## Текущий статус
-**Статус: готово к рабочему использованию с финальной проверкой перед выпуском.**
+- one-file executable: `dist/DartsRatingEBCK.exe`
+- packed release bundle: `release/DartsRatingEBCK-release.zip`
+- packaged verification artifact:
+  - `docs/artifacts/release-manual-run-2026-04-20-packaged-finish.md`
 
-Ключевой функционал для судьи и тренера закрыт: импорт, пересчёт, рейтинг, экспорт, отчёты, журнал, а также информационные вкладки «О программе» и «FAQ». На текущем этапе остаётся провести финальный релизный прогон по сценарию, проверить удобство на реальных файлах и подготовить дистрибутив для передачи пользователям.
+## Verification Snapshot
 
-## Следующие шаги
-1. Пройти полный релизный чек-лист и зафиксировать результаты.
-2. Выполнить финальный тест-прогон на реальных турнирных файлах.
-3. Проверить запуск и работу на «чистом» Windows-профиле.
-4. Подготовить и проверить итоговую сборку для установки.
-5. Согласовать короткую пользовательскую памятку для судьи/тренера.
-6. Зафиксировать версию релиза и дату передачи пользователям.
+Release close-out verification on this branch includes:
+- `pytest -q`
+- `python -m py_compile` over `app/` and `tests/`
+- `cmd /c scripts\BUILD_RELEASE.bat`
+- `cmd /c scripts\SMOKE_TEST.bat`
+- `cmd /c scripts\PACK_RELEASE.bat`
 
+## Intentionally Deferred
 
-## Проверка проекта (2026-04-03)
-- Выполнен локальный прогон автотестов: `39 passed, 2 skipped, 24 subtests passed`.
-- Критических блокеров по тестам не обнаружено.
-- Для выпуска по-прежнему актуальны шаги из раздела «Следующие шаги» (релизный чек-лист, проверка на реальных файлах и чистом профиле Windows, финальная сборка).
+These are not blockers for minimal finished v1:
+- attachments
+- tags
+- custom fields
+- installer
+- branding/theme customization
+- advanced workspace presets
+- full table geometry persistence beyond minimal saved UI state
+
+## Conclusion
+
+The current branch is ready for final review and merge as a release-ready desktop/offline-first build.

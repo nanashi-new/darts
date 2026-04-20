@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import sqlite3
 
+SCHEMA_VERSION = "2026.04.wave1"
+
 PLAYER_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS players (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -146,6 +148,47 @@ NOTES_INDEXES_SQL = [
     "CREATE INDEX IF NOT EXISTS idx_notes_created ON notes (created_at DESC);",
 ]
 
+TRAINING_ENTRIES_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS training_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id INTEGER NOT NULL,
+    coach_name TEXT,
+    training_date TEXT NOT NULL,
+    session_type TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    goals TEXT,
+    metrics_json TEXT NOT NULL DEFAULT '{}',
+    related_tournament_id INTEGER,
+    next_action TEXT,
+    is_archived INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+    FOREIGN KEY (related_tournament_id) REFERENCES tournaments(id) ON DELETE SET NULL
+);
+"""
+
+TRAINING_ENTRIES_INDEXES_SQL = [
+    "CREATE INDEX IF NOT EXISTS idx_training_entries_player_date ON training_entries (player_id, training_date DESC, id DESC);",
+    "CREATE INDEX IF NOT EXISTS idx_training_entries_created ON training_entries (created_at DESC);",
+]
+
+RESTORE_POINTS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS restore_points (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    source TEXT,
+    operation_group_id TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+RESTORE_POINTS_INDEXES_SQL = [
+    "CREATE INDEX IF NOT EXISTS idx_restore_points_created ON restore_points (created_at DESC);",
+]
+
 AUDIT_LOG_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -178,12 +221,16 @@ SCHEMA_SQL = [
     RATING_SNAPSHOTS_TABLE_SQL,
     LEAGUE_TRANSFER_EVENTS_TABLE_SQL,
     NOTES_TABLE_SQL,
+    TRAINING_ENTRIES_TABLE_SQL,
+    RESTORE_POINTS_TABLE_SQL,
     AUDIT_LOG_TABLE_SQL,
     *PLAYER_INDEXES_SQL,
     *RESULT_INDEXES_SQL,
     *RATING_SNAPSHOTS_INDEXES_SQL,
     *LEAGUE_TRANSFER_EVENTS_INDEXES_SQL,
     *NOTES_INDEXES_SQL,
+    *TRAINING_ENTRIES_INDEXES_SQL,
+    *RESTORE_POINTS_INDEXES_SQL,
     *AUDIT_LOG_INDEXES_SQL,
 ]
 

@@ -924,3 +924,213 @@ class NoteRepository:
             params,
         ).fetchall()
         return [dict(row) for row in rows]
+
+    def list_all(
+        self,
+        *,
+        include_archived: bool = False,
+        entity_types: list[str] | None = None,
+        note_types: list[str] | None = None,
+        visibilities: list[str] | None = None,
+        query: str | None = None,
+    ) -> List[RowDict]:
+        clauses: list[str] = []
+        params: list[Any] = []
+        if not include_archived:
+            clauses.append("notes.is_archived = 0")
+        if entity_types:
+            placeholders = ", ".join("?" for _ in entity_types)
+            clauses.append(f"notes.entity_type IN ({placeholders})")
+            params.extend(entity_types)
+        if note_types:
+            placeholders = ", ".join("?" for _ in note_types)
+            clauses.append(f"notes.note_type IN ({placeholders})")
+            params.extend(note_types)
+        if visibilities:
+            placeholders = ", ".join("?" for _ in visibilities)
+            clauses.append(f"notes.visibility IN ({placeholders})")
+            params.extend(visibilities)
+        normalized_query = (query or "").strip()
+        if normalized_query:
+            like_value = f"%{normalized_query}%"
+            clauses.append(
+                "(notes.title LIKE ? OR notes.body LIKE ? OR players.last_name LIKE ? OR players.first_name LIKE ?)"
+            )
+            params.extend([like_value, like_value, like_value, like_value])
+        where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        rows = self._connection.execute(
+            f"""
+            SELECT
+                notes.*,
+                players.last_name,
+                players.first_name,
+                players.middle_name,
+                tournaments.name AS tournament_name
+            FROM notes
+            LEFT JOIN players
+              ON notes.entity_type = 'player'
+             AND CAST(notes.entity_id AS INTEGER) = players.id
+            LEFT JOIN tournaments
+              ON notes.entity_type = 'tournament'
+             AND CAST(notes.entity_id AS INTEGER) = tournaments.id
+            {where_sql}
+            ORDER BY notes.is_pinned DESC, notes.created_at DESC, notes.id DESC
+            """,
+            params,
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+class TrainingEntryRepository:
+    """Repository for player training journal rows."""
+
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self._connection = connection
+
+    def create(self, data: dict[str, Any]) -> int:
+        cursor = self._connection.execute(
+            """
+            INSERT INTO training_entries (
+                player_id,
+                coach_name,
+                training_date,
+                session_type,
+                summary,
+                goals,
+                metrics_json,
+                related_tournament_id,
+                next_action,
+                is_archived
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                data.get("player_id"),
+                data.get("coach_name"),
+                data.get("training_date"),
+                data.get("session_type"),
+                data.get("summary"),
+                data.get("goals"),
+                data.get("metrics_json"),
+                data.get("related_tournament_id"),
+                data.get("next_action"),
+                int(bool(data.get("is_archived"))),
+            ),
+        )
+        self._connection.commit()
+        return _lastrowid_as_int(cursor)
+
+    def list_for_player(self, player_id: int, *, include_archived: bool = False) -> List[RowDict]:
+        clauses = ["training_entries.player_id = ?"]
+        params: list[Any] = [player_id]
+        if not include_archived:
+            clauses.append("training_entries.is_archived = 0")
+        rows = self._connection.execute(
+            f"""
+            SELECT
+                training_entries.*,
+                players.last_name,
+                players.first_name,
+                players.middle_name,
+                tournaments.name AS tournament_name
+            FROM training_entries
+            JOIN players ON players.id = training_entries.player_id
+            LEFT JOIN tournaments ON tournaments.id = training_entries.related_tournament_id
+            WHERE {' AND '.join(clauses)}
+            ORDER BY training_entries.training_date DESC, training_entries.id DESC
+            """,
+            params,
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_all(
+        self,
+        *,
+        include_archived: bool = False,
+        query: str | None = None,
+    ) -> List[RowDict]:
+        clauses: list[str] = []
+        params: list[Any] = []
+        if not include_archived:
+            clauses.append("training_entries.is_archived = 0")
+        normalized_query = (query or "").strip()
+        if normalized_query:
+            like_value = f"%{normalized_query}%"
+            clauses.append(
+                "("
+                "training_entries.summary LIKE ? OR "
+                "training_entries.goals LIKE ? OR "
+                "training_entries.next_action LIKE ? OR "
+                "training_entries.coach_name LIKE ? OR "
+                "players.last_name LIKE ? OR "
+                "players.first_name LIKE ?"
+                ")"
+            )
+            params.extend([like_value] * 6)
+        where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        rows = self._connection.execute(
+            f"""
+            SELECT
+                training_entries.*,
+                players.last_name,
+                players.first_name,
+                players.middle_name,
+                tournaments.name AS tournament_name
+            FROM training_entries
+            JOIN players ON players.id = training_entries.player_id
+            LEFT JOIN tournaments ON tournaments.id = training_entries.related_tournament_id
+            {where_sql}
+            ORDER BY training_entries.training_date DESC, training_entries.id DESC
+            """,
+            params,
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+class RestorePointRepository:
+    """Repository for persisted restore point metadata."""
+
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self._connection = connection
+
+    def create(self, data: dict[str, Any]) -> int:
+        cursor = self._connection.execute(
+            """
+            INSERT INTO restore_points (
+                title,
+                reason,
+                file_path,
+                source,
+                operation_group_id,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                data.get("title"),
+                data.get("reason"),
+                data.get("file_path"),
+                data.get("source"),
+                data.get("operation_group_id"),
+                data.get("created_at"),
+            ),
+        )
+        self._connection.commit()
+        return _lastrowid_as_int(cursor)
+
+    def get(self, restore_point_id: int) -> RowDict | None:
+        row = self._connection.execute(
+            "SELECT * FROM restore_points WHERE id = ?",
+            (restore_point_id,),
+        ).fetchone()
+        return _row_to_dict(row)
+
+    def list(self) -> List[RowDict]:
+        rows = self._connection.execute(
+            """
+            SELECT *
+            FROM restore_points
+            ORDER BY created_at DESC, id DESC
+            """
+        ).fetchall()
+        return [dict(row) for row in rows]

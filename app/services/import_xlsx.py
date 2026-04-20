@@ -11,7 +11,6 @@ from uuid import uuid4
 from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
 
-from app.db.database import get_default_database_path
 from app.db.repositories import (
     TOURNAMENT_STATUS_DRAFT,
     PlayerRepository,
@@ -20,6 +19,7 @@ from app.db.repositories import (
 )
 from app.domain.points import points_for_place
 from app.domain.ranks import calculate_points_classification
+from app.runtime_paths import get_runtime_paths
 from app.services.norms_loader import load_norms_from_settings
 
 
@@ -227,7 +227,7 @@ def _parse_first_table(path: str) -> tuple[
 
 
 def _profile_storage_path() -> Path:
-    return get_default_database_path().parent / "import_profiles.json"
+    return get_runtime_paths().import_profiles_path
 
 
 def save_import_profile(profile: ImportProfile | dict[str, object]) -> None:
@@ -740,7 +740,7 @@ def _parse_birth_value(value: object | None) -> tuple[str | None, str | None]:
 
 
 def _player_match_rules_path() -> Path:
-    return get_default_database_path().parent / "player_match_rules.json"
+    return get_runtime_paths().player_match_rules_path
 
 
 def _load_player_match_rules() -> dict[str, int]:
@@ -860,6 +860,8 @@ def import_tournament_rows(
     player_match_resolver: Callable[[str, str | None, list[dict[str, object]]], PlayerMatchResolution | None] | None = None,
     operation_group_id: str | None = None,
 ) -> ImportApplyReport:
+    from app.services.restore_points import create_restore_point
+
     tournament_repo = TournamentRepository(connection)
     player_repo = PlayerRepository(connection)
     result_repo = ResultRepository(connection)
@@ -868,6 +870,13 @@ def import_tournament_rows(
 
     source_files_payload = list(source_files or [])
     operation_group_id_value = str(operation_group_id or "").strip() or uuid4().hex
+    create_restore_point(
+        connection=connection,
+        title=f"Before import {tournament_name}",
+        reason="import_apply",
+        source="import_xlsx",
+        operation_group_id=operation_group_id_value,
+    )
     tournament_id = tournament_repo.create(
         {
             "name": tournament_name,

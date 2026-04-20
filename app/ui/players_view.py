@@ -23,6 +23,7 @@ from app.services.audit_log import AuditLogService, ERROR
 from app.services.league_transfer import list_player_league_transfers
 from app.ui.player_card_dialog import PlayerCardDialog
 from app.ui.player_edit_dialog import PlayerEditDialog
+from app.ui_state import get_view_state, update_view_state
 
 PLAYER_CREATE = "PLAYER_CREATE"
 PLAYER_UPDATE = "PLAYER_UPDATE"
@@ -44,7 +45,7 @@ class PlayersView(QWidget):
         toolbar.addWidget(QLabel("Поиск:"))
         self._search_input = QLineEdit(self)
         self._search_input.setPlaceholderText("Фамилия, имя или отчество")
-        self._search_input.textChanged.connect(self._refresh_players)
+        self._search_input.textChanged.connect(self._on_search_changed)
         toolbar.addWidget(self._search_input)
 
         self._card_btn = QPushButton("Карточка", self)
@@ -90,6 +91,19 @@ class PlayersView(QWidget):
         splitter.setStretchFactor(1, 2)
         layout.addWidget(splitter)
 
+        self._restore_state()
+        self._refresh_players()
+
+    def _restore_state(self) -> None:
+        state = get_view_state("players")
+        search = state.get("search")
+        if isinstance(search, str):
+            self._search_input.blockSignals(True)
+            self._search_input.setText(search)
+            self._search_input.blockSignals(False)
+
+    def _on_search_changed(self, text: str) -> None:
+        update_view_state("players", {"search": text})
         self._refresh_players()
 
     def _refresh_players(self) -> None:

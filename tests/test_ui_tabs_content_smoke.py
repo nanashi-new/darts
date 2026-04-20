@@ -8,7 +8,6 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
-
 pytestmark = pytest.mark.release_smoke
 
 _PLACEHOLDER_TEXTS = (
@@ -62,23 +61,23 @@ def _collect_tab_text(tab_widget) -> str:
     return "\n".join(chunks).lower()
 
 
-def test_about_and_faq_tabs_do_not_have_placeholder_text() -> None:
+def test_about_faq_and_diagnostics_tabs_do_not_have_placeholder_text() -> None:
     try:
         _ensure_app()
         from app.ui.main_window import MainWindow
 
         window = MainWindow()
-        _, _, _, QTabWidget = _qt_widgets()
+        _, _, _, q_tab_widget = _qt_widgets()
     except Exception as exc:  # noqa: BLE001
         if _is_expected_headless_qt_failure(exc):
             pytest.skip(f"Qt headless UI smoke unavailable: {exc}")
         raise
 
     tabs = window.centralWidget()
-    assert isinstance(tabs, QTabWidget)
+    assert isinstance(tabs, q_tab_widget)
 
     tab_names = [tabs.tabText(index) for index in range(tabs.count())]
-    for expected_name in ("О программе", "FAQ"):
+    for expected_name in ("О программе", "FAQ", "Диагностика", "Dashboard", "Контекст"):
         assert expected_name in tab_names
         target_index = tab_names.index(expected_name)
         target_widget = tabs.widget(target_index)

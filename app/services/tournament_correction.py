@@ -10,6 +10,7 @@ from app.db.repositories import TournamentRepository
 from app.domain.tournament_lifecycle import TournamentStatus
 from app.services.audit_log import AuditLogService, TOURNAMENT_CORRECTED
 from app.services.recalculate_tournament import recalculate_tournament_results
+from app.services.restore_points import create_restore_point
 from app.services.tournament_lifecycle import transition_tournament_status
 
 _TOURNAMENT_CORRECTION_FIELDS = (
@@ -60,6 +61,14 @@ def correct_tournament(
     current_status = str(tournament.get("status") or TournamentStatus.DRAFT.value)
     if current_status != TournamentStatus.PUBLISHED.value:
         raise TournamentCorrectionError("Коррекция доступна только для опубликованного турнира.")
+
+    create_restore_point(
+        connection=connection,
+        title=f"Before tournament correction #{tournament_id}",
+        reason="tournament_correction",
+        source=actor or "tournament_correction",
+        operation_group_id=operation_group_id,
+    )
 
     requested_updates = dict(updates or {})
     editable_updates = {
