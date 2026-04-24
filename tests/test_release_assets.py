@@ -20,3 +20,11 @@ def test_release_scripts_and_spec_exist() -> None:
 
     for path in expected_paths:
         assert path.exists(), path
+
+
+def test_release_spec_includes_qt_print_support() -> None:
+    project_root = Path(__file__).resolve().parent.parent
+    spec_path = project_root / "pyinstaller.release.spec"
+    content = spec_path.read_text(encoding="utf-8")
+
+    assert "PySide6.QtPrintSupport" in content

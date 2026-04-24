@@ -79,12 +79,10 @@ class ExportService:
         parent,
         header_lines: Iterable[str],
     ) -> bool:
-        from PySide6.QtGui import QPageSize
         from PySide6.QtPrintSupport import QPrintDialog, QPrinter
 
         printer = QPrinter(QPrinter.HighResolution)
-        printer.setPageOrientation(QPrinter.Landscape)
-        printer.setPageSize(QPageSize(QPageSize.A4))
+        self._configure_pdf_printer(printer)
         dialog = QPrintDialog(printer, parent)
         if dialog.exec() != QPrintDialog.Accepted:
             return False
@@ -158,6 +156,13 @@ class ExportService:
             return False
         return True
 
+    @staticmethod
+    def _configure_pdf_printer(printer) -> None:
+        from PySide6.QtGui import QPageLayout, QPageSize
+
+        printer.setPageOrientation(QPageLayout.Orientation.Landscape)
+        printer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
+
     def export_dataset_pdf(
         self,
         path: str,
@@ -170,14 +175,12 @@ class ExportService:
         rows_list = [["" if value is None else str(value) for value in row] for row in rows]
         if self._should_use_qt_pdf_renderer():
             try:
-                from PySide6.QtGui import QPageSize
                 from PySide6.QtPrintSupport import QPrinter
 
                 printer = QPrinter(QPrinter.HighResolution)
                 printer.setOutputFormat(QPrinter.PdfFormat)
                 printer.setOutputFileName(path)
-                printer.setPageOrientation(QPrinter.Landscape)
-                printer.setPageSize(QPageSize(QPageSize.A4))
+                self._configure_pdf_printer(printer)
                 self._render_dataset_to_printer(
                     printer,
                     header_lines_list,

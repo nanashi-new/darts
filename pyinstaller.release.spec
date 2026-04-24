@@ -23,6 +23,7 @@ a = Analysis(
     hiddenimports=[
         "PySide6.QtCore",
         "PySide6.QtGui",
+        "PySide6.QtPrintSupport",
         "PySide6.QtWidgets",
     ],
     hookspath=[],
