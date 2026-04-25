@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.services.player_merge import PlayerMergeService
+from app.ui.messages import confirm_yes_no
 
 
 class PlayerMergeDialog(QDialog):
@@ -36,12 +37,12 @@ class PlayerMergeDialog(QDialog):
         self.players_list = QListWidget(self)
         right_panel.addWidget(self.players_list)
 
-        right_panel.addWidget(QLabel("Primary (оставить)", self))
+        right_panel.addWidget(QLabel("Основной игрок (оставить)", self))
         self.primary_combo = QComboBox(self)
         self.primary_combo.currentIndexChanged.connect(self._update_transfer_count)
         right_panel.addWidget(self.primary_combo)
 
-        right_panel.addWidget(QLabel("Duplicate (удалить)", self))
+        right_panel.addWidget(QLabel("Дубль (удалить)", self))
         self.duplicate_combo = QComboBox(self)
         self.duplicate_combo.currentIndexChanged.connect(self._update_transfer_count)
         right_panel.addWidget(self.duplicate_combo)
@@ -129,7 +130,7 @@ class PlayerMergeDialog(QDialog):
             return
 
         results_to_move = self._merge_service.count_results_for_player(int(duplicate_id))
-        confirm = QMessageBox.question(
+        confirm = confirm_yes_no(
             self,
             "Подтверждение",
             (
@@ -137,7 +138,7 @@ class PlayerMergeDialog(QDialog):
                 f"к игроку #{int(primary_id)} и удалить дубль?"
             ),
         )
-        if confirm != QMessageBox.StandardButton.Yes:
+        if not confirm:
             return
 
         try:

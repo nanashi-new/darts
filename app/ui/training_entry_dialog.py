@@ -30,7 +30,7 @@ class TrainingEntryFormData:
 class TrainingEntryDialog(QDialog):
     def __init__(self, *, default_coach_name: str | None = None, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Новая training entry")
+        self.setWindowTitle("Новая запись тренировки")
         self.resize(520, 460)
 
         layout = QVBoxLayout(self)
@@ -42,6 +42,7 @@ class TrainingEntryDialog(QDialog):
         self.training_date_edit.setCalendarPopup(True)
         self.training_date_edit.setDate(QDate.currentDate())
         self.session_type_input = QLineEdit(self)
+        self.session_type_input.setPlaceholderText("Например: техника, матч, общая")
         self.summary_input = QLineEdit(self)
         self.goals_input = QTextEdit(self)
         self.goals_input.setMinimumHeight(90)
@@ -51,36 +52,40 @@ class TrainingEntryDialog(QDialog):
         self.next_action_input = QTextEdit(self)
         self.next_action_input.setMinimumHeight(80)
 
-        form.addRow("Coach", self.coach_name_input)
-        form.addRow("Date", self.training_date_edit)
-        form.addRow("Session type", self.session_type_input)
-        form.addRow("Summary*", self.summary_input)
-        form.addRow("Goals", self.goals_input)
-        form.addRow("Metrics JSON", self.metrics_input)
-        form.addRow("Next action", self.next_action_input)
+        form.addRow("Тренер", self.coach_name_input)
+        form.addRow("Дата", self.training_date_edit)
+        form.addRow("Тип занятия", self.session_type_input)
+        form.addRow("Итоги*", self.summary_input)
+        form.addRow("Цели", self.goals_input)
+        form.addRow("Метрики JSON", self.metrics_input)
+        form.addRow("Следующее действие", self.next_action_input)
         layout.addLayout(form)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel,
             self,
         )
+        if save_button := buttons.button(QDialogButtonBox.StandardButton.Save):
+            save_button.setText("Сохранить")
+        if cancel_button := buttons.button(QDialogButtonBox.StandardButton.Cancel):
+            cancel_button.setText("Отмена")
         buttons.accepted.connect(self._accept_if_valid)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
     def _accept_if_valid(self) -> None:
         if not self.summary_input.text().strip():
-            QMessageBox.warning(self, "Training", "Summary is required.")
+            QMessageBox.warning(self, "Тренировка", "Заполните краткие итоги тренировки.")
             return
         metrics_text = self.metrics_input.toPlainText().strip()
         if metrics_text:
             try:
                 metrics = json.loads(metrics_text)
             except json.JSONDecodeError:
-                QMessageBox.warning(self, "Training", "Metrics must be valid JSON.")
+                QMessageBox.warning(self, "Тренировка", "Метрики должны быть корректным JSON.")
                 return
             if not isinstance(metrics, dict):
-                QMessageBox.warning(self, "Training", "Metrics JSON must be an object.")
+                QMessageBox.warning(self, "Тренировка", "Метрики JSON должны быть объектом.")
                 return
         self.accept()
 

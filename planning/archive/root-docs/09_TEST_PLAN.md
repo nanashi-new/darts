@@ -1,5 +1,8 @@
 # 09 — План тестирования и приёмки
 
+> Active execution order lives in [`planning/00_PRIORITY.md`](planning/00_PRIORITY.md).
+> This file is a testing reference. New release/test tasks must be linked from `planning/tasks/`.
+
 Связанные документы:
 - Правила: [02_RULES_ALGORITHMS.md](02_RULES_ALGORITHMS.md)
 - Импорт/экспорт: [04_IMPORT_EXPORT_XLSX.md](04_IMPORT_EXPORT_XLSX.md)

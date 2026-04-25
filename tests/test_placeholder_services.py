@@ -10,7 +10,7 @@ from app.services.recalculate_rating import RecalculateRatingService
 
 import pytest
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.legacy]
 
 def test_export_wrappers_create_files(tmp_path: Path) -> None:
     rows = [["1", "Иванов Иван", "20"]]

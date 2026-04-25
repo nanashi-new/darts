@@ -9,7 +9,7 @@ class FaqView(QWidget):
     def __init__(self) -> None:
         super().__init__()
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("FAQ"))
+        layout.addWidget(QLabel("Вопросы и ответы"))
 
         text = QPlainTextEdit(self)
         text.setReadOnly(True)
@@ -24,4 +24,4 @@ class FaqView(QWidget):
                 return content
         except OSError:
             pass
-        return "FAQ временно недоступен. Проверьте наличие файла FAQ.txt рядом с приложением."
+        return "Раздел вопросов и ответов временно недоступен. Проверьте наличие файла FAQ.txt рядом с приложением."

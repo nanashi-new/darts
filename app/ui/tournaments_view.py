@@ -28,7 +28,10 @@ from app.services.tournament_correction import (
 )
 from app.services.tournament_lifecycle import transition_tournament_status
 from app.ui.entity_notes_dialog import EntityNotesDialog
+from app.ui.labels import category_label as display_category_label
+from app.ui.labels import tournament_status_label
 from app.ui.manual_tournament_dialog import ManualTournamentDialog
+from app.ui.messages import confirm_yes_no
 
 
 class TournamentsView(QWidget):
@@ -59,8 +62,8 @@ class TournamentsView(QWidget):
 
     def _build_actions(self) -> QHBoxLayout:
         actions_layout = QHBoxLayout()
-        self._create_adult_btn = QPushButton("Adult draft", self)
-        self._notes_btn = QPushButton("Notes", self)
+        self._create_adult_btn = QPushButton("Взрослый черновик", self)
+        self._notes_btn = QPushButton("Заметки", self)
         self._recalc_btn = QPushButton("Пересчитать турнир", self)
         self._submit_review_btn = QPushButton("Отправить на проверку", self)
         self._confirm_btn = QPushButton("Подтвердить", self)
@@ -131,8 +134,12 @@ class TournamentsView(QWidget):
 
         self._current_tournament = tournament
         date_label = tournament.get("date") or "дата не указана"
-        category_label = tournament.get("category_code") or "категория не указана"
-        status_label = str(tournament.get("status") or TournamentStatus.DRAFT.value)
+        category_label = (
+            display_category_label(tournament.get("category_code"))
+            if tournament.get("category_code")
+            else "категория не указана"
+        )
+        status_label = tournament_status_label(tournament.get("status") or TournamentStatus.DRAFT.value)
         self.header_label.setText(
             f"Турнир: {tournament.get('name')} — {date_label} ({category_label})"
         )
@@ -190,9 +197,9 @@ class TournamentsView(QWidget):
             "png": "tournament_protocol.png",
         }
         filters = {
-            "pdf": "PDF Files (*.pdf)",
-            "xlsx": "Excel Files (*.xlsx)",
-            "png": "Image Files (*.png *.jpg)",
+            "pdf": "Файлы PDF (*.pdf)",
+            "xlsx": "Файлы Excel (*.xlsx)",
+            "png": "Изображения (*.png *.jpg)",
         }
         path, _ = QFileDialog.getSaveFileName(
             self,
@@ -291,15 +298,15 @@ class TournamentsView(QWidget):
             "Пересчёт турнира",
             (
                 f"Турнир ID: {tournament_id}; обновлено: {report.results_updated}; "
-                f"warnings: {len(report.warnings)}; errors: {len(report.errors)}"
+                f"предупреждений: {len(report.warnings)}; ошибок: {len(report.errors)}"
             ),
             level="error" if report.errors else "warning" if report.warnings else "info",
             context={"tournament_id": tournament_id},
         )
         details = [
             f"Обновлено результатов: {report.results_updated}",
-            f"Warnings: {len(report.warnings)}",
-            f"Errors: {len(report.errors)}",
+            f"Предупреждений: {len(report.warnings)}",
+            f"Ошибок: {len(report.errors)}",
         ]
         if report.warnings:
             details.append("\n".join(report.warnings[:3]))
@@ -325,8 +332,8 @@ class TournamentsView(QWidget):
             ("location", "Локация"),
             ("organizer", "Организатор"),
             ("has_draft_changes", "Черновые изменения"),
-            ("warning_state", "Warning state"),
-            ("error_state", "Error state"),
+            ("warning_state", "Состояние предупреждений"),
+            ("error_state", "Состояние ошибок"),
             ("confirmed_by", "Подтвердил"),
             ("published_by", "Опубликовал"),
         ]
@@ -337,6 +344,10 @@ class TournamentsView(QWidget):
                 continue
             if key == "has_draft_changes":
                 value = "да" if bool(raw_value) else "нет"
+            elif key in {"warning_state", "error_state"} and str(raw_value) == "none":
+                value = "нет"
+            elif key == "type" and str(raw_value) == "standard":
+                value = "обычный"
             else:
                 value = str(raw_value)
             chunks.append(f"{label}: {value}")
@@ -373,7 +384,7 @@ class TournamentsView(QWidget):
         if is_published:
             self._recalc_btn.setEnabled(False)
             self._recalc_btn.setToolTip(
-                "Для published-турнира используйте операцию «Коррекция»."
+                "Для опубликованного турнира используйте операцию «Коррекция»."
             )
         else:
             self._recalc_btn.setEnabled(True)
@@ -383,9 +394,9 @@ class TournamentsView(QWidget):
         for button, target_status in action_buttons:
             if is_published:
                 button.setEnabled(False)
-                button.setToolTip("Для published-турнира доступна только операция «Коррекция».")
+                button.setToolTip("Для опубликованного турнира доступна только операция «Коррекция».")
                 disabled_messages.append(
-                    f"{button.text()}: отключено для published; используйте «Коррекция»."
+                    f"{button.text()}: отключено для опубликованного турнира; используйте «Коррекция»."
                 )
                 continue
             reason = self._transition_block_reason(current_status, target_status)
@@ -402,7 +413,7 @@ class TournamentsView(QWidget):
 
     def _open_tournament_notes(self) -> None:
         if not self._current_tournament:
-            QMessageBox.warning(self, "Notes", "Турнир не выбран.")
+            QMessageBox.warning(self, "Заметки", "Турнир не выбран.")
             return
         dialog = EntityNotesDialog(
             connection=self._connection,
@@ -422,8 +433,8 @@ class TournamentsView(QWidget):
         allowed = sorted(allowed_targets(current_status))
         if target_status in allowed:
             return None
-        allowed_labels = ", ".join(allowed) if allowed else "нет доступных переходов"
-        return f"Недоступно из статуса '{current_status}'. Разрешено: {allowed_labels}."
+        allowed_labels = ", ".join(tournament_status_label(status) for status in allowed) if allowed else "нет доступных переходов"
+        return f"Недоступно из статуса «{tournament_status_label(current_status)}». Разрешено: {allowed_labels}."
 
     def _transition_tournament(self, target_status: str, action_title: str) -> None:
         if not self._current_tournament:
@@ -442,16 +453,16 @@ class TournamentsView(QWidget):
                 ]
                 if len(preview.rows) > 5:
                     preview_lines.append(f"... и ещё {len(preview.rows) - 5}")
-                confirm = QMessageBox.question(
+                confirm = confirm_yes_no(
                     self,
                     action_title,
                     (
                         f"Будет зафиксировано переходов между лигами: {len(preview.rows)}.\n\n"
                         + "\n".join(preview_lines)
-                        + "\n\nПродолжить publish?"
+                        + "\n\nПродолжить публикацию?"
                     ),
                 )
-                if confirm != QMessageBox.StandardButton.Yes:
+                if not confirm:
                     return
         transition_result = transition_tournament_status(
             connection=self._connection,
@@ -468,13 +479,13 @@ class TournamentsView(QWidget):
                 if isinstance(requirements, dict):
                     message = (
                         f"{message}\n"
-                        f"Требования: reason={requirements.get('reason')}, "
-                        f"restore={requirements.get('restore')}, audit={requirements.get('audit')}"
+                        f"Требования: причина={requirements.get('reason')}, "
+                        f"точка восстановления={requirements.get('restore')}, аудит={requirements.get('audit')}"
                     )
             self._audit_log_service.log_event(
                 ERROR,
                 "Ошибка изменения статуса турнира",
-                f"{message}; details={details}",
+                f"{message}; детали={details}",
                 level="error",
                 context={"tournament_id": tournament_id, "to_status": target_status},
             )
@@ -483,7 +494,7 @@ class TournamentsView(QWidget):
             return
 
         self.refresh_latest_tournament(tournament_id)
-        QMessageBox.information(self, action_title, f"Статус турнира обновлён: {target_status}.")
+        QMessageBox.information(self, action_title, f"Статус турнира обновлен: {tournament_status_label(target_status)}.")
 
     def _start_correction(self) -> None:
         if not self._current_tournament:
@@ -493,13 +504,13 @@ class TournamentsView(QWidget):
         reason, accepted = QInputDialog.getText(
             self,
             "Коррекция опубликованного турнира",
-            "Укажите reason коррекции:",
+            "Укажите причину коррекции:",
         )
         if not accepted:
             return
         normalized_reason = reason.strip()
         if not normalized_reason:
-            QMessageBox.warning(self, "Коррекция", "Reason обязателен.")
+            QMessageBox.warning(self, "Коррекция", "Причина обязательна.")
             return
 
         try:
@@ -539,18 +550,18 @@ class TournamentsView(QWidget):
                 rows=payload.rows,
             )
         except ValueError as exc:
-            QMessageBox.warning(self, "Adult tournament", str(exc))
+            QMessageBox.warning(self, "Взрослый турнир", str(exc))
             return
 
         self.refresh_latest_tournament(report.tournament_id)
         message_lines = [
-            f"Created draft adult tournament: {report.tournament_name}",
-            f"Imported rows: {report.imported_rows}",
-            f"Skipped rows: {report.skipped_rows}",
+            f"Создан черновик взрослого турнира: {report.tournament_name}",
+            f"Импортировано строк: {report.imported_rows}",
+            f"Пропущено строк: {report.skipped_rows}",
         ]
         if report.warnings:
             message_lines.append("\n".join(report.warnings[:3]))
-        QMessageBox.information(self, "Adult tournament", "\n".join(message_lines))
+        QMessageBox.information(self, "Взрослый турнир", "\n".join(message_lines))
 
     def _build_export_header(self) -> list[str]:
         if not self._current_tournament:
@@ -558,7 +569,9 @@ class TournamentsView(QWidget):
         name = self._current_tournament.get("name") or "Название не указано"
         date_label = self._current_tournament.get("date") or "дата не указана"
         category_label = (
-            self._current_tournament.get("category_code") or "категория не указана"
+            display_category_label(self._current_tournament.get("category_code"))
+            if self._current_tournament.get("category_code")
+            else "категория не указана"
         )
         return [
             "Протокол турнира",

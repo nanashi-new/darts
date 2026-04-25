@@ -43,7 +43,7 @@ def create_training_entry(
 ) -> int:
     normalized_summary = summary.strip()
     if not normalized_summary:
-        raise ValueError("Training summary is required.")
+        raise ValueError("Укажите краткие итоги тренировки.")
     repository = TrainingEntryRepository(connection)
     entry_id = repository.create(
         {
@@ -61,8 +61,8 @@ def create_training_entry(
     )
     AuditLogService(connection).log_event(
         TRAINING_ENTRY_CREATED,
-        "Training entry created",
-        f"Training entry ID: {entry_id}; player_id={player_id}",
+        "Создана запись тренировки",
+        f"Запись тренировки ID: {entry_id}; игрок_id={player_id}",
         context={
             "entry_id": entry_id,
             "player_id": player_id,

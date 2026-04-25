@@ -1,5 +1,8 @@
 # 11 - Release Test Run
 
+Active release execution order lives in [`../planning/00_PRIORITY.md`](../planning/00_PRIORITY.md).
+Use this file as release-run reference material, not as the task queue.
+
 ## Latest packaged finish pass
 
 - Date: 2026-04-20
@@ -8,7 +11,7 @@
 - Environment: local Windows workstation, Python 3.13, one-file PyInstaller build
 - Main artifact: `dist/DartsRatingEBCK.exe`
 - Packed bundle: `release/DartsRatingEBCK-release.zip`
-- Detailed report: [`artifacts/release-manual-run-2026-04-20-packaged-finish.md`](artifacts/release-manual-run-2026-04-20-packaged-finish.md)
+- Detailed report: [`../planning/archive/release-artifacts/release-manual-run-2026-04-20-packaged-finish.md`](../planning/archive/release-artifacts/release-manual-run-2026-04-20-packaged-finish.md)
 
 ## Commands executed
 

@@ -21,7 +21,7 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1024, 640)
 
         tabs = QTabWidget()
-        tabs.addTab(DashboardView(navigate=lambda target: self._activate_tab(tabs, target)), "Dashboard")
+        tabs.addTab(DashboardView(navigate=lambda target: self._activate_tab(tabs, target)), "Главная")
         tabs.addTab(RatingView(), "Рейтинг")
         tournaments_view = TournamentsView()
         tabs.addTab(tournaments_view, "Турниры")
@@ -30,7 +30,7 @@ class MainWindow(QMainWindow):
         tabs.addTab(ImportExportView(tournaments_view), "Импорт/Экспорт")
         tabs.addTab(ReportsView(), "Отчеты")
         tabs.addTab(DiagnosticsView(), "Диагностика")
-        tabs.addTab(FaqView(), "FAQ")
+        tabs.addTab(FaqView(), "Вопросы и ответы")
         tabs.addTab(SettingsView(), "Настройки")
         tabs.addTab(AboutView(), "О программе")
 
@@ -42,14 +42,24 @@ class MainWindow(QMainWindow):
     @staticmethod
     def _activate_tab(tabs: QTabWidget, target: str) -> None:
         aliases = {
+            "Dashboard": "Главная",
+            "Главная": "Главная",
             "Context": "Контекст",
+            "Контекст": "Контекст",
             "Players": "Игроки",
+            "Игроки": "Игроки",
             "Tournaments": "Турниры",
+            "Турниры": "Турниры",
             "Rating": "Рейтинг",
+            "Рейтинг": "Рейтинг",
             "Reports": "Отчеты",
+            "Отчеты": "Отчеты",
             "Diagnostics": "Диагностика",
+            "Диагностика": "Диагностика",
             "Settings": "Настройки",
+            "Настройки": "Настройки",
             "About": "О программе",
+            "О программе": "О программе",
         }
         resolved_target = aliases.get(target, target)
         for index in range(tabs.count()):

@@ -50,9 +50,9 @@ def create_note(
     normalized_title = title.strip()
     normalized_body = body.strip()
     if not normalized_title:
-        raise ValueError("Note title is required.")
+        raise ValueError("Укажите заголовок заметки.")
     if not normalized_body:
-        raise ValueError("Note body is required.")
+        raise ValueError("Укажите текст заметки.")
 
     repo = NoteRepository(connection)
     note_id = repo.create(
@@ -71,8 +71,8 @@ def create_note(
     )
     AuditLogService(connection).log_event(
         NOTE_CREATED,
-        "Note created",
-        f"Note ID: {note_id}; entity={entity_type}:{entity_id}; title={normalized_title}",
+        "Создана заметка",
+        f"Заметка ID: {note_id}; объект={entity_type}:{entity_id}; заголовок={normalized_title}",
         context={
             "note_id": note_id,
             "entity_type": entity_type,

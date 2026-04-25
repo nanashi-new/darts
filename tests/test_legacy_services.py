@@ -9,7 +9,7 @@ from app.services.recalculate_tournament import RecalculationReport
 
 
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.legacy]
 
 def test_recalculate_rating_service_runs_targeted(monkeypatch: pytest.MonkeyPatch) -> None:
     report = RecalculationReport(tournaments_processed=1, results_updated=2)

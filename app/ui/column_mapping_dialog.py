@@ -76,6 +76,9 @@ class ColumnMappingDialog(QDialog):
             self,
         )
         self.ok_button = buttons.button(QDialogButtonBox.StandardButton.Ok)
+        self.ok_button.setText("Применить")
+        if cancel_button := buttons.button(QDialogButtonBox.StandardButton.Cancel):
+            cancel_button.setText("Отмена")
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)

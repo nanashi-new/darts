@@ -52,13 +52,13 @@ def build_league_transfer_preview(*, connection, tournament_id: int) -> LeagueTr
 
     tournament = tournament_repo.get(tournament_id)
     if tournament is None:
-        return LeagueTransferPreview(available=False, reason="Tournament was not found.", rows=[])
+        return LeagueTransferPreview(available=False, reason="Турнир не найден.", rows=[])
 
     league_code = str(tournament.get("league_code") or "").strip()
     if not league_code:
         return LeagueTransferPreview(
             available=False,
-            reason="League transfer preview is unavailable because league code is missing.",
+            reason="Предпросмотр переходов между лигами недоступен: не указана лига.",
             rows=[],
         )
 
@@ -66,7 +66,7 @@ def build_league_transfer_preview(*, connection, tournament_id: int) -> LeagueTr
     if not current_rows:
         return LeagueTransferPreview(
             available=False,
-            reason="League transfer preview is unavailable because tournament has no results yet.",
+            reason="Предпросмотр переходов между лигами недоступен: в турнире пока нет результатов.",
             rows=[],
         )
 
@@ -125,11 +125,11 @@ def record_league_transfers_for_tournament_publish(
     for row in preview.rows:
         audit_log_service.log_event(
             LEAGUE_TRANSFER_CREATED,
-            "League transfer created",
+            "Создан переход между лигами",
             (
-                f"Player ID: {row.player_id}; "
+                f"Игрок ID: {row.player_id}; "
                 f"{row.from_league_code or '-'} -> {row.to_league_code}; "
-                f"tournament_id={tournament_id}"
+                f"турнир_id={tournament_id}"
             ),
             context={
                 "player_id": row.player_id,

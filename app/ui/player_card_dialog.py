@@ -21,6 +21,15 @@ from app.services.notes import EntityNoteDefaults, NoteRecord, create_note, list
 from app.services.rating_snapshot import PlayerRatingStateEntry, list_latest_player_rating_states
 from app.services.training_journal import TrainingEntryRecord, create_training_entry, list_player_training_entries
 from app.ui.entity_notes_dialog import EntityNoteDialog, EntityNotesDialog
+from app.ui.labels import (
+    adult_scope_label,
+    category_label,
+    note_type_label,
+    priority_label,
+    scope_type_label,
+    session_type_label,
+    visibility_label,
+)
 from app.ui.rating_history_dialog import RatingHistoryDialog
 from app.ui.training_entry_dialog import TrainingEntryDialog
 
@@ -36,7 +45,7 @@ class PlayerCardDialog(QDialog):
 
         player = self._player_repo.get(player_id)
         if player is None:
-            raise ValueError("Player was not found.")
+            raise ValueError("Игрок не найден.")
         self._player = player
         self.setWindowTitle(f"Карточка игрока: {self._build_fio(player)}")
         self.resize(980, 760)
@@ -52,7 +61,7 @@ class PlayerCardDialog(QDialog):
         self._load_context()
 
     def _build_overview_group(self) -> QGroupBox:
-        group = QGroupBox("Overview", self)
+        group = QGroupBox("Обзор", self)
         layout = QVBoxLayout(group)
         self.overview_label = QLabel(group)
         self.overview_label.setWordWrap(True)
@@ -60,12 +69,12 @@ class PlayerCardDialog(QDialog):
         return group
 
     def _build_notes_group(self) -> QGroupBox:
-        group = QGroupBox("Notes", self)
+        group = QGroupBox("Заметки", self)
         layout = QVBoxLayout(group)
         controls = QHBoxLayout()
-        self.add_note_button = QPushButton("Добавить note", group)
-        self.coach_note_button = QPushButton("Coach note", group)
-        self.all_notes_button = QPushButton("Все notes", group)
+        self.add_note_button = QPushButton("Добавить заметку", group)
+        self.coach_note_button = QPushButton("Заметка тренера", group)
+        self.all_notes_button = QPushButton("Все заметки", group)
         self.add_note_button.clicked.connect(self._add_note)
         self.coach_note_button.clicked.connect(self._add_coach_note)
         self.all_notes_button.clicked.connect(self._open_all_notes)
@@ -76,7 +85,7 @@ class PlayerCardDialog(QDialog):
         layout.addLayout(controls)
 
         self.notes_table = QTableWidget(0, 5, group)
-        self.notes_table.setHorizontalHeaderLabels(["Title", "Type", "Visibility", "Priority", "Created"])
+        self.notes_table.setHorizontalHeaderLabels(["Заголовок", "Тип", "Доступ", "Приоритет", "Создано"])
         self.notes_table.verticalHeader().setVisible(False)
         self.notes_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.notes_table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
@@ -84,7 +93,7 @@ class PlayerCardDialog(QDialog):
         return group
 
     def _build_rating_group(self) -> QGroupBox:
-        group = QGroupBox("Rating states", self)
+        group = QGroupBox("Состояния рейтинга", self)
         layout = QVBoxLayout(group)
         controls = QHBoxLayout()
         self.open_rating_history_button = QPushButton("Открыть историю рейтинга", group)
@@ -95,7 +104,7 @@ class PlayerCardDialog(QDialog):
 
         self.rating_state_table = QTableWidget(0, 5, group)
         self.rating_state_table.setHorizontalHeaderLabels(
-            ["Scope type", "Scope key", "Место", "Очки", "Учтено турниров"]
+            ["Раздел", "Значение", "Место", "Очки", "Учтено турниров"]
         )
         self.rating_state_table.verticalHeader().setVisible(False)
         self.rating_state_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -106,10 +115,10 @@ class PlayerCardDialog(QDialog):
         return group
 
     def _build_training_group(self) -> QGroupBox:
-        group = QGroupBox("Training journal", self)
+        group = QGroupBox("Журнал тренировок", self)
         layout = QVBoxLayout(group)
         controls = QHBoxLayout()
-        self.add_training_button = QPushButton("Add training", group)
+        self.add_training_button = QPushButton("Добавить тренировку", group)
         self.add_training_button.clicked.connect(self._add_training_entry)
         controls.addWidget(self.add_training_button)
         controls.addStretch(1)
@@ -117,7 +126,7 @@ class PlayerCardDialog(QDialog):
 
         self.training_table = QTableWidget(0, 5, group)
         self.training_table.setHorizontalHeaderLabels(
-            ["Date", "Coach", "Type", "Summary", "Next action"]
+            ["Дата", "Тренер", "Тип", "Итоги", "Следующее действие"]
         )
         self.training_table.verticalHeader().setVisible(False)
         self.training_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -126,7 +135,7 @@ class PlayerCardDialog(QDialog):
         return group
 
     def _build_tournament_history_group(self) -> QGroupBox:
-        group = QGroupBox("Tournament history", self)
+        group = QGroupBox("История турниров", self)
         layout = QVBoxLayout(group)
         self.tournament_history_table = QTableWidget(0, 5, group)
         self.tournament_history_table.setHorizontalHeaderLabels(
@@ -139,7 +148,7 @@ class PlayerCardDialog(QDialog):
         return group
 
     def _build_league_history_group(self) -> QGroupBox:
-        group = QGroupBox("League history", self)
+        group = QGroupBox("История лиг", self)
         layout = QVBoxLayout(group)
         self.league_history_table = QTableWidget(0, 4, group)
         self.league_history_table.setHorizontalHeaderLabels(["Дата", "Из лиги", "В лигу", "Турнир"])
@@ -185,7 +194,7 @@ class PlayerCardDialog(QDialog):
                 [
                     row_data.get("tournament_date"),
                     row_data.get("tournament_name"),
-                    row_data.get("category_code"),
+                    category_label(row_data.get("category_code")),
                     row_data.get("place"),
                     row_data.get("points_total"),
                 ],
@@ -201,9 +210,9 @@ class PlayerCardDialog(QDialog):
                 row_index,
                 [
                     row_data.title,
-                    row_data.note_type,
-                    row_data.visibility,
-                    row_data.priority,
+                    note_type_label(row_data.note_type),
+                    visibility_label(row_data.visibility),
+                    priority_label(row_data.priority),
                     str(row_data.created_at).replace("T", " ")[:19],
                 ],
             )
@@ -219,7 +228,7 @@ class PlayerCardDialog(QDialog):
                 [
                     row_data.training_date,
                     row_data.coach_name or "",
-                    row_data.session_type,
+                    session_type_label(row_data.session_type),
                     row_data.summary,
                     row_data.next_action or "",
                 ],
@@ -250,8 +259,8 @@ class PlayerCardDialog(QDialog):
                 self.rating_state_table,
                 row_index,
                 [
-                    row_data.scope_type,
-                    row_data.scope_key,
+                    scope_type_label(row_data.scope_type),
+                    self._rating_scope_key_label(row_data),
                     row_data.position,
                     row_data.points,
                     row_data.tournaments_count,
@@ -263,6 +272,14 @@ class PlayerCardDialog(QDialog):
     def _refresh_rating_history_button_state(self) -> None:
         row = self.rating_state_table.currentRow()
         self.open_rating_history_button.setEnabled(0 <= row < len(self._rating_states))
+
+    @staticmethod
+    def _rating_scope_key_label(row_data: PlayerRatingStateEntry) -> str:
+        if row_data.scope_type == "adult":
+            return adult_scope_label(row_data.scope_key)
+        if row_data.scope_type == "category":
+            return category_label(row_data.scope_key)
+        return row_data.scope_key
 
     def _open_selected_rating_history(self) -> None:
         row = self.rating_state_table.currentRow()

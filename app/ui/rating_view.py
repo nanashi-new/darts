@@ -26,6 +26,7 @@ from app.services.audit_log import AuditLogService, ERROR, EXPORT_FILE
 from app.services.export_service import ExportService
 from app.services.notes import EntityNoteDefaults
 from app.ui.entity_notes_dialog import EntityNotesDialog
+from app.ui.labels import adult_scope_label, category_label
 from app.ui.rating_history_dialog import RatingHistoryDialog
 from app.ui_state import get_view_state, update_view_state
 
@@ -68,7 +69,7 @@ class RatingView(QWidget):
         self._scope_type_combo = QComboBox(filters_box)
         self._scope_type_combo.addItem("По категории", CATEGORY_SCOPE)
         self._scope_type_combo.addItem("По лиге", LEAGUE_SCOPE)
-        self._scope_type_combo.addItem("Adult overall", ADULT_SCOPE)
+        self._scope_type_combo.addItem("Взрослые", ADULT_SCOPE)
 
         self._scope_value_label = QLabel("Категория:", filters_box)
         self._category_combo = QComboBox(filters_box)
@@ -81,11 +82,11 @@ class RatingView(QWidget):
         self._search_input = QLineEdit(filters_box)
         self._search_input.setPlaceholderText("Поиск по ФИО")
 
-        grid.addWidget(QLabel("Скоуп:"), 0, 0)
+        grid.addWidget(QLabel("Раздел:"), 0, 0)
         grid.addWidget(self._scope_type_combo, 0, 1)
         grid.addWidget(self._scope_value_label, 0, 2)
         grid.addWidget(self._category_combo, 0, 3)
-        grid.addWidget(QLabel("N (3-12):"), 0, 4)
+        grid.addWidget(QLabel("Турниров (3-12):"), 0, 4)
         grid.addWidget(self._n_spin, 0, 5)
         grid.addWidget(QLabel("ФИО:"), 0, 6)
         grid.addWidget(self._search_input, 0, 7)
@@ -118,7 +119,7 @@ class RatingView(QWidget):
         export_btn = QPushButton("Экспорт", self)
         print_btn = QPushButton("Печать", self)
         self._history_button = QPushButton("История рейтинга", self)
-        self._league_notes_button = QPushButton("League notes", self)
+        self._league_notes_button = QPushButton("Заметки лиги", self)
 
         export_btn.clicked.connect(self._export_selected_format)
         print_btn.clicked.connect(self._print_table)
@@ -228,9 +229,9 @@ class RatingView(QWidget):
         selected_format = self._format_combo.currentText().lower()
         defaults = {"pdf": "rating.pdf", "xlsx": "rating.xlsx", "png": "rating.png"}
         filters = {
-            "pdf": "PDF Files (*.pdf)",
-            "xlsx": "Excel Files (*.xlsx)",
-            "png": "Image Files (*.png *.jpg)",
+            "pdf": "Файлы PDF (*.pdf)",
+            "xlsx": "Файлы Excel (*.xlsx)",
+            "png": "Изображения (*.png *.jpg)",
         }
         path, _ = QFileDialog.getSaveFileName(
             self,
@@ -305,7 +306,7 @@ class RatingView(QWidget):
         elif scope_type == LEAGUE_SCOPE:
             scope_label = "Лига"
         else:
-            scope_label = "Adult scope"
+            scope_label = "Взрослый зачет"
         scope_value = self._category_combo.currentText()
         n_value = self._n_spin.value()
         return [
@@ -323,13 +324,13 @@ class RatingView(QWidget):
         if is_enabled:
             self._history_button.setToolTip("")
             return
-        self._history_button.setToolTip("Выберите конкретный скоуп, чтобы открыть историю рейтинга.")
+        self._history_button.setToolTip("Выберите конкретный раздел рейтинга, чтобы открыть историю.")
 
     def _open_rating_history(self) -> None:
         scope_type = self._selected_scope_type()
         scope_key = self._category_combo.currentData()
         if not scope_key:
-            QMessageBox.information(self, "История рейтинга", "Сначала выберите конкретный скоуп.")
+            QMessageBox.information(self, "История рейтинга", "Сначала выберите конкретный раздел рейтинга.")
             return
         dialog = RatingHistoryDialog(
             connection=self._connection,
@@ -347,12 +348,12 @@ class RatingView(QWidget):
         if enabled:
             self._league_notes_button.setToolTip("")
             return
-        self._league_notes_button.setToolTip("League notes доступны только для выбранной лиги.")
+        self._league_notes_button.setToolTip("Заметки лиги доступны только для выбранной лиги.")
 
     def _open_league_notes(self) -> None:
         scope_key = self._category_combo.currentData()
         if self._selected_scope_type() != LEAGUE_SCOPE or not scope_key:
-            QMessageBox.information(self, "League notes", "Сначала выберите конкретную лигу.")
+            QMessageBox.information(self, "Заметки лиги", "Сначала выберите конкретную лигу.")
             return
         dialog = EntityNotesDialog(
             connection=self._connection,
@@ -377,8 +378,8 @@ class RatingView(QWidget):
             all_label = "Все лиги"
             values = self._tournament_repo.list_league_codes()
         elif scope_type == ADULT_SCOPE:
-            label = "Adult:"
-            all_label = "Все adult итоги"
+            label = "Взрослые:"
+            all_label = "Все взрослые итоги"
             values = [ADULT_OVERALL_SCOPE_KEY, ADULT_MEN_SCOPE_KEY, ADULT_WOMEN_SCOPE_KEY]
         else:
             label = "Категория:"
@@ -392,7 +393,13 @@ class RatingView(QWidget):
 
         target_index = 0
         for index, value in enumerate(values, start=1):
-            self._category_combo.addItem(value, value)
+            if scope_type == ADULT_SCOPE:
+                display_value = adult_scope_label(value)
+            elif scope_type == CATEGORY_SCOPE:
+                display_value = category_label(value)
+            else:
+                display_value = value
+            self._category_combo.addItem(display_value, value)
             if value == current_key:
                 target_index = index
         self._category_combo.setCurrentIndex(target_index)

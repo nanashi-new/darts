@@ -18,7 +18,8 @@ _PLACEHOLDER_TEXTS = (
 
 def _is_expected_headless_qt_failure(exc: Exception) -> bool:
     if isinstance(exc, ModuleNotFoundError):
-        return True
+        missing_name = getattr(exc, "name", "")
+        return missing_name == "PySide6" or missing_name.startswith("PySide6.")
     message = str(exc).lower()
     markers = (
         "libgl.so.1",
@@ -61,7 +62,8 @@ def _collect_tab_text(tab_widget) -> str:
     return "\n".join(chunks).lower()
 
 
-def test_about_faq_and_diagnostics_tabs_do_not_have_placeholder_text() -> None:
+def test_main_tabs_are_russian_and_not_placeholders(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("DARTS_PROFILE_ROOT", str(tmp_path / "profile"))
     try:
         _ensure_app()
         from app.ui.main_window import MainWindow
@@ -77,10 +79,21 @@ def test_about_faq_and_diagnostics_tabs_do_not_have_placeholder_text() -> None:
     assert isinstance(tabs, q_tab_widget)
 
     tab_names = [tabs.tabText(index) for index in range(tabs.count())]
-    for expected_name in ("О программе", "FAQ", "Диагностика", "Dashboard", "Контекст"):
-        assert expected_name in tab_names
-        target_index = tab_names.index(expected_name)
-        target_widget = tabs.widget(target_index)
-        content = _collect_tab_text(target_widget)
+    assert tab_names == [
+        "Главная",
+        "Рейтинг",
+        "Турниры",
+        "Игроки",
+        "Контекст",
+        "Импорт/Экспорт",
+        "Отчеты",
+        "Диагностика",
+        "Вопросы и ответы",
+        "Настройки",
+        "О программе",
+    ]
+
+    for index in range(tabs.count()):
+        content = _collect_tab_text(tabs.widget(index))
         for placeholder in _PLACEHOLDER_TEXTS:
             assert placeholder not in content

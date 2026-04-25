@@ -90,7 +90,7 @@ class ReportsView(QWidget):
             (
                 f"Турниров: {report.tournaments_processed}; "
                 f"обновлено: {report.results_updated}; "
-                f"warnings: {len(report.warnings)}; errors: {len(report.errors)}"
+                f"предупреждений: {len(report.warnings)}; ошибок: {len(report.errors)}"
             ),
             level="error" if report.errors else "warning" if report.warnings else "info",
         )
@@ -100,8 +100,8 @@ class ReportsView(QWidget):
             (
                 f"Турниров: {report.tournaments_processed}\n"
                 f"Обновлено результатов: {report.results_updated}\n"
-                f"Warnings: {len(report.warnings)}\n"
-                f"Errors: {len(report.errors)}"
+                f"Предупреждений: {len(report.warnings)}\n"
+                f"Ошибок: {len(report.errors)}"
             ),
         )
 

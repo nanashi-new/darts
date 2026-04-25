@@ -9,7 +9,7 @@ from app.services.import_xlsx import parse_first_table_from_xlsx_with_report, pa
 
 import pytest
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.fuzz]
 
 def _rand_cell() -> object:
     pool = [None, "", "  ", random.randint(0, 200), random.uniform(0, 200)]

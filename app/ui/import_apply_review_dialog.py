@@ -17,8 +17,9 @@ from PySide6.QtWidgets import (
 )
 
 from app.services.import_review import ImportRatingImpactPreview
-from app.services.league_transfer import LeagueTransferPreview
 from app.services.import_xlsx import ImportApplyReport
+from app.services.league_transfer import LeagueTransferPreview
+from app.ui.labels import tournament_status_label
 
 
 def _display_int(value: int | None) -> str:
@@ -35,7 +36,7 @@ class ImportApplyReviewDialog(QDialog):
         parent=None,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Импорт завершён: review/apply")
+        self.setWindowTitle("Импорт применен: проверка перед публикацией")
         self.resize(780, 640)
 
         layout = QVBoxLayout(self)
@@ -45,7 +46,7 @@ class ImportApplyReviewDialog(QDialog):
         layout.addWidget(self._build_league_group(league_preview))
 
         buttons = QDialogButtonBox(self)
-        self.leave_button = QPushButton("Оставить draft", self)
+        self.leave_button = QPushButton("Оставить черновиком", self)
         self.publish_button = QPushButton("Опубликовать сейчас", self)
         buttons.addButton(self.leave_button, QDialogButtonBox.ButtonRole.RejectRole)
         buttons.addButton(self.publish_button, QDialogButtonBox.ButtonRole.AcceptRole)
@@ -61,7 +62,10 @@ class ImportApplyReviewDialog(QDialog):
         summary_lines = [
             "Данные применены в черновик турнира.",
             f"Турнир: {apply_report.tournament_name} (ID: {apply_report.tournament_id})",
-            f"Статус: {apply_report.tournament_status}; has_draft_changes={int(apply_report.has_draft_changes)}",
+            (
+                f"Статус: {tournament_status_label(apply_report.tournament_status)}; "
+                f"черновые изменения: {'да' if apply_report.has_draft_changes else 'нет'}"
+            ),
             (
                 f"Строки: прочитано {apply_report.rows_read}, "
                 f"импортировано {apply_report.imported_rows} из {apply_report.total_rows}"
@@ -100,7 +104,7 @@ class ImportApplyReviewDialog(QDialog):
         return group
 
     def _build_rating_group(self, rating_preview: ImportRatingImpactPreview) -> QGroupBox:
-        group = QGroupBox("Rating Impact Preview", self)
+        group = QGroupBox("Предпросмотр влияния на рейтинг", self)
         layout = QVBoxLayout(group)
 
         self.rating_status_label = QLabel(group)
@@ -108,14 +112,14 @@ class ImportApplyReviewDialog(QDialog):
         if rating_preview.available:
             if rating_preview.rows:
                 self.rating_status_label.setText(
-                    "Показаны игроки, у которых после публикации изменятся место или очки."
+                    "Показаны игроки, у которых после публикации изменится место или количество очков."
                 )
             else:
                 self.rating_status_label.setText(
-                    "После публикации текущего draft официальный рейтинг не изменится."
+                    "После публикации текущего черновика официальный рейтинг не изменится."
                 )
         else:
-            self.rating_status_label.setText(rating_preview.reason or "Preview недоступен.")
+            self.rating_status_label.setText(rating_preview.reason or "Предпросмотр недоступен.")
         layout.addWidget(self.rating_status_label)
 
         self.impact_table = QTableWidget(0, 7, group)
@@ -124,10 +128,10 @@ class ImportApplyReviewDialog(QDialog):
                 "Игрок",
                 "Было место",
                 "Станет место",
-                "Δ место",
+                "Изм. места",
                 "Было очков",
                 "Станет очков",
-                "Δ очков",
+                "Изм. очков",
             ]
         )
         self.impact_table.verticalHeader().setVisible(False)
@@ -162,8 +166,8 @@ class ImportApplyReviewDialog(QDialog):
         return group
 
     def _build_league_group(self, league_preview: LeagueTransferPreview | None) -> QGroupBox:
-        preview = league_preview or LeagueTransferPreview(available=False, reason="Preview unavailable.", rows=[])
-        group = QGroupBox("League Transfer Preview", self)
+        preview = league_preview or LeagueTransferPreview(available=False, reason="Предпросмотр недоступен.", rows=[])
+        group = QGroupBox("Предпросмотр переходов между лигами", self)
         layout = QVBoxLayout(group)
 
         self.league_status_label = QLabel(group)
@@ -171,12 +175,12 @@ class ImportApplyReviewDialog(QDialog):
         if preview.available:
             if preview.rows:
                 self.league_status_label.setText(
-                    "Показаны игроки, у которых после publish изменится league state."
+                    "Показаны игроки, у которых после публикации изменится лига."
                 )
             else:
-                self.league_status_label.setText("После publish league transfer changes не появятся.")
+                self.league_status_label.setText("После публикации переходов между лигами не появится.")
         else:
-            self.league_status_label.setText(preview.reason or "Preview unavailable.")
+            self.league_status_label.setText(preview.reason or "Предпросмотр недоступен.")
         layout.addWidget(self.league_status_label)
 
         self.league_table = QTableWidget(0, 3, group)

@@ -100,7 +100,7 @@ class SettingsView(QWidget):
         version = norms_load.version or "—"
         updated_at = norms_load.updated_at or "—"
         self.norms_info_label.setText(
-            f"Нормативы: OK | версия: {version} | дата: {updated_at}"
+            f"Нормативы: загружены | версия: {version} | дата: {updated_at}"
         )
 
     def _recalculate_all(self) -> None:

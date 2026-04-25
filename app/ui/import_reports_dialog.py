@@ -25,6 +25,7 @@ from app.services.import_report import (
     render_import_report_json,
     render_import_report_text,
 )
+from app.ui.labels import import_apply_status_label
 
 
 class ImportReportsDialog(QDialog):
@@ -37,7 +38,7 @@ class ImportReportsDialog(QDialog):
         self._records: list[ImportSessionReportRecord] = list_import_reports(connection)
 
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Сохранённые import session reports.", self))
+        layout.addWidget(QLabel("Сохраненные отчеты по сессиям импорта.", self))
 
         content_layout = QHBoxLayout()
         self.report_list = QListWidget(self)
@@ -61,6 +62,8 @@ class ImportReportsDialog(QDialog):
         layout.addLayout(actions_layout)
 
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close, self)
+        if close_button := button_box.button(QDialogButtonBox.StandardButton.Close):
+            close_button.setText("Закрыть")
         button_box.rejected.connect(self.reject)
         button_box.accepted.connect(self.accept)
         layout.addWidget(button_box)
@@ -73,9 +76,9 @@ class ImportReportsDialog(QDialog):
         for record in self._records:
             report = record.report
             text = (
-                f"{record.created_at} | {report.tournament_name} | {report.apply_status} | "
-                f"imported={report.rows_imported} skipped={report.rows_skipped} | "
-                f"warnings={report.warnings_count}"
+                f"{record.created_at} | {report.tournament_name} | {import_apply_status_label(report.apply_status)} | "
+                f"импортировано={report.rows_imported} пропущено={report.rows_skipped} | "
+                f"предупреждений={report.warnings_count}"
             )
             item = QListWidgetItem(text)
             item.setData(Qt.ItemDataRole.UserRole, record.audit_event_id)
@@ -105,9 +108,9 @@ class ImportReportsDialog(QDialog):
             return
         path, _ = QFileDialog.getSaveFileName(
             self,
-            "Экспорт import report в TXT",
+            "Экспорт отчета импорта в TXT",
             self._default_export_name(record.report, ".txt"),
-            "Text files (*.txt)",
+            "Текстовые файлы (*.txt)",
         )
         if not path:
             return
@@ -120,9 +123,9 @@ class ImportReportsDialog(QDialog):
             return
         path, _ = QFileDialog.getSaveFileName(
             self,
-            "Экспорт import report в JSON",
+            "Экспорт отчета импорта в JSON",
             self._default_export_name(record.report, ".json"),
-            "JSON files (*.json)",
+            "Файлы JSON (*.json)",
         )
         if not path:
             return
@@ -132,5 +135,5 @@ class ImportReportsDialog(QDialog):
     @staticmethod
     def _default_export_name(report: ImportSessionReport, suffix: str) -> str:
         safe_name = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in report.tournament_name)
-        safe_name = safe_name.strip("_") or "import-report"
+        safe_name = safe_name.strip("_") or "otchet-importa"
         return f"{safe_name}-{report.apply_status}{suffix}"
