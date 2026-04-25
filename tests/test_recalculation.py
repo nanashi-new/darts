@@ -1,5 +1,4 @@
 import pytest
-import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -24,7 +23,7 @@ class RecalculationTests(unittest.TestCase):
         self.connection.close()
         self.temp_dir.cleanup()
 
-    def test_missing_norms_sets_classification_zero_and_warning(self) -> None:
+    def test_recalculate_ignores_legacy_classification_without_warning(self) -> None:
         player_id = self.players.create(
             {
                 "last_name": "Тест",
@@ -64,24 +63,17 @@ class RecalculationTests(unittest.TestCase):
             }
         )
 
-        previous = os.environ.get("NORMS_XLSX_PATH")
-        broken_path = Path(self.temp_dir.name) / "broken.xlsx"
-        broken_path.write_text("not-an-xlsx", encoding="utf-8")
-        os.environ["NORMS_XLSX_PATH"] = str(broken_path)
-        try:
-            report = recalculate_tournament_results(
-                connection=self.connection,
-                tournament_id=tournament_id,
-            )
-        finally:
-            if previous is None:
-                os.environ.pop("NORMS_XLSX_PATH", None)
-            else:
-                os.environ["NORMS_XLSX_PATH"] = previous
+        report = recalculate_tournament_results(
+            connection=self.connection,
+            tournament_id=tournament_id,
+        )
 
         updated = self.results.get(result_id)
         self.assertEqual(updated["points_classification"], 0)
-        self.assertGreaterEqual(len(report.warnings), 1)
+        self.assertEqual(updated["rank_set"], None)
+        self.assertEqual(updated["rank_sector20"], None)
+        self.assertEqual(updated["rank_big_round"], None)
+        self.assertEqual(report.warnings, [])
 
     def test_recalculate_tournament_updates_points_total(self) -> None:
         player_id = self.players.create(
@@ -130,7 +122,8 @@ class RecalculationTests(unittest.TestCase):
 
         updated = self.results.get(result_id)
         self.assertEqual(updated["points_place"], 12)
-        self.assertEqual(updated["points_total"], updated["points_place"] + updated["points_classification"])
+        self.assertEqual(updated["points_classification"], 0)
+        self.assertEqual(updated["points_total"], updated["points_place"])
         self.assertEqual(report.results_updated, 1)
 
     def test_recalculate_adult_tournament_keeps_manual_totals(self) -> None:

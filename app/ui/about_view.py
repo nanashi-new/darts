@@ -7,7 +7,7 @@ class AboutView(QWidget):
     def __init__(self) -> None:
         super().__init__()
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Darts Rating EBCK"))
+        layout.addWidget(QLabel("Дартс Лига"))
         layout.addWidget(QLabel(f"Версия: {__version__}"))
         layout.addWidget(QLabel(f"Сборка: {__build_info__}"))
         layout.addWidget(QLabel(f"Время сборки: {__build_metadata__.build_timestamp}"))

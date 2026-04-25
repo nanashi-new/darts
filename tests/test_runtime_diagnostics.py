@@ -70,9 +70,8 @@ def test_create_restore_point_persists_backup_and_metadata(monkeypatch, tmp_path
     assert persisted[0].title == "Before risky operation"
 
 
-def test_self_check_reports_missing_norms_template(monkeypatch, tmp_path) -> None:
+def test_self_check_does_not_require_legacy_classification_template(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("DARTS_PROFILE_ROOT", str(tmp_path / "profile"))
-    monkeypatch.setenv("NORMS_XLSX_PATH", str(tmp_path / "missing" / "norms.xlsx"))
     connection = get_connection()
 
     from app.services import diagnostics
@@ -85,8 +84,7 @@ def test_self_check_reports_missing_norms_template(monkeypatch, tmp_path) -> Non
 
     report = diagnostics.run_self_check(connection=connection)
 
-    assert report.issues
-    assert any(issue.code == "norms.unavailable" for issue in report.issues)
+    assert not any(issue.code == "scoring.unavailable" for issue in report.issues)
 
 
 def test_export_diagnostic_bundle_contains_expected_files(monkeypatch, tmp_path) -> None:

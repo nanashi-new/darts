@@ -60,14 +60,13 @@ def test_import_apply_review_dialog_shows_summary_warnings_and_rating_impact() -
     dialog = ImportApplyReviewDialog(
         apply_report=ImportApplyReport(
             tournament_id=17,
-            tournament_name="Spring Cup",
+            tournament_name="Весенний кубок",
             tournament_status="draft",
             has_draft_changes=True,
             imported_rows=2,
             skipped_rows=1,
             total_rows=3,
-            warnings=["Missing norms file"],
-            norms_loaded=False,
+            warnings=["Нужна ручная проверка"],
             source_files=["/tmp/import.xlsx"],
             operation_group_id="op-import-dialog",
             files_processed=1,
@@ -81,16 +80,16 @@ def test_import_apply_review_dialog_shows_summary_warnings_and_rating_impact() -
             available=True,
             reason=None,
             before_rows=[
-                RatingSnapshotRow(player_id=1, place=1, fio="Adams Alice", points=100, tournaments_count=1),
+                RatingSnapshotRow(player_id=1, place=1, fio="Иванова Анна", points=100, tournaments_count=1),
             ],
             after_rows=[
-                RatingSnapshotRow(player_id=2, place=1, fio="Brown Bob", points=120, tournaments_count=1),
-                RatingSnapshotRow(player_id=1, place=2, fio="Adams Alice", points=100, tournaments_count=1),
+                RatingSnapshotRow(player_id=2, place=1, fio="Петров Борис", points=120, tournaments_count=1),
+                RatingSnapshotRow(player_id=1, place=2, fio="Иванова Анна", points=100, tournaments_count=1),
             ],
             rows=[
                 RatingImpactRow(
                     player_id=2,
-                    fio="Brown Bob",
+                    fio="Петров Борис",
                     old_place=None,
                     new_place=1,
                     place_delta=None,
@@ -100,7 +99,7 @@ def test_import_apply_review_dialog_shows_summary_warnings_and_rating_impact() -
                 ),
                 RatingImpactRow(
                     player_id=1,
-                    fio="Adams Alice",
+                    fio="Иванова Анна",
                     old_place=1,
                     new_place=2,
                     place_delta=-1,

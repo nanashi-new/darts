@@ -10,7 +10,7 @@ from app.services.restore_points import process_pending_profile_action
 
 def main() -> int:
     log_path = _configure_startup_logging()
-    logging.info("Starting Darts Rating EBCK")
+    logging.info("Starting Darts Liga")
     logging.info("Runtime paths: %s", get_runtime_paths().to_dict())
     logging.info("Build info: %s", load_build_info().to_dict())
     pending_result = process_pending_profile_action()

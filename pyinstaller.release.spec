@@ -8,9 +8,7 @@ try:
 except Exception:
     project_root = Path.cwd()
 
-datas = [
-    ("app/resources/norms.xlsx.b64", "app/resources"),
-]
+datas = []
 generated_build_info = project_root / "build" / "build_info.json"
 if generated_build_info.exists():
     datas.append((str(generated_build_info), "app/resources"))
@@ -44,7 +42,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name="DartsRatingEBCK",
+    name="DartsLiga",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

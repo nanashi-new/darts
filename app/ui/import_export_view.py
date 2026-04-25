@@ -341,16 +341,6 @@ class ImportExportView(QWidget):
             if callable(refresh):
                 refresh(tournament_id)
 
-        if not apply_report.norms_loaded:
-            self._audit_log_service.log_event(
-                IMPORT_FILE,
-                "Импорт файла выполнен с предупреждением",
-                "Нормативы не загружены.",
-                level="warning",
-                context={"path": file_path, "tournament_id": tournament_id},
-                operation_group_id=apply_report.operation_group_id or None,
-            )
-
         self._audit_log_service.log_event(
             IMPORT_FILE,
             "Импорт файла: применено в черновик",

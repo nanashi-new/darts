@@ -9,13 +9,13 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 from app.build_info import BuildInfo, load_build_info
 from app.db.schema import SCHEMA_VERSION
-from app.runtime_paths import RuntimePaths, get_bundled_resource_path, get_runtime_paths
+from app.runtime_paths import RuntimePaths, get_runtime_paths
 from app.services.audit_log import (
     AuditLogService,
     DIAGNOSTIC_BUNDLE_EXPORTED,
     SELF_CHECK_RUN,
 )
-from app.settings import get_norms_xlsx_path, set_last_self_check
+from app.settings import set_last_self_check
 
 
 @dataclass(frozen=True)
@@ -85,17 +85,6 @@ def run_self_check(*, connection=None) -> SelfCheckReport:
                 code="build_info.fallback",
                 severity="warning",
                 message="Метаданные сборки не найдены; используется режим разработки.",
-            )
-        )
-
-    norms_path = Path(get_norms_xlsx_path())
-    bundled_template = get_bundled_resource_path("resources/norms.xlsx.b64")
-    if not norms_path.exists() and not bundled_template.exists():
-        issues.append(
-            SelfCheckIssue(
-                code="norms.unavailable",
-                severity="warning",
-                message="Файл norms.xlsx отсутствует, а встроенный шаблон недоступен.",
             )
         )
 

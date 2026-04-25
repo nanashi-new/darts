@@ -2,7 +2,7 @@ import unittest
 
 import pytest
 
-from app.domain.points import points_for_place, points_for_rank
+from app.domain.points import points_for_place
 
 
 pytestmark = pytest.mark.unit
@@ -29,25 +29,6 @@ class PointsForPlaceTests(unittest.TestCase):
         for place, expected in cases:
             with self.subTest(place=place):
                 self.assertEqual(points_for_place(place), expected)
-
-
-class PointsForRankTests(unittest.TestCase):
-    def test_points_for_rank_table(self) -> None:
-        cases = [
-            ("3юн", 2),
-            ("2юн", 4),
-            ("1юн", 6),
-            ("3сп", 8),
-            ("2сп", 10),
-            ("1сп", 12),
-            ("КМС", 14),
-            (None, 0),
-            ("", 0),
-            ("неизвестный", 0),
-        ]
-        for rank, expected in cases:
-            with self.subTest(rank=rank):
-                self.assertEqual(points_for_rank(rank), expected)
 
 
 if __name__ == "__main__":

@@ -1,1 +1,1 @@
-"""Domain layer with EBCK business rules."""
+"""Domain layer with rating business rules."""

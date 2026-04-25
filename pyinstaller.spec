@@ -13,9 +13,7 @@ a = Analysis(
     ['app/__main__.py'],
     pathex=[str(project_root)],
     binaries=[],
-    datas=[
-        ('app/resources/norms.xlsx.b64', 'app/resources'),
-    ],
+    datas=[],
     hiddenimports=[
         'PySide6.QtCore',
         'PySide6.QtGui',
@@ -37,7 +35,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='DartsRatingEBCK',
+    name='DartsLiga',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -54,5 +52,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='DartsRatingEBCK',
+    name='DartsLiga',
 )

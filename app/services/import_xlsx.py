@@ -18,9 +18,7 @@ from app.db.repositories import (
     TournamentRepository,
 )
 from app.domain.points import points_for_place
-from app.domain.ranks import calculate_points_classification
 from app.runtime_paths import get_runtime_paths
-from app.services.norms_loader import load_norms_from_settings
 
 
 class ImportRow(TypedDict, total=False):
@@ -80,7 +78,6 @@ class ImportApplyReport:
     skipped_rows: int
     total_rows: int
     warnings: list[str]
-    norms_loaded: bool
     source_files: list[str]
     operation_group_id: str = ""
     files_processed: int = 1
@@ -865,9 +862,6 @@ def import_tournament_rows(
     tournament_repo = TournamentRepository(connection)
     player_repo = PlayerRepository(connection)
     result_repo = ResultRepository(connection)
-    norms_load = load_norms_from_settings()
-    norms, norms_loaded = norms_load.norms, norms_load.loaded
-
     source_files_payload = list(source_files or [])
     operation_group_id_value = str(operation_group_id or "").strip() or uuid4().hex
     create_restore_point(
@@ -992,18 +986,14 @@ def import_tournament_rows(
         score_sector20 = parse_int(row.get("score_sector20"))
         score_big_round = parse_int(row.get("score_big_round"))
 
-        gender = None if player is None else player.get("gender")
-        ranks, points_classification = calculate_points_classification(
-            score_set=score_set,
-            score_sector20=score_sector20,
-            score_big_round=score_big_round,
-            gender=gender,
-            birth_date=birth_date,
-            tournament_date=tournament_date,
-            norms=norms or {},
-        )
         points_place = points_for_place(place) if place is not None else 0
-        points_total = points_place + points_classification
+        points_classification = 0
+        points_total = points_place
+        ranks = {
+            "rank_set": None,
+            "rank_sector20": None,
+            "rank_big_round": None,
+        }
 
         result_repo.create(
             {
@@ -1019,7 +1009,7 @@ def import_tournament_rows(
                 "points_classification": points_classification,
                 "points_place": points_place,
                 "points_total": points_total,
-                "calc_version": "v2",
+                "calc_version": "v3_no_classification",
             }
         )
         imported_rows += 1
@@ -1033,7 +1023,6 @@ def import_tournament_rows(
         skipped_rows=skipped_rows,
         total_rows=len(parsed_rows),
         warnings=warnings,
-        norms_loaded=norms_loaded,
         source_files=source_files_payload,
         operation_group_id=operation_group_id_value,
         files_processed=len(source_files_payload) if source_files_payload else 1,

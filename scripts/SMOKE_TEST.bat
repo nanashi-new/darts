@@ -6,13 +6,13 @@ cd /d %~dp0\..
 pytest -q tests\test_runtime_diagnostics.py tests\test_release_smoke_max.py tests\test_ui_tabs_content_smoke.py
 if errorlevel 1 exit /b 1
 
-if not exist dist\DartsRatingEBCK.exe (
+if not exist dist\DartsLiga.exe (
   echo Release exe not found. Run scripts\BUILD_RELEASE.bat first.
   exit /b 1
 )
 
 set "PROFILE_ROOT=%TEMP%\DartsSmoke_%RANDOM%%RANDOM%"
-set "ARTIFACT=%CD%\dist\DartsRatingEBCK.exe"
+set "ARTIFACT=%CD%\dist\DartsLiga.exe"
 
 powershell -NoProfile -Command ^
   "$ErrorActionPreference = 'Stop'; " ^
@@ -26,7 +26,7 @@ powershell -NoProfile -Command ^
   "  return $p.ExitCode " ^
   "} " ^
   "$first = Invoke-SmokeRun; if ($first -ne 0) { throw 'First packaged run failed.' } " ^
-  "$required = @('app.db','settings.json','norms.xlsx','logs\startup.log'); " ^
+  "$required = @('app.db','settings.json','logs\startup.log'); " ^
   "foreach ($entry in $required) { if (-not (Test-Path (Join-Path $profileRoot $entry))) { throw ('Missing required profile artifact: ' + $entry) } } " ^
   "$second = Invoke-SmokeRun; if ($second -ne 0) { throw 'Second packaged run failed.' } " ^
   "Write-Host ('Smoke profile root: ' + $profileRoot);"

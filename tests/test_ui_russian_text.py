@@ -39,6 +39,15 @@ DISALLOWED_VISIBLE_FRAGMENTS = (
     "Summary is required",
     "Primary",
     "Duplicate",
+    "Darts Rating EBCK",
+    "DartsRatingEBCK",
+    "EBCK",
+    "ЕВСК",
+    "norms.xlsx",
+    "норматив",
+    "Норматив",
+    "разряд",
+    "Разряд",
 )
 
 

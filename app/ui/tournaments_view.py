@@ -160,7 +160,6 @@ class TournamentsView(QWidget):
             ("score_sector20", "Сектор 20"),
             ("score_big_round", "Большой раунд"),
             ("points_place", "Очки за место"),
-            ("points_classification", "Очки классификации"),
             ("points_total", "Итого"),
         ]
         model = QStandardItemModel(self)
@@ -237,7 +236,6 @@ class TournamentsView(QWidget):
                         "Сектор 20",
                         "Большой раунд",
                         "Очки за место",
-                        "Очки классификации",
                         "Итого",
                     ],
                     rows=self._table_rows(),

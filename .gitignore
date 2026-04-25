@@ -11,5 +11,3 @@ test_run/
 
 *.tmp
 *.bak
-
-app/resources/norms.xlsx

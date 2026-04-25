@@ -107,7 +107,6 @@ class BatchExportService:
                     "Сектор 20",
                     "Большой раунд",
                     "Очки за место",
-                    "Очки классификации",
                     "Итого",
                 ],
                 rows=rows,
@@ -180,7 +179,6 @@ class BatchExportService:
                     str(result.get("score_sector20") or ""),
                     str(result.get("score_big_round") or ""),
                     str(result.get("points_place") or ""),
-                    str(result.get("points_classification") or ""),
                     str(result.get("points_total") or ""),
                 ]
             )

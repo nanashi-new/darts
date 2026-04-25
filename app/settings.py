@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
-
 from app.runtime_paths import get_runtime_paths
 
 
@@ -30,21 +28,6 @@ def update_setting(key: str, value: object) -> None:
     settings = load_settings()
     settings[key] = value
     save_settings(settings)
-
-
-def get_default_norms_xlsx_path() -> str:
-    return str(get_runtime_paths().profile_root / "norms.xlsx")
-
-
-def get_norms_xlsx_path() -> str:
-    env_path = os.environ.get("NORMS_XLSX_PATH")
-    if env_path:
-        return env_path
-    return str(load_settings().get("norms_xlsx_path") or get_default_norms_xlsx_path())
-
-
-def set_norms_xlsx_path(path: str) -> None:
-    update_setting("norms_xlsx_path", path)
 
 
 def get_saved_views() -> dict[str, object]:

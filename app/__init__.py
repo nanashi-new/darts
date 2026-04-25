@@ -1,4 +1,4 @@
-"""Application package for the Darts Rating EBCK desktop app."""
+"""Application package for the Darts Liga desktop app."""
 
 from app.build_info import load_build_info
 

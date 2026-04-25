@@ -17,7 +17,7 @@ from app.ui_state import get_view_state, update_view_state
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("Darts Rating EBCK")
+        self.setWindowTitle("Дартс Лига")
         self.setMinimumSize(1024, 640)
 
         tabs = QTabWidget()

@@ -9,8 +9,8 @@ Use this file as release-run reference material, not as the task queue.
 - Branch: `feature/adult-league-rating-transitions`
 - Base commit before final close-out commit: `a9af253`
 - Environment: local Windows workstation, Python 3.13, one-file PyInstaller build
-- Main artifact: `dist/DartsRatingEBCK.exe`
-- Packed bundle: `release/DartsRatingEBCK-release.zip`
+- Main artifact: `dist/DartsLiga.exe`
+- Packed bundle: `release/DartsLiga-release.zip`
 - Detailed report: [`../planning/archive/release-artifacts/release-manual-run-2026-04-20-packaged-finish.md`](../planning/archive/release-artifacts/release-manual-run-2026-04-20-packaged-finish.md)
 
 ## Commands executed
@@ -42,7 +42,7 @@ Expected result:
 - validates pinned requirements
 - validates offline wheel manifest when `vendor/wheels` is present
 - generates `build/build_info.json`
-- produces `dist/DartsRatingEBCK.exe`
+- produces `dist/DartsLiga.exe`
 
 ### Packaged clean-profile smoke
 
@@ -52,7 +52,7 @@ cmd /c scripts\SMOKE_TEST.bat
 
 Expected result:
 - packaged app starts with a fresh `DARTS_PROFILE_ROOT`
-- `app.db`, `settings.json`, `norms.xlsx`, and `logs/startup.log` are created
+- `app.db`, `settings.json`, and `logs/startup.log` are created
 - second run also succeeds
 
 ### Release bundle
@@ -62,7 +62,7 @@ cmd /c scripts\PACK_RELEASE.bat
 ```
 
 Expected result:
-- produces `release/DartsRatingEBCK-release.zip`
+- produces `release/DartsLiga-release.zip`
 
 ## Acceptance criteria for release close-out
 

@@ -9,9 +9,9 @@
 | Порядок | Задача | Статус | Task | Зависимости |
 |---:|---|---|---|---|
 | 1 | Очистить активное дерево и перенести старые планы в архив | done | [repo-cleanup.md](tasks/repo-cleanup.md) | система `planning/` |
-| 2 | Стабилизировать текущую русификацию | in progress | [russian-ui-polish.md](tasks/russian-ui-polish.md) | текущая ветка `feature/russian-release-polish` |
-| 3 | Переименовать продукт в «Дартс Лига» | planned | [rename-to-darts-liga.md](tasks/rename-to-darts-liga.md) | русификация UI |
-| 4 | Убрать ЕВСК/EBCK из продукта и расчетов | planned | [remove-evsk-ebck.md](tasks/remove-evsk-ebck.md) | новое название продукта |
+| 2 | Стабилизировать текущую русификацию | done | [russian-ui-polish.md](tasks/russian-ui-polish.md) | merged in PR #65 |
+| 3 | Переименовать продукт в «Дартс Лига» | done | [rename-to-darts-liga.md](tasks/rename-to-darts-liga.md) | ветка `feature/darts-liga-no-evsk` |
+| 4 | Убрать старую классификацию из продукта и расчетов | done | [remove-evsk-ebck.md](tasks/remove-evsk-ebck.md) | ветка `feature/darts-liga-no-evsk` |
 | 5 | Закрыть release readiness для v1.1 | planned | [release-readiness.md](tasks/release-readiness.md) | P0 задачи 2-4 |
 
 ## P1 - Следующий слой удобства

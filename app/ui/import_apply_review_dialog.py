@@ -93,8 +93,6 @@ class ImportApplyReviewDialog(QDialog):
 
         self.warnings_list = QListWidget(group)
         warning_lines = list(apply_report.warnings)
-        if not apply_report.norms_loaded:
-            warning_lines.insert(0, "Нормативы не загружены.")
         if not warning_lines:
             warning_lines.append("Предупреждений нет.")
         for warning in warning_lines:

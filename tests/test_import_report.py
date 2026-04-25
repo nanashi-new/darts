@@ -56,7 +56,7 @@ def test_build_import_session_report_and_renderers_include_required_fields() -> 
         players_created=1,
         players_reused=1,
         players_matched_manually=1,
-        warnings=["Missing norms file"],
+        warnings=["Нужна ручная проверка"],
         warnings_count=1,
         errors_count=0,
         source_files=["/tmp/import.xlsx"],
@@ -66,17 +66,17 @@ def test_build_import_session_report_and_renderers_include_required_fields() -> 
     json_payload = json.loads(render_import_report_json(report))
 
     assert "Spring Cup" in text_report
-    assert "Files processed: 1" in text_report
-    assert "Tables processed: 1" in text_report
-    assert "Rows read: 3" in text_report
-    assert "Rows imported: 2" in text_report
-    assert "Rows skipped: 1" in text_report
-    assert "Players created: 1" in text_report
-    assert "Players reused: 1" in text_report
-    assert "Players matched manually: 1" in text_report
+    assert "Обработано файлов: 1" in text_report
+    assert "Обработано таблиц: 1" in text_report
+    assert "Прочитано строк: 3" in text_report
+    assert "Импортировано строк: 2" in text_report
+    assert "Пропущено строк: 1" in text_report
+    assert "Создано игроков: 1" in text_report
+    assert "Переиспользовано игроков: 1" in text_report
+    assert "Сопоставлено вручную: 1" in text_report
     assert json_payload["operation_group_id"] == "op-import-1"
     assert json_payload["apply_status"] == "published"
-    assert json_payload["warnings"] == ["Missing norms file"]
+    assert json_payload["warnings"] == ["Нужна ручная проверка"]
     assert json_payload["source_files"] == ["/tmp/import.xlsx"]
 
 

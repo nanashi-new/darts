@@ -5,7 +5,7 @@ cd /d %~dp0\..
 
 set "WHEELS_DIR=vendor\wheels"
 set "MANIFEST_FILE=%WHEELS_DIR%\manifest.json"
-set "ARTIFACT=dist\DartsRatingEBCK.exe"
+set "ARTIFACT=dist\DartsLiga.exe"
 
 if not exist requirements-pinned.txt (
   echo requirements-pinned.txt not found.

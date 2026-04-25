@@ -3,8 +3,8 @@ setlocal
 
 cd /d %~dp0\..
 
-set "ARTIFACT=dist\DartsRatingEBCK.exe"
-set "SCRIPT=installer\DartsRatingEBCK.iss"
+set "ARTIFACT=dist\DartsLiga.exe"
+set "SCRIPT=installer\DartsLiga.iss"
 
 if not exist "%ARTIFACT%" (
   echo Release exe not found. Run scripts\BUILD_RELEASE.bat first.
@@ -40,5 +40,5 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo Installer artifact: release\DartsRatingEBCK-Setup.exe
+echo Installer artifact: release\DartsLiga-Setup.exe
 endlocal

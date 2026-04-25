@@ -5,8 +5,6 @@ from typing import TypedDict, cast
 
 from app.db.repositories import ResultRepository, TournamentRepository
 from app.domain.points import points_for_place
-from app.domain.ranks import calculate_points_classification
-from app.services.norms_loader import load_norms_from_settings
 
 
 def _as_int_or_none(value: object | None) -> int | None:
@@ -51,11 +49,6 @@ def recalculate_tournament_results(*, connection, tournament_id: int) -> Recalcu
     if not tournament:
         raise ValueError("Турнир не найден.")
 
-    norms_load = load_norms_from_settings()
-    norms, norms_loaded = norms_load.norms, norms_load.loaded
-    if not norms_loaded:
-        report.warnings.append(norms_load.warning or "Нормативы не загружены.")
-
     results_raw = result_repo.list_with_players(tournament_id)
     results: list[ResultRow] = [
         cast(ResultRow, result) for result in results_raw if isinstance(result, dict)
@@ -68,27 +61,17 @@ def recalculate_tournament_results(*, connection, tournament_id: int) -> Recalcu
             if is_adult_mode:
                 points_total = _as_int_or_none(result.get("points_total")) or 0
                 points_place = points_total
-                points_classification = 0
-                ranks = {
-                    "rank_set": result.get("rank_set"),
-                    "rank_sector20": result.get("rank_sector20"),
-                    "rank_big_round": result.get("rank_big_round"),
-                }
                 calc_version = "manual_adult_v1"
             else:
                 points_place = points_for_place(place) if place is not None else 0
-
-                ranks, points_classification = calculate_points_classification(
-                    score_set=result.get("score_set"),
-                    score_sector20=result.get("score_sector20"),
-                    score_big_round=result.get("score_big_round"),
-                    gender=result.get("gender"),
-                    birth_date=result.get("birth_date"),
-                    tournament_date=tournament.get("date"),
-                    norms=norms or {},
-                )
-                points_total = points_place + points_classification
-                calc_version = "v2"
+                points_total = points_place
+                calc_version = "v3_no_classification"
+            points_classification = 0
+            ranks = {
+                "rank_set": None,
+                "rank_sector20": None,
+                "rank_big_round": None,
+            }
 
             result_id = _as_int_or_none(result.get("id"))
             if result_id is None:

@@ -125,5 +125,5 @@ if errorlevel 1 (
 )
 
 echo [5/5] Готово.
-echo Итоговый файл: dist\DartsRatingEBCK\DartsRatingEBCK.exe
+echo Итоговый файл: dist\DartsLiga\DartsLiga.exe
 endlocal

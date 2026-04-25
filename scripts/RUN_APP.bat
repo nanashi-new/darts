@@ -3,8 +3,8 @@ setlocal
 
 cd /d %~dp0\..
 
-if exist dist\DartsRatingEBCK.exe (
-  start "" /wait dist\DartsRatingEBCK.exe
+if exist dist\DartsLiga.exe (
+  start "" /wait dist\DartsLiga.exe
   exit /b %errorlevel%
 )
 

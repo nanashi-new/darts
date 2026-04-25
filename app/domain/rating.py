@@ -3,12 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from app.domain.ranks import _normalize_gender
-
 
 def compute_tournament_points(points_classification: int | None, points_place: int | None) -> int:
     """Compute total tournament points."""
-    return int(points_classification or 0) + int(points_place or 0)
+    return int(points_place or 0)
 
 
 def rolling_rating(tournament_points_list_sorted_by_date_desc: list[int], n: int) -> int:
@@ -52,6 +50,17 @@ def normalize_adult_gender_scope(value: object | None) -> str | None:
         return "men"
     if normalized_gender == "F":
         return "women"
+    return None
+
+
+def _normalize_gender(value: object | None) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip().lower()
+    if text in {"m", "м", "male", "муж", "мужской", "юноши", "мужчины"}:
+        return "M"
+    if text in {"f", "ж", "female", "жен", "женский", "девушки", "женщины"}:
+        return "F"
     return None
 
 

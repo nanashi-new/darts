@@ -53,8 +53,6 @@ def build_import_session_report(
 
     tournament = TournamentRepository(connection).get(apply_report.tournament_id) or {}
     warnings = list(apply_report.warnings)
-    if not apply_report.norms_loaded:
-        warnings.insert(0, "Нормативы не были загружены из настроек.")
 
     category_code_raw = tournament.get("category_code")
     category_code = str(category_code_raw).strip() if category_code_raw is not None else None

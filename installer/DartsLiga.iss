@@ -1,7 +1,7 @@
-#define MyAppName "Darts Rating EBCK"
+#define MyAppName "Дартс Лига"
 #define MyAppVersion "1.1.0"
-#define MyAppPublisher "Darts Rating EBCK"
-#define MyAppExeName "DartsRatingEBCK.exe"
+#define MyAppPublisher "Darts Liga"
+#define MyAppExeName "DartsLiga.exe"
 
 [Setup]
 AppId={{4C279D15-8E83-4D17-8C69-91E857F9B3F2}
@@ -12,7 +12,7 @@ DefaultDirName={localappdata}\Programs\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=..\release
-OutputBaseFilename=DartsRatingEBCK-Setup
+OutputBaseFilename=DartsLiga-Setup
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern

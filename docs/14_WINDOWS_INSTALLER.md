@@ -25,13 +25,13 @@ scripts\BUILD_INSTALLER.bat
 
 Результат:
 
-- `release\DartsRatingEBCK-Setup.exe`
+- `release\DartsLiga-Setup.exe`
 
 ## Требования
 
 - Windows
 - Inno Setup 6
-- готовый файл `dist\DartsRatingEBCK.exe`
+- готовый файл `dist\DartsLiga.exe`
 
 Скрипт ищет `ISCC.exe` в стандартных папках установки Inno Setup и в `PATH`.
 
@@ -39,7 +39,7 @@ scripts\BUILD_INSTALLER.bat
 
 Перед публикацией релиза:
 
-- установить приложение через `release\DartsRatingEBCK-Setup.exe`
+- установить приложение через `release\DartsLiga-Setup.exe`
 - запустить приложение из меню Пуск или ярлыка
 - проверить первый запуск на чистом профиле
 - проверить экспорт PDF/XLSX/PNG
