@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.services.audit_log import AuditLogService, EVENT_TYPES
+from app.ui.labels import audit_event_label, level_label
 
 
 class AuditLogDialog(QDialog):
@@ -29,7 +30,7 @@ class AuditLogDialog(QDialog):
         self._type_filter = QComboBox(self)
         self._type_filter.addItem("Все типы", "")
         for event_type in EVENT_TYPES:
-            self._type_filter.addItem(event_type, event_type)
+            self._type_filter.addItem(audit_event_label(event_type), event_type)
         self._type_filter.currentIndexChanged.connect(self._refresh)
 
         self._search_input = QLineEdit(self)
@@ -45,7 +46,7 @@ class AuditLogDialog(QDialog):
         layout.addWidget(self._list_widget)
 
         buttons_row = QHBoxLayout()
-        export_btn = QPushButton("Экспорт лога в TXT", self)
+        export_btn = QPushButton("Экспорт журнала в TXT", self)
         export_btn.clicked.connect(self._export_log)
         close_btn = QPushButton("Закрыть", self)
         close_btn.clicked.connect(self.accept)
@@ -65,7 +66,8 @@ class AuditLogDialog(QDialog):
         )
         for event in events:
             self._list_widget.addItem(
-                f"[{event.created_at}] {event.level.upper()} {event.event_type} — {event.title}\n{event.details}"
+                f"[{event.created_at}] {level_label(event.level)} | {audit_event_label(event.event_type)} | "
+                f"{event.title}\n{event.details}"
             )
 
     def _selected_event_type(self) -> str | None:
@@ -75,9 +77,9 @@ class AuditLogDialog(QDialog):
     def _export_log(self) -> None:
         path, _ = QFileDialog.getSaveFileName(
             self,
-            "Экспорт лога",
+            "Экспорт журнала",
             "audit_log.txt",
-            "Text Files (*.txt)",
+            "Текстовые файлы (*.txt)",
         )
         if not path:
             return

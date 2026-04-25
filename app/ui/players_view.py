@@ -21,6 +21,7 @@ from app.db.database import get_connection
 from app.db.repositories import PlayerRepository, ResultRepository
 from app.services.audit_log import AuditLogService, ERROR
 from app.services.league_transfer import list_player_league_transfers
+from app.ui.messages import confirm_yes_no
 from app.ui.player_card_dialog import PlayerCardDialog
 from app.ui.player_edit_dialog import PlayerEditDialog
 from app.ui_state import get_view_state, update_view_state
@@ -335,7 +336,7 @@ class PlayersView(QWidget):
 
         player_id = int(player["id"])
         fio = self._build_fio(player)
-        confirm = QMessageBox.question(
+        confirm = confirm_yes_no(
             self,
             "Удаление игрока",
             (
@@ -343,7 +344,7 @@ class PlayersView(QWidget):
                 "Связанные результаты турниров также будут удалены."
             ),
         )
-        if confirm != QMessageBox.StandardButton.Yes:
+        if not confirm:
             return
 
         try:

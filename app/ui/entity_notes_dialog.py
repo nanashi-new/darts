@@ -23,6 +23,16 @@ from PySide6.QtWidgets import (
 )
 
 from app.services.notes import EntityNoteDefaults, create_note, list_entity_notes
+from app.ui.labels import (
+    ENTITY_TYPE_LABELS,
+    NOTE_TYPE_LABELS,
+    PRIORITY_LABELS,
+    VISIBILITY_LABELS,
+    entity_type_label,
+    note_type_label,
+    priority_label,
+    visibility_label,
+)
 
 
 @dataclass(frozen=True)
@@ -36,32 +46,15 @@ class EntityNoteFormData:
     is_pinned: bool
 
 
-NOTE_TYPE_OPTIONS: list[tuple[str, str]] = [
-    ("Player note", "player_note"),
-    ("Coach note", "coach_note"),
-    ("Follow-up", "follow_up"),
-    ("Tournament note", "tournament_note"),
-    ("League note", "league_note"),
-]
-
-VISIBILITY_OPTIONS: list[tuple[str, str]] = [
-    ("Personal", "personal"),
-    ("Internal service", "internal_service"),
-    ("Coach-only", "coach_only"),
-    ("Follow-up", "follow_up"),
-]
-
-PRIORITY_OPTIONS: list[tuple[str, str]] = [
-    ("Low", "low"),
-    ("Normal", "normal"),
-    ("High", "high"),
-]
+NOTE_TYPE_OPTIONS: list[tuple[str, str]] = [(label, value) for value, label in NOTE_TYPE_LABELS.items()]
+VISIBILITY_OPTIONS: list[tuple[str, str]] = [(label, value) for value, label in VISIBILITY_LABELS.items()]
+PRIORITY_OPTIONS: list[tuple[str, str]] = [(label, value) for value, label in PRIORITY_LABELS.items()]
 
 
 class EntityNoteDialog(QDialog):
     def __init__(self, *, defaults: EntityNoteDefaults | None = None, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Новая note")
+        self.setWindowTitle("Новая заметка")
         self.resize(520, 420)
 
         layout = QVBoxLayout(self)
@@ -74,7 +67,7 @@ class EntityNoteDialog(QDialog):
         self.priority_combo = QComboBox(self)
         self.body_input = QTextEdit(self)
         self.body_input.setMinimumHeight(140)
-        self.is_pinned_checkbox = QCheckBox("Pinned", self)
+        self.is_pinned_checkbox = QCheckBox("Закрепить", self)
 
         for label, value in NOTE_TYPE_OPTIONS:
             self.type_combo.addItem(label, value)
@@ -83,12 +76,12 @@ class EntityNoteDialog(QDialog):
         for label, value in PRIORITY_OPTIONS:
             self.priority_combo.addItem(label, value)
 
-        form.addRow("Title*", self.title_input)
-        form.addRow("Author", self.author_input)
-        form.addRow("Type", self.type_combo)
-        form.addRow("Visibility", self.visibility_combo)
-        form.addRow("Priority", self.priority_combo)
-        form.addRow("Body*", self.body_input)
+        form.addRow("Заголовок*", self.title_input)
+        form.addRow("Автор", self.author_input)
+        form.addRow("Тип", self.type_combo)
+        form.addRow("Доступ", self.visibility_combo)
+        form.addRow("Приоритет", self.priority_combo)
+        form.addRow("Текст*", self.body_input)
         form.addRow("", self.is_pinned_checkbox)
         layout.addLayout(form)
 
@@ -96,6 +89,10 @@ class EntityNoteDialog(QDialog):
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel,
             self,
         )
+        if save_button := buttons.button(QDialogButtonBox.StandardButton.Save):
+            save_button.setText("Сохранить")
+        if cancel_button := buttons.button(QDialogButtonBox.StandardButton.Cancel):
+            cancel_button.setText("Отмена")
         buttons.accepted.connect(self._accept_if_valid)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
@@ -114,10 +111,10 @@ class EntityNoteDialog(QDialog):
 
     def _accept_if_valid(self) -> None:
         if not self.title_input.text().strip():
-            QMessageBox.warning(self, "Note", "Title is required.")
+            QMessageBox.warning(self, "Заметка", "Укажите заголовок.")
             return
         if not self.body_input.toPlainText().strip():
-            QMessageBox.warning(self, "Note", "Body is required.")
+            QMessageBox.warning(self, "Заметка", "Укажите текст заметки.")
             return
         self.accept()
 
@@ -156,7 +153,7 @@ class EntityNotesDialog(QDialog):
         self._entity_id = entity_id
         self._defaults = defaults
 
-        self.setWindowTitle(f"Notes: {entity_type}:{entity_id}")
+        self.setWindowTitle(f"Заметки: {entity_type_label(entity_type)} {entity_id}")
         self.resize(860, 520)
 
         layout = QVBoxLayout(self)
@@ -167,21 +164,21 @@ class EntityNotesDialog(QDialog):
         self._refresh_notes()
 
     def _build_filters_group(self) -> QGroupBox:
-        group = QGroupBox("Filters", self)
+        group = QGroupBox("Фильтры", self)
         layout = QHBoxLayout(group)
 
         self.search_input = QLineEdit(group)
-        self.search_input.setPlaceholderText("Search in title/body")
+        self.search_input.setPlaceholderText("Поиск по заголовку и тексту")
         self.search_input.textChanged.connect(self._refresh_notes)
 
         self.note_type_filter_combo = QComboBox(group)
-        self.note_type_filter_combo.addItem("All types", None)
+        self.note_type_filter_combo.addItem("Все типы", None)
         for label, value in NOTE_TYPE_OPTIONS:
             self.note_type_filter_combo.addItem(label, value)
         self.note_type_filter_combo.currentIndexChanged.connect(self._refresh_notes)
 
         self.visibility_filter_combo = QComboBox(group)
-        self.visibility_filter_combo.addItem("All visibilities", None)
+        self.visibility_filter_combo.addItem("Любой доступ", None)
         for label, value in VISIBILITY_OPTIONS:
             self.visibility_filter_combo.addItem(label, value)
         self.visibility_filter_combo.currentIndexChanged.connect(self._refresh_notes)
@@ -194,7 +191,7 @@ class EntityNotesDialog(QDialog):
     def _build_notes_table(self) -> QTableWidget:
         self.notes_table = QTableWidget(0, 7, self)
         self.notes_table.setHorizontalHeaderLabels(
-            ["Title", "Type", "Visibility", "Priority", "Pinned", "Author", "Created"]
+            ["Заголовок", "Тип", "Доступ", "Приоритет", "Закреплена", "Автор", "Создано"]
         )
         self.notes_table.verticalHeader().setVisible(False)
         self.notes_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -203,7 +200,7 @@ class EntityNotesDialog(QDialog):
 
     def _build_actions(self) -> QHBoxLayout:
         layout = QHBoxLayout()
-        self.add_note_button = QPushButton("Добавить note", self)
+        self.add_note_button = QPushButton("Добавить заметку", self)
         self.add_note_button.clicked.connect(self._open_create_dialog)
         layout.addWidget(self.add_note_button)
         layout.addStretch(1)
@@ -226,10 +223,10 @@ class EntityNotesDialog(QDialog):
             self.notes_table.insertRow(row_index)
             values = [
                 note.title,
-                note.note_type,
-                note.visibility,
-                note.priority,
-                "yes" if note.is_pinned else "",
+                note_type_label(note.note_type),
+                visibility_label(note.visibility),
+                priority_label(note.priority),
+                "Да" if note.is_pinned else "",
                 note.author or "",
                 str(note.created_at).replace("T", " ")[:19],
             ]

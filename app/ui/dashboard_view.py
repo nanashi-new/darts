@@ -4,13 +4,13 @@ from collections.abc import Callable
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QHBoxLayout,
     QLabel,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
     QWidget,
-    QHBoxLayout,
 )
 
 from app.db.database import get_connection
@@ -18,6 +18,7 @@ from app.db.repositories import TournamentRepository
 from app.services.import_report import list_import_reports
 from app.services.notes import list_notes_hub
 from app.settings import get_last_self_check
+from app.ui.labels import import_apply_status_label, tournament_status_label, visibility_label
 from app.ui.player_card_dialog import PlayerCardDialog
 
 
@@ -29,29 +30,29 @@ class DashboardView(QWidget):
         self._tournament_repo = TournamentRepository(self._connection)
         layout = QVBoxLayout(self)
 
-        layout.addWidget(QLabel("Dashboard", self))
+        layout.addWidget(QLabel("Главная", self))
         layout.addLayout(self._build_quick_actions())
 
         self.recent_tournaments_table = QTableWidget(0, 3, self)
-        self.recent_tournaments_table.setHorizontalHeaderLabels(["Date", "Tournament", "Status"])
-        layout.addWidget(QLabel("Recent tournaments", self))
+        self.recent_tournaments_table.setHorizontalHeaderLabels(["Дата", "Турнир", "Статус"])
+        layout.addWidget(QLabel("Последние турниры", self))
         layout.addWidget(self.recent_tournaments_table)
 
         self.recent_imports_table = QTableWidget(0, 4, self)
-        self.recent_imports_table.setHorizontalHeaderLabels(["Created", "Tournament", "Status", "Imported"])
-        layout.addWidget(QLabel("Recent import reports", self))
+        self.recent_imports_table.setHorizontalHeaderLabels(["Создан", "Турнир", "Статус", "Импортировано"])
+        layout.addWidget(QLabel("Последние отчеты импорта", self))
         layout.addWidget(self.recent_imports_table)
 
         self.follow_up_notes_table = QTableWidget(0, 3, self)
-        self.follow_up_notes_table.setHorizontalHeaderLabels(["Entity", "Title", "Visibility"])
-        layout.addWidget(QLabel("Follow-up notes", self))
+        self.follow_up_notes_table.setHorizontalHeaderLabels(["Объект", "Заголовок", "Доступ"])
+        layout.addWidget(QLabel("Контрольные заметки", self))
         layout.addWidget(self.follow_up_notes_table)
 
-        self.open_follow_up_player_button = QPushButton("Open selected player note entity", self)
+        self.open_follow_up_player_button = QPushButton("Открыть карточку выбранного игрока", self)
         self.open_follow_up_player_button.clicked.connect(self._open_selected_follow_up_player)
         layout.addWidget(self.open_follow_up_player_button)
 
-        self.diagnostics_summary_label = QLabel("Diagnostics summary: no self-check yet", self)
+        self.diagnostics_summary_label = QLabel("Диагностика: самопроверка еще не запускалась", self)
         layout.addWidget(self.diagnostics_summary_label)
 
         layout.addStretch(1)
@@ -77,9 +78,12 @@ class DashboardView(QWidget):
         for tournament in self._tournament_repo.list()[:5]:
             row_index = self.recent_tournaments_table.rowCount()
             self.recent_tournaments_table.insertRow(row_index)
-            for column, value in enumerate(
-                [tournament.get("date"), tournament.get("name"), tournament.get("status")]
-            ):
+            values = [
+                tournament.get("date"),
+                tournament.get("name"),
+                tournament_status_label(tournament.get("status")),
+            ]
+            for column, value in enumerate(values):
                 self.recent_tournaments_table.setItem(
                     row_index,
                     column,
@@ -94,7 +98,7 @@ class DashboardView(QWidget):
             values = [
                 report_record.created_at,
                 report_record.report.tournament_name,
-                report_record.report.apply_status,
+                import_apply_status_label(report_record.report.apply_status),
                 report_record.report.rows_imported,
             ]
             for column, value in enumerate(values):
@@ -111,7 +115,7 @@ class DashboardView(QWidget):
             values = [
                 note.entity_label or f"{note.entity_type}:{note.entity_id}",
                 note.title,
-                note.visibility,
+                visibility_label(note.visibility),
             ]
             for column, value in enumerate(values):
                 item = QTableWidgetItem(str(value))
@@ -122,12 +126,12 @@ class DashboardView(QWidget):
     def _fill_diagnostics_summary(self) -> None:
         last_self_check = get_last_self_check()
         if not last_self_check:
-            self.diagnostics_summary_label.setText("Diagnostics summary: no self-check yet")
+            self.diagnostics_summary_label.setText("Диагностика: самопроверка еще не запускалась")
             return
         issues = last_self_check.get("issues", [])
-        created_at = last_self_check.get("created_at", "—")
+        created_at = last_self_check.get("created_at", "-")
         self.diagnostics_summary_label.setText(
-            f"Diagnostics summary: {len(issues)} issue(s), last check at {created_at}"
+            f"Диагностика: проблем - {len(issues)}, последняя проверка - {created_at}"
         )
 
     def _open_selected_follow_up_player(self) -> None:

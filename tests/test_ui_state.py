@@ -14,7 +14,8 @@ pytestmark = pytest.mark.release_smoke
 
 def _is_expected_headless_qt_failure(exc: Exception) -> bool:
     if isinstance(exc, ModuleNotFoundError):
-        return True
+        missing_name = getattr(exc, "name", "")
+        return missing_name == "PySide6" or missing_name.startswith("PySide6.")
     message = str(exc).lower()
     markers = (
         "libgl.so.1",
@@ -132,7 +133,7 @@ def test_views_restore_saved_workspace_state(monkeypatch, tmp_path) -> None:
 
     context_view = window.findChild(context_view_module.ContextView)
     assert context_view is not None
-    assert context_view._tabs.tabText(context_view._tabs.currentIndex()) == "Training"
+    assert context_view._tabs.tabText(context_view._tabs.currentIndex()) == "Тренировки"
     assert context_view.notes_search_input.text() == "note filter"
     assert context_view.notes_entity_filter.currentData() == "league"
     assert context_view.notes_type_filter.currentData() == "coach_note"

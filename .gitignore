@@ -1,9 +1,15 @@
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 build/
 dist/
 release/
 test_run/
+
+*.tmp
+*.bak
 
 app/resources/norms.xlsx

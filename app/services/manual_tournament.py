@@ -30,7 +30,7 @@ def create_manual_adult_tournament(
 ) -> ManualTournamentCreateReport:
     normalized_name = str(tournament_name or "").strip()
     if not normalized_name:
-        raise ValueError("Tournament name is required.")
+        raise ValueError("Укажите название турнира.")
 
     tournament_repo = TournamentRepository(connection)
     player_repo = PlayerRepository(connection)
@@ -59,13 +59,13 @@ def create_manual_adult_tournament(
     for index, row in enumerate(rows, start=1):
         fio = str(row.get("fio") or "").strip()
         if not fio:
-            warnings.append(f"Row {index}: missing FIO.")
+            warnings.append(f"Строка {index}: не указано ФИО.")
             skipped_rows += 1
             continue
 
         last_name, first_name, middle_name = _parse_fio(fio)
         if not last_name or not first_name:
-            warnings.append(f"Row {index}: incomplete FIO '{fio}'.")
+            warnings.append(f"Строка {index}: неполное ФИО '{fio}'.")
             skipped_rows += 1
             continue
 
@@ -73,7 +73,7 @@ def create_manual_adult_tournament(
         place = _parse_int(row.get("place"))
         points_total = _parse_int(row.get("points_total"))
         if points_total is None:
-            warnings.append(f"Row {index}: points_total is required for adult manual flow.")
+            warnings.append(f"Строка {index}: для взрослого турнира нужны итоговые очки.")
             skipped_rows += 1
             continue
 
@@ -120,14 +120,14 @@ def create_manual_adult_tournament(
         imported_rows += 1
 
     if imported_rows == 0:
-        raise ValueError("Adult manual tournament requires at least one valid result row.")
+        raise ValueError("Для взрослого турнира нужна хотя бы одна корректная строка результата.")
 
     audit_log.log_event(
         TOURNAMENT_CREATED,
-        "Manual adult tournament created",
+        "Создан взрослый турнир вручную",
         (
-            f"Tournament ID: {tournament_id}; rows={imported_rows}; "
-            f"skipped={skipped_rows}"
+            f"Турнир ID: {tournament_id}; строк={imported_rows}; "
+            f"пропущено={skipped_rows}"
         ),
         context={
             "tournament_id": tournament_id,

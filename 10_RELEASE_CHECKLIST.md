@@ -1,22 +1,28 @@
 # 10 - Release Checklist
 
-Current release target: minimal finished desktop v1 from `feature/adult-league-rating-transitions`.
+Active execution order lives in [`planning/00_PRIORITY.md`](planning/00_PRIORITY.md).
+Use this file only as the release gate checklist.
+
+Current release target: Russian polished desktop v1.1 from `feature/russian-release-polish`.
 
 Latest packaged verification artifact:
-- [`docs/artifacts/release-manual-run-2026-04-20-packaged-finish.md`](docs/artifacts/release-manual-run-2026-04-20-packaged-finish.md)
+- [`planning/archive/release-artifacts/release-manual-run-2026-04-20-packaged-finish.md`](planning/archive/release-artifacts/release-manual-run-2026-04-20-packaged-finish.md)
 
-Latest packaged outputs:
-- `dist/DartsRatingEBCK.exe`
-- `release/DartsRatingEBCK-release.zip`
+Expected release outputs:
+- one-file executable: `dist/DartsRatingEBCK.exe`
+- ZIP bundle: `release/DartsRatingEBCK-release.zip`
+- Windows installer: `release/DartsRatingEBCK-Setup.exe`
 
 ## Code and test gates
 
-- [x] `pytest -q` passes on the current branch
-- [x] `python -m py_compile` over `app/` and `tests/` passes
-- [x] diagnostics/runtime/recovery tests pass
-- [x] training/context/dashboard regressions remain green
-- [x] dependency installation uses `requirements-pinned.txt`
-- [x] offline wheel manifest validation is part of `scripts/BUILD_RELEASE.bat`
+- [ ] `pytest -q` passes on the current branch
+- [ ] `python -m mypy app` passes
+- [ ] `python -m py_compile` over `app/` and `tests/` passes
+- [ ] UI smoke tests confirm Russian top-level tabs and no placeholder text
+- [ ] UI Russian text tests confirm visible app strings are localized
+- [ ] diagnostics/runtime/recovery tests pass
+- [ ] dependency installation uses `requirements-pinned.txt`
+- [ ] offline wheel manifest validation is part of `scripts/BUILD_RELEASE.bat`
 
 ## Packaging gates
 
@@ -25,24 +31,27 @@ Latest packaged outputs:
 - [x] packaged artifact is produced by `scripts/BUILD_RELEASE.bat`
 - [x] packaged artifact path is printed by the build script
 - [x] mutable user data stays outside the exe via runtime paths
+- [x] Inno Setup installer script exists: `installer/DartsRatingEBCK.iss`
+- [x] installer build script exists: `scripts/BUILD_INSTALLER.bat`
+- [x] ZIP bundle remains available as fallback packaging
 
 ## Clean-profile smoke gates
 
-- [x] packaged app starts with a fresh `DARTS_PROFILE_ROOT`
-- [x] first run creates `app.db`
-- [x] first run creates `settings.json`
-- [x] first run materializes `norms.xlsx`
-- [x] first run writes `logs/startup.log`
-- [x] second packaged run succeeds on the same profile
-- [x] diagnostics/runtime metadata is available to the UI layer and included in the diagnostic bundle flow
+- [ ] packaged app starts with a fresh `DARTS_PROFILE_ROOT`
+- [ ] first run creates `app.db`
+- [ ] first run creates `settings.json`
+- [ ] first run materializes `norms.xlsx`
+- [ ] first run writes `logs/startup.log`
+- [ ] second packaged run succeeds on the same profile
+- [ ] diagnostics/runtime metadata is available to the UI layer and included in the diagnostic bundle flow
 
-## Recovery and diagnostics gates
+## Installer gates
 
-- [x] restore points are persisted in SQLite and on disk
-- [x] dangerous operations create restore points
-- [x] safe reset is queued and processed on restart
-- [x] diagnostic bundle export exists
-- [x] self-check exists and reports issues
+- [ ] `scripts\BUILD_INSTALLER.bat` produces `release\DartsRatingEBCK-Setup.exe`
+- [ ] installer UI is Russian
+- [ ] installed app starts from Start menu shortcut
+- [ ] optional desktop shortcut works
+- [ ] uninstall removes the installed executable but leaves user profile data intact
 
 ## Release scripts
 
@@ -52,15 +61,15 @@ Latest packaged outputs:
 - [x] `scripts/SMOKE_TEST.bat`
 - [x] `scripts/RESET_APP_DATA.bat`
 - [x] `scripts/PACK_RELEASE.bat`
+- [x] `scripts/BUILD_INSTALLER.bat`
 
 ## Decision
 
-Minimal finished v1 is release-ready on the current branch.
+The branch is ready for release only after the unchecked gates above are verified on Windows.
 
 Deferred by choice, not by release blocker:
 - attachments
 - tags
 - custom fields
-- installer
 - branding/theme customization
 - advanced workspace presets and table-geometry persistence

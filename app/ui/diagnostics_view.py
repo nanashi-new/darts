@@ -25,6 +25,7 @@ from app.services.restore_points import (
     queue_restore_from_point,
     queue_safe_profile_reset,
 )
+from app.ui.labels import level_label
 
 
 class DiagnosticsView(QWidget):
@@ -43,33 +44,37 @@ class DiagnosticsView(QWidget):
         layout.addWidget(
             QLabel(
                 (
-                    f"Version: {__build_metadata__.version} | "
-                    f"Build: {__build_metadata__.packaging_mode} | "
-                    f"Revision: {__build_metadata__.git_revision} | "
-                    f"Schema: {__build_metadata__.schema_version}"
+                    f"Версия: {__build_metadata__.version} | "
+                    f"Сборка: {__build_metadata__.packaging_mode} | "
+                    f"Ревизия: {__build_metadata__.git_revision} | "
+                    f"Схема: {__build_metadata__.schema_version}"
                 ),
                 self,
             )
         )
         layout.addWidget(
             QLabel(
-                f"Profile: {self._paths.profile_root}\nDB: {self._paths.db_path}\nSettings: {self._paths.settings_path}",
+                (
+                    f"Профиль: {self._paths.profile_root}\n"
+                    f"База данных: {self._paths.db_path}\n"
+                    f"Настройки: {self._paths.settings_path}"
+                ),
                 self,
             )
         )
 
-        self.self_check_summary = QLabel("Self-check: not run", self)
+        self.self_check_summary = QLabel("Самопроверка: еще не запускалась", self)
         layout.addWidget(self.self_check_summary)
 
         self.self_check_output = QPlainTextEdit(self)
         self.self_check_output.setReadOnly(True)
         layout.addWidget(self.self_check_output)
 
-        self.run_self_check_button = QPushButton("Запустить self-check", self)
+        self.run_self_check_button = QPushButton("Запустить самопроверку", self)
         self.run_self_check_button.clicked.connect(self._run_self_check)
         layout.addWidget(self.run_self_check_button)
 
-        self.export_bundle_button = QPushButton("Экспорт diagnostic bundle", self)
+        self.export_bundle_button = QPushButton("Экспорт диагностического архива", self)
         self.export_bundle_button.clicked.connect(self._export_bundle)
         layout.addWidget(self.export_bundle_button)
 
@@ -81,20 +86,20 @@ class DiagnosticsView(QWidget):
         self.open_profile_button.clicked.connect(lambda: self._open_folder(self._paths.profile_root))
         layout.addWidget(self.open_profile_button)
 
-        self.create_restore_point_button = QPushButton("Создать restore point", self)
+        self.create_restore_point_button = QPushButton("Создать точку восстановления", self)
         self.create_restore_point_button.clicked.connect(self._create_restore_point)
         layout.addWidget(self.create_restore_point_button)
 
-        layout.addWidget(QLabel("Restore points", self))
+        layout.addWidget(QLabel("Точки восстановления", self))
         self.restore_points_list = QListWidget(self)
         self.restore_points_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
         layout.addWidget(self.restore_points_list)
 
-        self.restore_selected_button = QPushButton("Восстановить выбранный point", self)
+        self.restore_selected_button = QPushButton("Восстановить выбранную точку", self)
         self.restore_selected_button.clicked.connect(self._restore_selected)
         layout.addWidget(self.restore_selected_button)
 
-        self.safe_reset_button = QPushButton("Безопасный reset профиля", self)
+        self.safe_reset_button = QPushButton("Безопасно сбросить профиль", self)
         self.safe_reset_button.clicked.connect(self._safe_reset)
         layout.addWidget(self.safe_reset_button)
 
@@ -103,20 +108,20 @@ class DiagnosticsView(QWidget):
     def _run_self_check(self) -> None:
         report = run_self_check(connection=self._connection)
         self.self_check_summary.setText(format_self_check_summary(report))
-        lines = [f"Created: {report.created_at}", f"OK: {report.ok}", ""]
+        lines = [f"Создано: {report.created_at}", f"Ошибок нет: {'да' if report.ok else 'нет'}", ""]
         if report.issues:
             for issue in report.issues:
-                lines.append(f"[{issue.severity}] {issue.code}: {issue.message}")
+                lines.append(f"[{level_label(issue.severity)}] {issue.code}: {issue.message}")
         else:
-            lines.append("No issues detected.")
+            lines.append("Проблем не обнаружено.")
         self.self_check_output.setPlainText("\n".join(lines))
 
     def _export_bundle(self) -> None:
         result = export_diagnostic_bundle(connection=self._connection)
         QMessageBox.information(
             self,
-            "Diagnostics",
-            f"Diagnostic bundle создан:\n{result.bundle_path}",
+            "Диагностика",
+            f"Диагностический архив создан:\n{result.bundle_path}",
         )
 
     def _open_folder(self, path: Path) -> None:
@@ -126,15 +131,15 @@ class DiagnosticsView(QWidget):
     def _create_restore_point(self) -> None:
         record = create_restore_point(
             connection=self._connection,
-            title="Manual restore point",
+            title="Ручная точка восстановления",
             reason="manual",
             source="diagnostics_view",
         )
         self._refresh_restore_points()
         QMessageBox.information(
             self,
-            "Diagnostics",
-            f"Restore point создан:\n{record.file_path}",
+            "Диагностика",
+            f"Точка восстановления создана:\n{record.file_path}",
         )
 
     def _refresh_restore_points(self) -> None:
@@ -149,7 +154,7 @@ class DiagnosticsView(QWidget):
     def _restore_selected(self) -> None:
         item = self.restore_points_list.currentItem()
         if item is None:
-            QMessageBox.warning(self, "Diagnostics", "Выберите restore point.")
+            QMessageBox.warning(self, "Диагностика", "Выберите точку восстановления.")
             return
         restore_point_id = int(item.data(Qt.ItemDataRole.UserRole))
         queue_restore_from_point(
@@ -159,7 +164,7 @@ class DiagnosticsView(QWidget):
         )
         QMessageBox.information(
             self,
-            "Diagnostics",
+            "Диагностика",
             "Восстановление запланировано. Перезапустите приложение.",
         )
 
@@ -170,6 +175,6 @@ class DiagnosticsView(QWidget):
         )
         QMessageBox.information(
             self,
-            "Diagnostics",
-            "Safe reset запланирован. Перезапустите приложение.",
+            "Диагностика",
+            "Сброс профиля запланирован. Перезапустите приложение.",
         )

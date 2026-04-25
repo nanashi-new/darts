@@ -32,7 +32,7 @@ class PlayerMatchDialog(QDialog):
         self._selected_player_id: int | None = None
 
         layout = QVBoxLayout(self)
-        birth_caption = birth_date_or_year or "—"
+        birth_caption = birth_date_or_year or "-"
         layout.addWidget(QLabel(f"Найдено несколько игроков для: {fio} (ДР/год: {birth_caption})", self))
 
         self.table_view = QTableView(self)

@@ -18,7 +18,7 @@ from app.services.player_merge import PlayerMergeService
 from app.services.recalculate_tournament import recalculate_all_tournaments, recalculate_tournament_results
 
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
 
 def test_integrity_services_max(tmp_path: Path) -> None:

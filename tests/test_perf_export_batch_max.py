@@ -10,7 +10,7 @@ from app.services.batch_export import BatchExportService
 
 import pytest
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
 def _seed_for_export(connection) -> None:
     players = PlayerRepository(connection)

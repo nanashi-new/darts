@@ -49,12 +49,12 @@ def build_import_session_report(
 ) -> ImportSessionReport:
     normalized_status = str(apply_status).strip().lower()
     if normalized_status not in IMPORT_APPLY_STATUSES:
-        raise ValueError(f"Unsupported import apply status: {apply_status}")
+        raise ValueError(f"Неподдерживаемый статус применения импорта: {apply_status}")
 
     tournament = TournamentRepository(connection).get(apply_report.tournament_id) or {}
     warnings = list(apply_report.warnings)
     if not apply_report.norms_loaded:
-        warnings.insert(0, "Norms were not loaded from settings.")
+        warnings.insert(0, "Нормативы не были загружены из настроек.")
 
     category_code_raw = tournament.get("category_code")
     category_code = str(category_code_raw).strip() if category_code_raw is not None else None
@@ -91,12 +91,12 @@ def persist_import_session_report(
     payload = asdict(report)
     return audit_log_service.log_event(
         IMPORT_REPORT,
-        "Import session report saved",
+        "Сохранен отчет сессии импорта",
         (
-            f"Tournament ID: {report.tournament_id}; "
+            f"Турнир ID: {report.tournament_id}; "
             f"apply_status={report.apply_status}; "
-            f"rows_imported={report.rows_imported}; "
-            f"rows_skipped={report.rows_skipped}"
+            f"импортировано={report.rows_imported}; "
+            f"пропущено={report.rows_skipped}"
         ),
         context=payload,
         entity_type="tournament",
@@ -126,29 +126,29 @@ def list_import_reports(connection: sqlite3.Connection) -> list[ImportSessionRep
 
 def render_import_report_text(report: ImportSessionReport) -> str:
     lines = [
-        "Import Session Report",
-        f"Tournament: {report.tournament_name}",
-        f"Tournament ID: {report.tournament_id}",
-        f"Category: {report.category_code or '-'}",
-        f"Tournament status: {report.tournament_status}",
-        f"Apply status: {report.apply_status}",
-        f"Operation group: {report.operation_group_id or '-'}",
-        f"Files processed: {report.files_processed}",
-        f"Tables processed: {report.tables_processed}",
-        f"Rows read: {report.rows_read}",
-        f"Rows imported: {report.rows_imported}",
-        f"Rows skipped: {report.rows_skipped}",
-        f"Players created: {report.players_created}",
-        f"Players reused: {report.players_reused}",
-        f"Players matched manually: {report.players_matched_manually}",
-        f"Warnings count: {report.warnings_count}",
-        f"Errors count: {report.errors_count}",
+        "Отчет сессии импорта",
+        f"Турнир: {report.tournament_name}",
+        f"ID турнира: {report.tournament_id}",
+        f"Категория: {report.category_code or '-'}",
+        f"Статус турнира: {_tournament_status_label(report.tournament_status)}",
+        f"Статус применения: {_apply_status_label(report.apply_status)}",
+        f"Группа операции: {report.operation_group_id or '-'}",
+        f"Обработано файлов: {report.files_processed}",
+        f"Обработано таблиц: {report.tables_processed}",
+        f"Прочитано строк: {report.rows_read}",
+        f"Импортировано строк: {report.rows_imported}",
+        f"Пропущено строк: {report.rows_skipped}",
+        f"Создано игроков: {report.players_created}",
+        f"Переиспользовано игроков: {report.players_reused}",
+        f"Сопоставлено вручную: {report.players_matched_manually}",
+        f"Предупреждений: {report.warnings_count}",
+        f"Ошибок: {report.errors_count}",
     ]
     if report.source_files:
-        lines.append("Source files:")
+        lines.append("Исходные файлы:")
         lines.extend(f"- {path}" for path in report.source_files)
     if report.warnings:
-        lines.append("Warnings:")
+        lines.append("Предупреждения:")
         lines.extend(f"- {warning}" for warning in report.warnings)
     return "\n".join(lines)
 
@@ -199,3 +199,20 @@ def _coerce_str_list(value: object) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item) for item in value]
+
+
+def _apply_status_label(value: str) -> str:
+    return {
+        "draft_applied": "Оставлен черновиком",
+        "published": "Опубликован",
+    }.get(value, value)
+
+
+def _tournament_status_label(value: str) -> str:
+    return {
+        "draft": "Черновик",
+        "review": "На проверке",
+        "confirmed": "Подтвержден",
+        "published": "Опубликован",
+        "archived": "В архиве",
+    }.get(value, value)

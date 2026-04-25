@@ -17,10 +17,10 @@ from PySide6.QtWidgets import (
 
 from app.services.rating_snapshot import (
     RatingSnapshotEntry,
-    RatingSnapshotSession,
     list_rating_snapshot_rows,
     list_rating_snapshot_sessions,
 )
+from app.ui.labels import adult_scope_label, category_label, scope_type_label
 
 
 class RatingHistoryDialog(QDialog):
@@ -62,13 +62,22 @@ class RatingHistoryDialog(QDialog):
         self._populate_sessions()
         self._sync_selected_session()
 
+    def _scope_caption(self, scope_type: str, scope_key: str) -> str:
+        if scope_type == "adult":
+            scope_value = adult_scope_label(scope_key)
+        elif scope_type == "category":
+            scope_value = category_label(scope_key)
+        else:
+            scope_value = scope_key
+        return f"{scope_type_label(scope_type)}: {scope_value}"
+
     def _populate_sessions(self) -> None:
         self.session_list.clear()
         for session in self._sessions:
             item = QListWidgetItem(
                 (
-                    f"{session.created_at} | {session.scope_key} | "
-                    f"source tournament={session.source_tournament_id} | entries={session.entries_count}"
+                    f"{session.created_at} | {self._scope_caption(session.scope_type, session.scope_key)} | "
+                    f"турнир #{session.source_tournament_id} | записей: {session.entries_count}"
                 )
             )
             self.session_list.addItem(item)
@@ -82,7 +91,7 @@ class RatingHistoryDialog(QDialog):
             self.rows_table.setRowCount(0)
             self.basis_list.clear()
             self.status_label.setText(
-                f"История рейтинга для scope {self._scope_type}:{self._scope_key} пока не создана."
+                f"История рейтинга для «{self._scope_caption(self._scope_type, self._scope_key)}» пока не создана."
             )
             return
 
@@ -112,8 +121,8 @@ class RatingHistoryDialog(QDialog):
         self.basis_list.clear()
         self.status_label.setText(
             (
-                f"История рейтинга: scope {session.scope_type}:{session.scope_key}; "
-                f"snapshots={len(self._sessions)}; rows={len(self._rows)}"
+                f"История рейтинга: {self._scope_caption(session.scope_type, session.scope_key)}; "
+                f"снимков: {len(self._sessions)}; строк: {len(self._rows)}"
             )
         )
         if self._rows:
@@ -132,15 +141,15 @@ class RatingHistoryDialog(QDialog):
             self.basis_list.addItem(
                 QListWidgetItem(
                     (
-                        f"Tournament #{basis_item.tournament_id} | "
-                        f"date={basis_item.tournament_date} | "
-                        f"points={basis_item.points_total}"
+                        f"Турнир #{basis_item.tournament_id} | "
+                        f"дата: {basis_item.tournament_date} | "
+                        f"очки: {basis_item.points_total}"
                     )
                 )
             )
         self.status_label.setText(
             (
-                f"История рейтинга: scope {entry.scope_type}:{entry.scope_key}; "
-                f"игрок {entry.fio}; basis={len(entry.rolling_basis)}"
+                f"История рейтинга: {self._scope_caption(entry.scope_type, entry.scope_key)}; "
+                f"игрок: {entry.fio}; оснований: {len(entry.rolling_basis)}"
             )
         )

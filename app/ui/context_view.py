@@ -5,7 +5,6 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QHBoxLayout,
-    QLabel,
     QLineEdit,
     QMessageBox,
     QPushButton,
@@ -19,6 +18,16 @@ from PySide6.QtWidgets import (
 from app.db.database import get_connection
 from app.services.notes import list_notes_hub
 from app.services.training_journal import list_training_entries
+from app.ui.labels import (
+    ENTITY_TYPE_LABELS,
+    NOTE_TYPE_LABELS,
+    VISIBILITY_LABELS,
+    entity_type_label,
+    note_type_label,
+    priority_label,
+    session_type_label,
+    visibility_label,
+)
 from app.ui.player_card_dialog import PlayerCardDialog
 from app.ui_state import get_view_state, update_view_state
 
@@ -30,8 +39,8 @@ class ContextView(QWidget):
         layout = QVBoxLayout(self)
 
         tabs = QTabWidget(self)
-        tabs.addTab(self._build_notes_tab(), "Notes")
-        tabs.addTab(self._build_training_tab(), "Training")
+        tabs.addTab(self._build_notes_tab(), "Заметки")
+        tabs.addTab(self._build_training_tab(), "Тренировки")
         layout.addWidget(tabs)
         self._tabs = tabs
 
@@ -45,25 +54,28 @@ class ContextView(QWidget):
         layout = QVBoxLayout(widget)
         filters = QHBoxLayout()
         self.notes_search_input = QLineEdit(widget)
-        self.notes_search_input.setPlaceholderText("Search notes")
+        self.notes_search_input.setPlaceholderText("Поиск по заметкам")
         self.notes_search_input.textChanged.connect(self._on_notes_filters_changed)
+
         self.notes_entity_filter = QComboBox(widget)
-        self.notes_entity_filter.addItem("All entities", None)
-        self.notes_entity_filter.addItem("Players", "player")
-        self.notes_entity_filter.addItem("Tournaments", "tournament")
-        self.notes_entity_filter.addItem("Leagues", "league")
+        self.notes_entity_filter.addItem("Все объекты", None)
+        for value, label in ENTITY_TYPE_LABELS.items():
+            self.notes_entity_filter.addItem(label, value)
         self.notes_entity_filter.currentIndexChanged.connect(self._on_notes_filters_changed)
+
         self.notes_type_filter = QComboBox(widget)
-        self.notes_type_filter.addItem("All note types", None)
-        for value in ["player_note", "coach_note", "follow_up", "tournament_note", "league_note"]:
-            self.notes_type_filter.addItem(value, value)
+        self.notes_type_filter.addItem("Все типы заметок", None)
+        for value, label in NOTE_TYPE_LABELS.items():
+            self.notes_type_filter.addItem(label, value)
         self.notes_type_filter.currentIndexChanged.connect(self._on_notes_filters_changed)
+
         self.notes_visibility_filter = QComboBox(widget)
-        self.notes_visibility_filter.addItem("All visibilities", None)
-        for value in ["personal", "internal_service", "coach_only", "follow_up"]:
-            self.notes_visibility_filter.addItem(value, value)
+        self.notes_visibility_filter.addItem("Любой доступ", None)
+        for value, label in VISIBILITY_LABELS.items():
+            self.notes_visibility_filter.addItem(label, value)
         self.notes_visibility_filter.currentIndexChanged.connect(self._on_notes_filters_changed)
-        self.coach_only_checkbox = QCheckBox("Coach-only", widget)
+
+        self.coach_only_checkbox = QCheckBox("Только тренеру", widget)
         self.coach_only_checkbox.toggled.connect(self._on_notes_filters_changed)
         filters.addWidget(self.notes_search_input)
         filters.addWidget(self.notes_entity_filter)
@@ -74,12 +86,12 @@ class ContextView(QWidget):
 
         self.notes_table = QTableWidget(0, 7, widget)
         self.notes_table.setHorizontalHeaderLabels(
-            ["Entity", "Title", "Type", "Visibility", "Priority", "Author", "Created"]
+            ["Объект", "Заголовок", "Тип", "Доступ", "Приоритет", "Автор", "Создано"]
         )
         layout.addWidget(self.notes_table)
 
         actions = QHBoxLayout()
-        self.open_related_note_entity_button = QPushButton("Open related entity", widget)
+        self.open_related_note_entity_button = QPushButton("Открыть связанный объект", widget)
         self.open_related_note_entity_button.clicked.connect(self._open_selected_note_entity)
         actions.addWidget(self.open_related_note_entity_button)
         actions.addStretch(1)
@@ -91,19 +103,19 @@ class ContextView(QWidget):
         layout = QVBoxLayout(widget)
         filters = QHBoxLayout()
         self.training_search_input = QLineEdit(widget)
-        self.training_search_input.setPlaceholderText("Search training")
+        self.training_search_input.setPlaceholderText("Поиск по тренировкам")
         self.training_search_input.textChanged.connect(self._on_training_filters_changed)
         filters.addWidget(self.training_search_input)
         layout.addLayout(filters)
 
         self.training_table = QTableWidget(0, 6, widget)
         self.training_table.setHorizontalHeaderLabels(
-            ["Player", "Date", "Coach", "Type", "Summary", "Next action"]
+            ["Игрок", "Дата", "Тренер", "Тип", "Итоги", "Следующее действие"]
         )
         layout.addWidget(self.training_table)
 
         actions = QHBoxLayout()
-        self.open_training_player_button = QPushButton("Open player card", widget)
+        self.open_training_player_button = QPushButton("Открыть карточку игрока", widget)
         self.open_training_player_button.clicked.connect(self._open_selected_training_player)
         actions.addWidget(self.open_training_player_button)
         actions.addStretch(1)
@@ -127,6 +139,8 @@ class ContextView(QWidget):
 
         target_tab = state.get("current_tab")
         if isinstance(target_tab, str):
+            aliases = {"Notes": "Заметки", "Training": "Тренировки"}
+            target_tab = aliases.get(target_tab, target_tab)
             for index in range(self._tabs.count()):
                 if self._tabs.tabText(index) == target_tab:
                     self._tabs.setCurrentIndex(index)
@@ -173,11 +187,11 @@ class ContextView(QWidget):
             row_index = self.notes_table.rowCount()
             self.notes_table.insertRow(row_index)
             values = [
-                note.entity_label or f"{note.entity_type}:{note.entity_id}",
+                note.entity_label or f"{entity_type_label(note.entity_type)}: {note.entity_id}",
                 note.title,
-                note.note_type,
-                note.visibility,
-                note.priority,
+                note_type_label(note.note_type),
+                visibility_label(note.visibility),
+                priority_label(note.priority),
                 note.author or "",
                 str(note.created_at).replace("T", " ")[:19],
             ]
@@ -202,7 +216,7 @@ class ContextView(QWidget):
                 entry.player_fio,
                 entry.training_date,
                 entry.coach_name or "",
-                entry.session_type,
+                session_type_label(entry.session_type),
                 entry.summary,
                 entry.next_action or "",
             ]
@@ -214,7 +228,7 @@ class ContextView(QWidget):
     def _open_selected_note_entity(self) -> None:
         row = self.notes_table.currentRow()
         if row < 0:
-            QMessageBox.information(self, "Context", "Select a note row first.")
+            QMessageBox.information(self, "Контекст", "Сначала выберите строку заметки.")
             return
         item = self.notes_table.item(row, 0)
         if item is None:
@@ -224,12 +238,16 @@ class ContextView(QWidget):
         if entity_type == "player" and entity_id.isdigit():
             PlayerCardDialog(connection=self._connection, player_id=int(entity_id), parent=self).exec()
             return
-        QMessageBox.information(self, "Context", f"Open entity is not implemented for {entity_type}:{entity_id}.")
+        QMessageBox.information(
+            self,
+            "Контекст",
+            f"Открытие объекта «{entity_type_label(entity_type)}» из этого списка пока недоступно.",
+        )
 
     def _open_selected_training_player(self) -> None:
         row = self.training_table.currentRow()
         if row < 0:
-            QMessageBox.information(self, "Context", "Select a training row first.")
+            QMessageBox.information(self, "Контекст", "Сначала выберите строку тренировки.")
             return
         item = self.training_table.item(row, 0)
         if item is None:

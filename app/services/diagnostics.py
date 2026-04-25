@@ -67,7 +67,7 @@ def run_self_check(*, connection=None) -> SelfCheckReport:
                     SelfCheckIssue(
                         code=f"paths.{label}",
                         severity="error",
-                        message=f"Missing required path: {path}",
+                        message=f"Не найден обязательный путь: {path}",
                     )
                 )
 
@@ -76,7 +76,7 @@ def run_self_check(*, connection=None) -> SelfCheckReport:
             SelfCheckIssue(
                 code="build.schema_version",
                 severity="warning",
-                message="Build metadata schema version does not match the current app schema.",
+                message="Версия схемы в метаданных сборки не совпадает с текущей схемой приложения.",
             )
         )
     if not build_info.generated:
@@ -84,7 +84,7 @@ def run_self_check(*, connection=None) -> SelfCheckReport:
             SelfCheckIssue(
                 code="build_info.fallback",
                 severity="warning",
-                message="Generated build metadata not found; using dev fallback.",
+                message="Метаданные сборки не найдены; используется режим разработки.",
             )
         )
 
@@ -95,7 +95,7 @@ def run_self_check(*, connection=None) -> SelfCheckReport:
             SelfCheckIssue(
                 code="norms.unavailable",
                 severity="warning",
-                message="norms.xlsx is missing and the bundled template is unavailable.",
+                message="Файл norms.xlsx отсутствует, а встроенный шаблон недоступен.",
             )
         )
 
@@ -112,7 +112,7 @@ def run_self_check(*, connection=None) -> SelfCheckReport:
                 SelfCheckIssue(
                     code="db.integrity",
                     severity="error",
-                    message=f"SQLite integrity_check returned: {integrity_status}",
+                    message=f"Проверка целостности SQLite вернула: {integrity_status}",
                 )
             )
     except sqlite3.DatabaseError as exc:
@@ -120,7 +120,7 @@ def run_self_check(*, connection=None) -> SelfCheckReport:
             SelfCheckIssue(
                 code="db.open",
                 severity="error",
-                message=f"Unable to open database: {exc}",
+                message=f"Не удалось открыть базу данных: {exc}",
             )
         )
 
@@ -134,8 +134,8 @@ def run_self_check(*, connection=None) -> SelfCheckReport:
     if connection is not None:
         AuditLogService(connection).log_event(
             SELF_CHECK_RUN,
-            "Выполнен self-check",
-            f"Issues: {len(report.issues)}",
+            "Выполнена самопроверка",
+            f"Проблем: {len(report.issues)}",
             level="error" if not report.ok else "warning" if report.issues else "info",
             context=report.to_dict(),
             source="diagnostics",
@@ -173,7 +173,7 @@ def export_diagnostic_bundle(*, connection=None, self_check: SelfCheckReport | N
     if connection is not None:
         AuditLogService(connection).log_event(
             DIAGNOSTIC_BUNDLE_EXPORTED,
-            "Экспортирован diagnostic bundle",
+            "Экспортирован диагностический архив",
             bundle_path.name,
             context=result.to_dict(),
             source="diagnostics",
@@ -183,8 +183,8 @@ def export_diagnostic_bundle(*, connection=None, self_check: SelfCheckReport | N
 
 def format_self_check_summary(report: SelfCheckReport) -> str:
     if not report.issues:
-        return "Self-check: OK"
-    return f"Self-check: {len(report.issues)} issue(s)"
+        return "Самопроверка: все в порядке"
+    return f"Самопроверка: проблем - {len(report.issues)}"
 
 
 def _current_timestamp() -> str:

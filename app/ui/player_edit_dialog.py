@@ -39,12 +39,12 @@ class PlayerEditDialog(QDialog):
         self.first_name_input = QLineEdit(self)
         self.middle_name_input = QLineEdit(self)
         self.birth_date_input = QLineEdit(self)
-        self.birth_date_input.setPlaceholderText("YYYY-MM-DD")
+        self.birth_date_input.setPlaceholderText("ГГГГ-ММ-ДД")
 
         self.gender_combo = QComboBox(self)
         self.gender_combo.addItem("—", None)
-        self.gender_combo.addItem("M", "M")
-        self.gender_combo.addItem("F", "F")
+        self.gender_combo.addItem("Мужской", "M")
+        self.gender_combo.addItem("Женский", "F")
 
         self.coach_input = QLineEdit(self)
         self.club_input = QLineEdit(self)
@@ -65,6 +65,10 @@ class PlayerEditDialog(QDialog):
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel,
             self,
         )
+        if save_button := buttons.button(QDialogButtonBox.StandardButton.Save):
+            save_button.setText("Сохранить")
+        if cancel_button := buttons.button(QDialogButtonBox.StandardButton.Cancel):
+            cancel_button.setText("Отмена")
         buttons.accepted.connect(self._accept_if_valid)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)

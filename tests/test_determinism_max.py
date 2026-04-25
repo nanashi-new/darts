@@ -12,7 +12,7 @@ from app.services.recalculate_tournament import recalculate_all_tournaments
 
 import pytest
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
 def _seed_dataset(connection) -> None:
     players = PlayerRepository(connection)

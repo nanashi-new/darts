@@ -10,9 +10,9 @@ class AboutView(QWidget):
         layout.addWidget(QLabel("Darts Rating EBCK"))
         layout.addWidget(QLabel(f"Версия: {__version__}"))
         layout.addWidget(QLabel(f"Сборка: {__build_info__}"))
-        layout.addWidget(QLabel(f"Build time: {__build_metadata__.build_timestamp}"))
-        layout.addWidget(QLabel(f"Git revision: {__build_metadata__.git_revision}"))
-        layout.addWidget(QLabel(f"Schema version: {__build_metadata__.schema_version}"))
+        layout.addWidget(QLabel(f"Время сборки: {__build_metadata__.build_timestamp}"))
+        layout.addWidget(QLabel(f"Git-ревизия: {__build_metadata__.git_revision}"))
+        layout.addWidget(QLabel(f"Версия схемы: {__build_metadata__.schema_version}"))
         layout.addWidget(
             QLabel(
                 "Локальное приложение для ведения турниров, рейтинга, импорта и диагностических операций."

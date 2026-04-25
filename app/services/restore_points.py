@@ -43,7 +43,7 @@ def create_restore_point(
 ) -> RestorePointRecord:
     paths = get_runtime_paths()
     timestamp = _timestamp_token()
-    safe_title = _slugify(title) or "restore-point"
+    safe_title = _slugify(title) or "tochka-vosstanovleniya"
     backup_path = paths.restore_points_dir / f"{timestamp}_{safe_title}.db"
     _backup_connection(connection, backup_path)
     repository = RestorePointRepository(connection)
@@ -71,7 +71,7 @@ def create_restore_point(
     )
     AuditLogService(connection).log_event(
         RESTORE_POINT_CREATED,
-        "Создан restore point",
+        "Создана точка восстановления",
         f"{title}: {backup_path.name}",
         context=record.to_dict(),
         source=source,
@@ -95,7 +95,7 @@ def queue_restore_from_point(
     repository = RestorePointRepository(connection)
     row = repository.get(restore_point_id)
     if row is None:
-        raise ValueError("Restore point not found.")
+        raise ValueError("Точка восстановления не найдена.")
     record = _to_record(row)
     pending_payload = {
         "action": "restore_db",
@@ -107,7 +107,7 @@ def queue_restore_from_point(
     AuditLogService(connection).log_event(
         PROFILE_RESTORE_REQUESTED,
         "Запрошено восстановление профиля",
-        f"Restore point #{record.id}",
+        f"Точка восстановления #{record.id}",
         context={"restore_point_id": record.id, "file_path": record.file_path},
         source=source,
         operation_group_id=operation_group_id,
@@ -123,7 +123,7 @@ def queue_safe_profile_reset(
 ) -> Path:
     create_restore_point(
         connection=connection,
-        title="Before safe profile reset",
+        title="Перед безопасным сбросом профиля",
         reason="safe_profile_reset",
         source=source,
         operation_group_id=operation_group_id,
@@ -135,8 +135,8 @@ def queue_safe_profile_reset(
     pending_path = _write_pending_action(pending_payload)
     AuditLogService(connection).log_event(
         PROFILE_RESET_REQUESTED,
-        "Запрошен безопасный reset профиля",
-        "Reset будет выполнен при следующем запуске.",
+        "Запрошен безопасный сброс профиля",
+        "Сброс будет выполнен при следующем запуске.",
         context={"pending_action_path": str(pending_path)},
         source=source,
         operation_group_id=operation_group_id,
@@ -214,7 +214,7 @@ def _apply_reset_action(*, paths) -> dict[str, Any]:
         AuditLogService(connection).log_event(
             PROFILE_RESTORED,
             "Профиль сброшен",
-            "Создан чистый профиль после safe reset.",
+            "Создан чистый профиль после безопасного сброса.",
             context={"backup_dir": str(backup_dir)},
             source="startup_reset",
         )

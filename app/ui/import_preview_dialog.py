@@ -41,6 +41,10 @@ class ImportPreviewDialog(QDialog):
             | QDialogButtonBox.StandardButton.Cancel,
             self,
         )
+        if ok_button := button_box.button(QDialogButtonBox.StandardButton.Ok):
+            ok_button.setText("Импортировать")
+        if cancel_button := button_box.button(QDialogButtonBox.StandardButton.Cancel):
+            cancel_button.setText("Отмена")
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)

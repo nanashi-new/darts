@@ -159,7 +159,7 @@ def create_rating_snapshot_for_tournament_publish(
     if not created_sessions:
         return SnapshotCreateResult(
             created=False,
-            reason="No published results available for supported scopes.",
+            reason="Нет опубликованных результатов для поддерживаемых разделов рейтинга.",
             session=None,
         )
 

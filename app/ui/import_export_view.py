@@ -47,6 +47,7 @@ from app.services.tournament_lifecycle import transition_tournament_status
 from app.ui.column_mapping_dialog import ColumnMappingDialog
 from app.ui.import_apply_review_dialog import ImportApplyReviewDialog
 from app.ui.import_preview_dialog import ImportPreviewDialog
+from app.ui.labels import tournament_status_label
 from app.ui.player_match_dialog import PlayerMatchDialog
 
 
@@ -77,6 +78,10 @@ class TableBlocksDialog(QDialog):
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
             self,
         )
+        if ok_button := button_box.button(QDialogButtonBox.StandardButton.Ok):
+            ok_button.setText("Импортировать выбранные")
+        if cancel_button := button_box.button(QDialogButtonBox.StandardButton.Cancel):
+            cancel_button.setText("Отмена")
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
@@ -119,6 +124,8 @@ class ImportProfilesDialog(QDialog):
         layout.addLayout(controls)
 
         close_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close, self)
+        if close_button := close_box.button(QDialogButtonBox.StandardButton.Close):
+            close_button.setText("Закрыть")
         close_box.rejected.connect(self.reject)
         close_box.accepted.connect(self.accept)
         layout.addWidget(close_box)
@@ -187,7 +194,7 @@ class ImportExportView(QWidget):
         self.category_code_input.setPlaceholderText("Например, U12-M")
         form_layout.addRow("Категория:", self.category_code_input)
 
-        self.is_adult_mode_checkbox = QCheckBox("Adult mode", self)
+        self.is_adult_mode_checkbox = QCheckBox("Взрослый режим", self)
         form_layout.addRow("Режим:", self.is_adult_mode_checkbox)
         layout.addLayout(form_layout)
 
@@ -346,10 +353,10 @@ class ImportExportView(QWidget):
 
         self._audit_log_service.log_event(
             IMPORT_FILE,
-            "Импорт файла: применено в draft",
+            "Импорт файла: применено в черновик",
             (
                 f"Турнир ID: {tournament_id}; импортировано: {apply_report.imported_rows}; "
-                f"пропущено: {apply_report.skipped_rows}; warnings: {len(apply_report.warnings)}"
+                f"пропущено: {apply_report.skipped_rows}; предупреждений: {len(apply_report.warnings)}"
             ),
             context={"path": file_path, "tournament_id": tournament_id},
             operation_group_id=apply_report.operation_group_id or None,
@@ -379,13 +386,13 @@ class ImportExportView(QWidget):
         self._persist_import_session_report(apply_report, apply_status="draft_applied")
         self._audit_log_service.log_event(
             IMPORT_FILE,
-            "Импорт файла завершён без publish",
-            f"Турнир ID: {apply_report.tournament_id} оставлен в статусе draft",
+            "Импорт файла завершен без публикации",
+            f"Турнир ID: {apply_report.tournament_id} оставлен в статусе черновика",
             level="warning",
             context={"tournament_id": apply_report.tournament_id, "status": apply_report.tournament_status},
             operation_group_id=apply_report.operation_group_id or None,
         )
-        QMessageBox.information(self, "Импорт", "Импорт завершён. Турнир оставлен в статусе draft.")
+        QMessageBox.information(self, "Импорт", "Импорт завершен. Турнир оставлен в статусе черновика.")
 
     def _publish_imported_tournament(self, apply_report: ImportApplyReport) -> None:
         transitions = (
@@ -409,16 +416,16 @@ class ImportExportView(QWidget):
                 details = error_payload.get("details")
                 self._audit_log_service.log_event(
                     ERROR,
-                    "Ошибка publish после импорта",
-                    f"{message}; details={details}",
+                    "Ошибка публикации после импорта",
+                    f"{message}; детали={details}",
                     level="error",
                     context={"tournament_id": apply_report.tournament_id, "target_status": target_status},
                     operation_group_id=apply_report.operation_group_id or None,
                 )
                 QMessageBox.warning(
                     self,
-                    "Publish",
-                    f"Не удалось перейти в статус '{target_status}'.\n{message}",
+                    "Публикация",
+                    f"Не удалось перейти в статус «{tournament_status_label(target_status)}».\n{message}",
                 )
                 return
 
@@ -437,10 +444,11 @@ class ImportExportView(QWidget):
         )
         self._audit_log_service.log_event(
             IMPORT_FILE,
-            "Импорт файла завершён + publish подтверждён",
+            "Импорт файла завершен, публикация подтверждена",
             (
                 f"Турнир ID: {apply_report.tournament_id}; "
-                f"status={published_status}; imported={apply_report.imported_rows}; warnings={len(apply_report.warnings)}"
+                f"статус={tournament_status_label(published_status)}; "
+                f"импортировано={apply_report.imported_rows}; предупреждений={len(apply_report.warnings)}"
             ),
             context={"tournament_id": apply_report.tournament_id, "status": published_status},
             operation_group_id=apply_report.operation_group_id or None,
