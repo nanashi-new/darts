@@ -94,7 +94,7 @@ def test_import_reports_dialog_shows_history_and_export_actions(tmp_path) -> Non
     dialog._sync_selected_report()
     assert dialog.export_txt_button.isEnabled() is True
     assert dialog.export_json_button.isEnabled() is True
-    assert "Dialog Cup" in dialog.details_text.toPlainText()
+    assert "Кубок диалога" in dialog.details_text.toPlainText()
 
 
 def test_reports_view_opens_import_reports_dialog(monkeypatch) -> None:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QCheckBox,
     QComboBox,
     QHBoxLayout,
@@ -18,6 +19,7 @@ from PySide6.QtWidgets import (
 from app.db.database import get_connection
 from app.services.notes import list_notes_hub
 from app.services.training_journal import list_training_entries
+from app.ui.context_details_dialog import ContextNoteDetailsDialog, ContextTrainingDetailsDialog
 from app.ui.labels import (
     ENTITY_TYPE_LABELS,
     NOTE_TYPE_LABELS,
@@ -36,6 +38,8 @@ class ContextView(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self._connection = get_connection()
+        self._note_rows = []
+        self._training_rows = []
         layout = QVBoxLayout(self)
 
         tabs = QTabWidget(self)
@@ -88,10 +92,19 @@ class ContextView(QWidget):
         self.notes_table.setHorizontalHeaderLabels(
             ["Объект", "Заголовок", "Тип", "Доступ", "Приоритет", "Автор", "Создано"]
         )
+        self.notes_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.notes_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.notes_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.notes_table.itemDoubleClicked.connect(lambda *_args: self._open_selected_note_details())
         layout.addWidget(self.notes_table)
 
         actions = QHBoxLayout()
-        self.open_related_note_entity_button = QPushButton("Открыть связанный объект", widget)
+        self.open_note_details_button = QPushButton("Детали", widget)
+        self.open_note_details_button.setToolTip("Открыть детали выбранной заметки.")
+        self.open_note_details_button.clicked.connect(self._open_selected_note_details)
+        actions.addWidget(self.open_note_details_button)
+        self.open_related_note_entity_button = QPushButton("Объект", widget)
+        self.open_related_note_entity_button.setToolTip("Открыть связанный объект выбранной заметки.")
         self.open_related_note_entity_button.clicked.connect(self._open_selected_note_entity)
         actions.addWidget(self.open_related_note_entity_button)
         actions.addStretch(1)
@@ -112,10 +125,19 @@ class ContextView(QWidget):
         self.training_table.setHorizontalHeaderLabels(
             ["Игрок", "Дата", "Тренер", "Тип", "Итоги", "Следующее действие"]
         )
+        self.training_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.training_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.training_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.training_table.itemDoubleClicked.connect(lambda *_args: self._open_selected_training_details())
         layout.addWidget(self.training_table)
 
         actions = QHBoxLayout()
-        self.open_training_player_button = QPushButton("Открыть карточку игрока", widget)
+        self.open_training_details_button = QPushButton("Детали", widget)
+        self.open_training_details_button.setToolTip("Открыть детали выбранной тренировки.")
+        self.open_training_details_button.clicked.connect(self._open_selected_training_details)
+        actions.addWidget(self.open_training_details_button)
+        self.open_training_player_button = QPushButton("Карточка", widget)
+        self.open_training_player_button.setToolTip("Открыть карточку игрока выбранной тренировки.")
         self.open_training_player_button.clicked.connect(self._open_selected_training_player)
         actions.addWidget(self.open_training_player_button)
         actions.addStretch(1)
@@ -182,6 +204,7 @@ class ContextView(QWidget):
             visibilities=visibilities,
             query=self.notes_search_input.text().strip() or None,
         )
+        self._note_rows = notes
         self.notes_table.setRowCount(0)
         for note in notes:
             row_index = self.notes_table.rowCount()
@@ -208,6 +231,7 @@ class ContextView(QWidget):
             connection=self._connection,
             query=self.training_search_input.text().strip() or None,
         )
+        self._training_rows = entries
         self.training_table.setRowCount(0)
         for entry in entries:
             row_index = self.training_table.rowCount()
@@ -224,6 +248,20 @@ class ContextView(QWidget):
                 item = QTableWidgetItem(str(value))
                 item.setData(Qt.ItemDataRole.UserRole, entry.player_id)
                 self.training_table.setItem(row_index, column, item)
+
+    def _open_selected_note_details(self) -> None:
+        row = self.notes_table.currentRow()
+        if row < 0 or row >= len(self._note_rows):
+            QMessageBox.information(self, "Контекст", "Сначала выберите строку заметки.")
+            return
+        ContextNoteDetailsDialog(note=self._note_rows[row], parent=self).exec()
+
+    def _open_selected_training_details(self) -> None:
+        row = self.training_table.currentRow()
+        if row < 0 or row >= len(self._training_rows):
+            QMessageBox.information(self, "Контекст", "Сначала выберите строку тренировки.")
+            return
+        ContextTrainingDetailsDialog(entry=self._training_rows[row], parent=self).exec()
 
     def _open_selected_note_entity(self) -> None:
         row = self.notes_table.currentRow()

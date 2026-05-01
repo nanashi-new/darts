@@ -39,7 +39,7 @@ def build_import_rating_preview(
     *,
     connection: Connection,
     tournament_id: int,
-    n_value: int = 6,
+    n_value: int = 3,
 ) -> ImportRatingImpactPreview:
     tournament_repo = TournamentRepository(connection)
     result_repo = ResultRepository(connection)

@@ -4,6 +4,8 @@ from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
     QPushButton,
+    QScrollArea,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -18,12 +20,22 @@ from app.ui.player_merge_dialog import PlayerMergeDialog
 class SettingsView(QWidget):
     def __init__(self) -> None:
         super().__init__()
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._connection = get_connection()
         self._audit_log_service = AuditLogService(self._connection)
         self._build_ui()
 
     def _build_ui(self) -> None:
-        layout = QVBoxLayout(self)
+        root_layout = QVBoxLayout(self)
+        scroll_area = QScrollArea(self)
+        scroll_area.setWidgetResizable(True)
+        root_layout.addWidget(scroll_area)
+
+        content = QWidget(self)
+        content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        scroll_area.setWidget(content)
+
+        layout = QVBoxLayout(content)
 
         description = QLabel("Служебные действия для обслуживания базы и данных приложения.", self)
         description.setWordWrap(True)

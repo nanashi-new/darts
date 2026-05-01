@@ -19,6 +19,8 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QMessageBox,
     QPushButton,
+    QScrollArea,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -27,6 +29,7 @@ from app.db.database import get_connection
 from app.db.repositories import TournamentRepository
 from app.domain.tournament_lifecycle import TournamentStatus
 from app.services.audit_log import AuditLogService, ERROR, IMPORT_FILE, IMPORT_FOLDER
+from app.services.category_suggestion import suggest_category_code
 from app.services.import_report import build_import_session_report, persist_import_session_report
 from app.services.import_review import build_import_rating_preview
 from app.services.league_transfer import build_league_transfer_preview
@@ -35,8 +38,7 @@ from app.services.import_xlsx import (
     TableBlock,
     delete_import_profile,
     import_batch_from_folder,
-    import_tournament_results,
-    import_tournament_rows,
+    import_tournament_table_blocks,
     list_import_profiles,
     parse_table_block_with_mapping,
     parse_tables_from_xlsx_with_report,
@@ -47,7 +49,7 @@ from app.services.tournament_lifecycle import transition_tournament_status
 from app.ui.column_mapping_dialog import ColumnMappingDialog
 from app.ui.import_apply_review_dialog import ImportApplyReviewDialog
 from app.ui.import_preview_dialog import ImportPreviewDialog
-from app.ui.labels import tournament_status_label
+from app.ui.labels import category_label, tournament_status_label
 from app.ui.player_match_dialog import PlayerMatchDialog
 
 
@@ -171,13 +173,23 @@ class ImportProfilesDialog(QDialog):
 class ImportExportView(QWidget):
     def __init__(self, tournaments_view: QWidget | None = None) -> None:
         super().__init__()
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._connection = get_connection()
         self._tournament_repo = TournamentRepository(self._connection)
         self._audit_log_service = AuditLogService(self._connection)
         self._tournaments_view = tournaments_view
 
-        layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Демо-импорт Excel: выберите файл для предпросмотра."))
+        root_layout = QVBoxLayout(self)
+        scroll_area = QScrollArea(self)
+        scroll_area.setWidgetResizable(True)
+        root_layout.addWidget(scroll_area)
+
+        content = QWidget(self)
+        content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        scroll_area.setWidget(content)
+
+        layout = QVBoxLayout(content)
+        layout.addWidget(QLabel("Импорт Excel: выберите файл для предпросмотра."))
 
         form_layout = QFormLayout()
         self.tournament_name_input = QLineEdit(self)
@@ -194,11 +206,16 @@ class ImportExportView(QWidget):
         self.category_code_input.setPlaceholderText("Например, U12-M")
         form_layout.addRow("Категория:", self.category_code_input)
 
+        self.category_hint_label = QLabel("", self)
+        self.category_hint_label.setWordWrap(True)
+        form_layout.addRow("", self.category_hint_label)
+
         self.is_adult_mode_checkbox = QCheckBox("Взрослый режим", self)
         form_layout.addRow("Режим:", self.is_adult_mode_checkbox)
         layout.addLayout(form_layout)
 
-        self.import_button = QPushButton("Импорт файла (демо)", self)
+        self.import_button = QPushButton("Импорт файла", self)
+        self.import_button.setToolTip("Выбрать XLSX-файл и пройти предпросмотр перед импортом.")
         self.import_button.clicked.connect(self._on_import_clicked)
         layout.addWidget(self.import_button)
 
@@ -209,6 +226,7 @@ class ImportExportView(QWidget):
         self.import_profiles_button = QPushButton("Профили импорта", self)
         self.import_profiles_button.clicked.connect(self._on_import_profiles_clicked)
         layout.addWidget(self.import_profiles_button)
+        layout.addStretch(1)
 
     def _resolve_player_match(
         self,
@@ -258,34 +276,56 @@ class ImportExportView(QWidget):
             QMessageBox.information(self, "Импорт", "Не выбраны блоки для импорта.")
             return
 
-        preview_block = blocks[selected[0]]
-        if preview_block.needs_mapping or preview_block.confidence < 1.0:
-            headers, preview_rows = read_table_block_preview(file_path, preview_block)
-            mapping_dialog = ColumnMappingDialog(headers, preview_rows, self)
-            if mapping_dialog.exec() != QDialog.DialogCode.Accepted:
-                return
+        selected_blocks: list[TableBlock] = []
+        for block_index in selected:
+            block = blocks[block_index]
+            if block.needs_mapping or block.confidence < 1.0:
+                headers, preview_rows = read_table_block_preview(file_path, block)
+                mapping_dialog = ColumnMappingDialog(headers, preview_rows, self)
+                if mapping_dialog.exec() != QDialog.DialogCode.Accepted:
+                    return
 
-            selected_mapping = mapping_dialog.mapping()
-            header_aliases = {key: [header] for key, header in selected_mapping.items() if header}
-            save_import_profile(
-                {
-                    "name": f"wizard:{preview_block.sheet_name}:{preview_block.start_row}",
-                    "required_columns": ["fio", "place", "score_set"],
-                    "header_aliases": header_aliases,
-                }
-            )
+                selected_mapping = mapping_dialog.mapping()
+                header_aliases = {key: [header] for key, header in selected_mapping.items() if header}
+                save_import_profile(
+                    {
+                        "name": f"wizard:{block.sheet_name}:{block.start_row}",
+                        "required_columns": [
+                            key
+                            for key in (
+                                "fio",
+                                "birth_year" if selected_mapping.get("birth_year") else "birth_date",
+                                "place",
+                                "score_set",
+                                "score_sector20",
+                                "score_big_round",
+                            )
+                            if selected_mapping.get(key)
+                        ],
+                        "header_aliases": header_aliases,
+                    }
+                )
 
-            mapped_rows = parse_table_block_with_mapping(file_path, preview_block, selected_mapping)
-            preview_block = replace(
-                preview_block,
-                rows=mapped_rows,
-                needs_mapping=False,
-                confidence=1.0,
-                missing_required_columns=[],
-                errors=[],
-            )
+                mapped_rows = parse_table_block_with_mapping(file_path, block, selected_mapping)
+                block = replace(
+                    block,
+                    rows=mapped_rows,
+                    needs_mapping=False,
+                    confidence=1.0,
+                    missing_required_columns=[],
+                    errors=[],
+                )
+            selected_blocks.append(block)
 
-        preview = ImportPreviewDialog(preview_block.rows, preview_block.warnings, self)
+        preview_rows = [row for block in selected_blocks for row in block.rows]
+        preview_warnings = [
+            f"{block.sheet_name}:{block.start_row} - {warning}"
+            for block in selected_blocks
+            for warning in block.warnings
+        ]
+        self._update_category_hint(preview_rows)
+
+        preview = ImportPreviewDialog(preview_rows, preview_warnings, self)
         if preview.exec() != QDialog.DialogCode.Accepted:
             return
 
@@ -300,29 +340,17 @@ class ImportExportView(QWidget):
         operation_group_id = uuid4().hex
 
         try:
-            if preview_block.rows:
-                apply_report = import_tournament_rows(
-                    connection=self._connection,
-                    rows=preview_block.rows,
-                    tournament_name=tournament_name,
-                    tournament_date=tournament_date,
-                    category_code=category_code,
-                    is_adult_mode=is_adult_mode,
-                    source_files=[file_path],
-                    player_match_resolver=self._resolve_player_match,
-                    operation_group_id=operation_group_id,
-                )
-            else:
-                apply_report = import_tournament_results(
-                    connection=self._connection,
-                    file_path=file_path,
-                    tournament_name=tournament_name,
-                    tournament_date=tournament_date,
-                    category_code=category_code,
-                    is_adult_mode=is_adult_mode,
-                    player_match_resolver=self._resolve_player_match,
-                    operation_group_id=operation_group_id,
-                )
+            apply_report = import_tournament_table_blocks(
+                connection=self._connection,
+                blocks=selected_blocks,
+                tournament_name=tournament_name,
+                tournament_date=tournament_date,
+                category_code=category_code,
+                is_adult_mode=is_adult_mode,
+                source_files=[file_path],
+                player_match_resolver=self._resolve_player_match,
+                operation_group_id=operation_group_id,
+            )
         except ValueError as exc:
             self._audit_log_service.log_event(
                 ERROR,
@@ -357,7 +385,7 @@ class ImportExportView(QWidget):
         rating_preview = build_import_rating_preview(
             connection=self._connection,
             tournament_id=apply_report.tournament_id,
-            n_value=6,
+            n_value=3,
         )
         league_preview = build_league_transfer_preview(
             connection=self._connection,
@@ -383,6 +411,29 @@ class ImportExportView(QWidget):
             operation_group_id=apply_report.operation_group_id or None,
         )
         QMessageBox.information(self, "Импорт", "Импорт завершен. Турнир оставлен в статусе черновика.")
+
+    def _update_category_hint(self, rows: list[dict[str, object]]) -> None:
+        self.category_hint_label.clear()
+        if self.is_adult_mode_checkbox.isChecked() or self.category_code_input.text().strip():
+            return
+        tournament_date = self.tournament_date_input.date().toString("yyyy-MM-dd")
+        for row in rows:
+            suggested = suggest_category_code(
+                birth_date_or_year=row.get("birth"),
+                tournament_date=tournament_date,
+            )
+            if not suggested:
+                continue
+            self.category_code_input.setPlaceholderText(f"Подсказка: {suggested}")
+            self.category_code_input.setToolTip(
+                "Подсказка рассчитана по дате рождения первой подходящей строки. "
+                "Проверьте категорию и введите код, если она подходит."
+            )
+            self.category_hint_label.setText(
+                f"Подсказка категории: {suggested} - {category_label(suggested)}. "
+                "Введите код вручную, если это верно."
+            )
+            return
 
     def _publish_imported_tournament(self, apply_report: ImportApplyReport) -> None:
         transitions = (

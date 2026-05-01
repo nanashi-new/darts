@@ -41,10 +41,18 @@ TOURNAMENT_STATUS_LABELS = {
 }
 
 CATEGORY_LABELS = {
+    "U10": "До 10 лет",
+    "U10-M": "Юноши до 10 лет",
+    "U10-W": "Девушки до 10 лет",
+    "U12": "До 12 лет",
     "U12-M": "Юноши до 12 лет",
     "U12-W": "Девушки до 12 лет",
+    "U15": "До 15 лет",
     "U15-M": "Юноши до 15 лет",
     "U15-W": "Девушки до 15 лет",
+    "JUNIOR": "Юниоры",
+    "JUNIOR-M": "Юниоры",
+    "JUNIOR-W": "Юниорки",
 }
 
 SCOPE_TYPE_LABELS = {
@@ -57,6 +65,11 @@ ADULT_SCOPE_LABELS = {
     "overall": "Все взрослые",
     "men": "Мужчины",
     "women": "Женщины",
+}
+
+LEAGUE_LABELS = {
+    "PREMIER": "Премьер-лига",
+    "FIRST": "Первая лига",
 }
 
 ENTITY_TYPE_LABELS = {
@@ -164,6 +177,10 @@ def scope_type_label(value: object) -> str:
 
 def adult_scope_label(value: object) -> str:
     return display_label(value, ADULT_SCOPE_LABELS)
+
+
+def league_label(value: object) -> str:
+    return display_label(value, LEAGUE_LABELS)
 
 
 def entity_type_label(value: object) -> str:

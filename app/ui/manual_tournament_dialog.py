@@ -44,9 +44,9 @@ class ManualTournamentDialog(QDialog):
         self.rows_input = QPlainTextEdit(self)
         self.rows_input.setPlaceholderText(
             "Одна строка на участника:\n"
-            "ФИО; дата или год рождения; место; очки\n"
-            "Иванов Иван; 1989-01-01; 1; 120\n"
-            "Петрова Анна; 1990; 2; 105"
+            "ФИО; дата или год рождения; место; очки; пол\n"
+            "Иванов Иван; 1989-01-01; 1; 120; M\n"
+            "Петрова Анна; 1990; 2; 105; W"
         )
         self.rows_input.setMinimumHeight(260)
 
@@ -97,14 +97,15 @@ class ManualTournamentDialog(QDialog):
             if not line:
                 continue
             parts = [part.strip() for part in line.split(";")]
-            if len(parts) != 4:
-                raise ValueError(f"Строка {line_number}: нужен формат 'ФИО; дата/год; место; очки'.")
+            if len(parts) not in {4, 5}:
+                raise ValueError(f"Строка {line_number}: нужен формат 'ФИО; дата/год; место; очки; пол'.")
             rows.append(
                 {
                     "fio": parts[0],
                     "birth": parts[1] or None,
                     "place": parts[2],
                     "points_total": parts[3],
+                    "gender": parts[4] if len(parts) == 5 and parts[4] else None,
                 }
             )
         return rows

@@ -53,10 +53,10 @@ def test_manual_tournament_dialog_parses_rows() -> None:
 
     dialog = ManualTournamentDialog()
     dialog.name_input.setText("Adult Manual Cup")
-    dialog.league_input.setText("PREMIER")
+    dialog.league_code_input.setText("PREMIER")
     dialog.rows_input.setPlainText(
-        "Adultov Alex; 1989-01-01; 1; 120\n"
-        "Senior Sara; 1990; 2; 105"
+        "Adultov Alex; 1989-01-01; 1; 120; M\n"
+        "Senior Sara; 1990; 2; 105; W"
     )
 
     data = dialog.form_data()
@@ -65,6 +65,8 @@ def test_manual_tournament_dialog_parses_rows() -> None:
     assert data.league_code == "PREMIER"
     assert len(data.rows) == 2
     assert data.rows[0]["points_total"] == "120"
+    assert data.rows[0]["gender"] == "M"
+    assert data.rows[1]["gender"] == "W"
 
 
 def test_tournaments_view_uses_manual_adult_dialog(monkeypatch, tmp_path) -> None:
@@ -95,7 +97,7 @@ def test_tournaments_view_uses_manual_adult_dialog(monkeypatch, tmp_path) -> Non
                 tournament_name="Adult UI Cup",
                 tournament_date="2026-04-22",
                 league_code="PREMIER",
-                rows=[{"fio": "Adultov Alex", "birth": "1989", "place": "1", "points_total": "120"}],
+                rows=[{"fio": "Adultov Alex", "birth": "1989", "place": "1", "points_total": "120", "gender": "M"}],
             )
 
     def fake_create_manual_adult_tournament(*, connection, tournament_name, tournament_date, league_code, rows):
@@ -125,6 +127,64 @@ def test_tournaments_view_uses_manual_adult_dialog(monkeypatch, tmp_path) -> Non
             "Adult UI Cup",
             "2026-04-22",
             "PREMIER",
-            [{"fio": "Adultov Alex", "birth": "1989", "place": "1", "points_total": "120"}],
+            [{"fio": "Adultov Alex", "birth": "1989", "place": "1", "points_total": "120", "gender": "M"}],
         )
     ]
+
+
+def test_tournaments_view_archive_uses_safe_wrapper_with_reason(monkeypatch, tmp_path) -> None:
+    try:
+        _ensure_app()
+        from app.db.repositories import TournamentRepository
+        from app.ui.tournaments_view import TournamentsView
+    except Exception as exc:  # noqa: BLE001
+        if _is_expected_headless_qt_failure(exc):
+            pytest.skip(f"Qt headless UI smoke unavailable: {exc}")
+        raise
+
+    from app.db.database import get_connection
+
+    connection = get_connection(tmp_path / "safe-status-ui.db")
+    tournament_id = TournamentRepository(connection).create(
+        {
+            "name": "Safe UI Cup",
+            "date": "2026-04-26",
+            "category_code": "U12",
+            "status": "confirmed",
+            "source_files": "[]",
+        }
+    )
+    captured: list[dict[str, object]] = []
+
+    def fake_archive_or_cancel_tournament(**kwargs):
+        captured.append(kwargs)
+        return {
+            "ok": True,
+            "data": {
+                "tournament_id": tournament_id,
+                "from_status": "confirmed",
+                "to_status": "archived",
+                "restore_point_created": True,
+            },
+        }
+
+    monkeypatch.setattr("app.ui.tournaments_view.get_connection", lambda: connection)
+    monkeypatch.setattr("app.ui.tournaments_view.archive_or_cancel_tournament", fake_archive_or_cancel_tournament)
+    monkeypatch.setattr("app.ui.tournaments_view.QInputDialog.getText", lambda *args, **kwargs: ("Сезон закрыт", True))
+    monkeypatch.setattr("app.ui.tournaments_view.QMessageBox.information", lambda *args, **kwargs: None)
+
+    view = TournamentsView()
+    view.refresh_latest_tournament(tournament_id)
+
+    assert hasattr(view, "_archive_btn")
+    assert hasattr(view, "_cancel_btn")
+    assert view._archive_btn.text() == "Архив"
+    assert view._cancel_btn.text() == "Отменить"
+
+    view._safe_archive_or_cancel_tournament("archived", "Архивация")
+
+    assert captured
+    assert captured[0]["tournament_id"] == tournament_id
+    assert captured[0]["target_status"] == "archived"
+    assert captured[0]["reason"] == "Сезон закрыт"
+    assert captured[0]["actor"] == "tournaments_view"

@@ -112,7 +112,7 @@ def transition_tournament_status(
         snapshot_result = create_rating_snapshot_for_tournament_publish(
             connection=connection,
             tournament_id=tournament_id,
-            n_value=6,
+            n_value=3,
             operation_group_id=operation_group_id,
         )
         transfer_result = record_league_transfers_for_tournament_publish(

@@ -127,12 +127,14 @@ def test_import_apply_review_dialog_shows_summary_warnings_and_rating_impact() -
     summary_text = "\n".join(
         dialog.summary_list.item(index).text() for index in range(dialog.summary_list.count())
     )
-    assert "Spring Cup" in summary_text
+    assert "Весенний кубок" in summary_text
     assert "3" in summary_text
     assert "1" in summary_text
-    assert dialog.warnings_list.count() == 2
+    assert dialog.warnings_list.count() == 1
     assert dialog.impact_table.rowCount() == 2
     assert dialog.impact_table.columnCount() == 7
     assert dialog.league_table.rowCount() == 1
-    assert dialog.leave_button.text() == "Оставить draft"
+    assert dialog.league_table.item(0, 1).text() == "Первая лига"
+    assert dialog.league_table.item(0, 2).text() == "Премьер-лига"
+    assert dialog.leave_button.text() == "Оставить черновиком"
     assert dialog.publish_button.text() == "Опубликовать сейчас"

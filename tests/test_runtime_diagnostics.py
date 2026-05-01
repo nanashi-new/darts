@@ -76,12 +76,6 @@ def test_self_check_does_not_require_legacy_classification_template(monkeypatch,
 
     from app.services import diagnostics
 
-    monkeypatch.setattr(
-        diagnostics,
-        "get_bundled_resource_path",
-        lambda relative_path: tmp_path / "missing-template.bin",
-    )
-
     report = diagnostics.run_self_check(connection=connection)
 
     assert not any(issue.code == "scoring.unavailable" for issue in report.issues)

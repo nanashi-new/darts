@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
+from typing import Any, TypedDict
 
 from app.db.repositories import RatingSnapshotRepository, ResultRepository, TournamentRepository
 from app.domain.rating import RatingBasisItem, build_rating_basis, build_rating_snapshot
@@ -15,6 +16,13 @@ ADULT_OVERALL_SCOPE_KEY = "overall"
 ADULT_MEN_SCOPE_KEY = "men"
 ADULT_WOMEN_SCOPE_KEY = "women"
 SNAPSHOT_REASON_PUBLISH = "publish"
+
+
+class RatingScopeFilters(TypedDict, total=False):
+    category_code: str
+    league_code: str
+    is_adult_mode: bool
+    adult_gender_scope: str
 
 
 @dataclass(frozen=True)
@@ -70,7 +78,7 @@ class PlayerRatingStateEntry:
 def create_rating_snapshot_for_tournament_publish(
     connection,
     tournament_id: int,
-    n_value: int = 6,
+    n_value: int = 3,
     operation_group_id: str | None = None,
 ) -> SnapshotCreateResult:
     tournament_repo = TournamentRepository(connection)
@@ -227,7 +235,7 @@ def list_latest_player_rating_states(connection, *, player_id: int) -> list[Play
     ]
 
 
-def _snapshot_entry_from_row(row: dict[str, object]) -> RatingSnapshotEntry:
+def _snapshot_entry_from_row(row: dict[str, Any]) -> RatingSnapshotEntry:
     return RatingSnapshotEntry(
         id=int(row["id"]),
         scope_type=str(row["scope_type"]),
@@ -266,7 +274,7 @@ def _parse_basis_json(raw_value: object) -> list[RatingBasisItem]:
     return basis_items
 
 
-def _build_fio(row: dict[str, object]) -> str:
+def _build_fio(row: dict[str, Any]) -> str:
     last_name = str(row.get("last_name") or "").strip()
     first_name = str(row.get("first_name") or "").strip()
     middle_name = str(row.get("middle_name") or "").strip()
@@ -274,9 +282,9 @@ def _build_fio(row: dict[str, object]) -> str:
 
 
 def _build_scope_requests(
-    tournament: dict[str, object],
-) -> list[tuple[str, str, dict[str, object]]]:
-    requests: list[tuple[str, str, dict[str, object]]] = []
+    tournament: dict[str, Any],
+) -> list[tuple[str, str, RatingScopeFilters]]:
+    requests: list[tuple[str, str, RatingScopeFilters]] = []
     is_adult_mode = bool(int(tournament.get("is_adult_mode") or 0))
     category_code = str(tournament.get("category_code") or "").strip()
     if category_code and not is_adult_mode:

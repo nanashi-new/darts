@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 from app.services.import_review import ImportRatingImpactPreview
 from app.services.import_xlsx import ImportApplyReport
 from app.services.league_transfer import LeagueTransferPreview
-from app.ui.labels import tournament_status_label
+from app.ui.labels import league_label, tournament_status_label
 
 
 def _display_int(value: int | None) -> str:
@@ -195,7 +195,11 @@ class ImportApplyReviewDialog(QDialog):
         for preview_row in preview.rows:
             row_index = self.league_table.rowCount()
             self.league_table.insertRow(row_index)
-            values = [preview_row.fio, preview_row.from_league_code or "", preview_row.to_league_code]
+            values = [
+                preview_row.fio,
+                league_label(preview_row.from_league_code) if preview_row.from_league_code else "",
+                league_label(preview_row.to_league_code),
+            ]
             for column, value in enumerate(values):
                 item = QTableWidgetItem(value)
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)

@@ -24,7 +24,7 @@ def main() -> int:
 
         app = QApplication([])
         window = MainWindow()
-        window.show()
+        window.show_workspace()
         return app.exec()
     except Exception:
         logging.exception("Fatal startup error. See log at %s", log_path)

@@ -175,6 +175,7 @@ class ExportService:
         rows_list = [["" if value is None else str(value) for value in row] for row in rows]
         if self._should_use_qt_pdf_renderer():
             try:
+                self._ensure_qt_application()
                 from PySide6.QtPrintSupport import QPrinter
 
                 printer = QPrinter(QPrinter.HighResolution)

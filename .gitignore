@@ -1,13 +1,17 @@
 __pycache__/
 *.py[cod]
+.venv/
+.local/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+pytest-cache-files-*/
 
 build/
 dist/
 release/
 test_run/
+.tmp/
 
 *.tmp
 *.bak

@@ -6,6 +6,7 @@ from app.ui.labels import (
     category_label,
     import_apply_status_label,
     gender_label,
+    league_label,
     note_type_label,
     priority_label,
     scope_type_label,
@@ -27,6 +28,8 @@ def test_ui_labels_translate_known_technical_codes() -> None:
     assert priority_label("high") == "Высокий"
     assert session_type_label("general") == "Общая тренировка"
     assert gender_label("M") == "Мужской"
+    assert league_label("PREMIER") == "Премьер-лига"
+    assert league_label("FIRST") == "Первая лига"
     assert import_apply_status_label("draft_applied") == "Оставлен черновиком"
     assert audit_event_label("IMPORT_FILE") == "Импорт файла"
 

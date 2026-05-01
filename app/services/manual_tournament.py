@@ -70,6 +70,7 @@ def create_manual_adult_tournament(
             continue
 
         birth_date, birth_year = _parse_birth_value(row.get("birth"))
+        gender = _parse_gender(row.get("gender"))
         place = _parse_int(row.get("place"))
         points_total = _parse_int(row.get("points_total"))
         if points_total is None:
@@ -91,7 +92,7 @@ def create_manual_adult_tournament(
                     "first_name": first_name,
                     "middle_name": middle_name,
                     "birth_date": birth_date,
-                    "gender": None,
+                    "gender": gender,
                     "coach": None,
                     "club": None,
                     "notes": None,
@@ -185,3 +186,16 @@ def _parse_int(value: object | None) -> int | None:
         return int(float(text.replace(",", ".")))
     except (TypeError, ValueError):
         return None
+
+
+def _parse_gender(value: object | None) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip().lower()
+    if not text:
+        return None
+    if text in {"m", "м", "male", "man", "men", "муж", "мужской", "юноша", "мужчины"}:
+        return "M"
+    if text in {"f", "w", "ж", "female", "woman", "women", "жен", "женский", "девушка", "женщины"}:
+        return "F"
+    return str(value).strip()

@@ -8,6 +8,7 @@ import sqlite3
 from typing import Any, TypedDict, cast
 
 from app.db.repositories import ResultRepository, TournamentRepository
+from app.runtime_paths import get_runtime_paths
 from app.services.export_service import ExportService
 
 
@@ -53,8 +54,28 @@ class BatchExportService:
         self._result_repo = ResultRepository(connection)
         self._export_service = ExportService()
 
-    def export_all(self, base_directory: str | Path, export_format: str, n_value: int = 6) -> BatchExportResult:
-        run_directory = Path(base_directory) / "exports" / f"{date.today().isoformat()}_run"
+    def export_all(self, base_directory: str | Path, export_format: str, n_value: int = 3) -> BatchExportResult:
+        return self._export_all_to_run_parent(
+            Path(base_directory) / "exports",
+            export_format=export_format,
+            n_value=n_value,
+        )
+
+    def export_all_to_profile(self, export_format: str, n_value: int = 3) -> BatchExportResult:
+        return self._export_all_to_run_parent(
+            get_runtime_paths().exports_dir,
+            export_format=export_format,
+            n_value=n_value,
+        )
+
+    def _export_all_to_run_parent(
+        self,
+        run_parent_directory: str | Path,
+        *,
+        export_format: str,
+        n_value: int,
+    ) -> BatchExportResult:
+        run_directory = Path(run_parent_directory) / f"{date.today().isoformat()}_run"
         ratings_dir = run_directory / "ratings"
         tournaments_dir = run_directory / "tournaments"
         ratings_dir.mkdir(parents=True, exist_ok=True)

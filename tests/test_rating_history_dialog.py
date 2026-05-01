@@ -321,7 +321,7 @@ def test_rating_history_dialog_shows_adult_scope_rows(tmp_path) -> None:
     dialog.session_list.setCurrentRow(0)
     dialog._sync_selected_session()
     assert dialog.rows_table.rowCount() == 3
-    assert "adult:overall" in dialog.status_label.text().lower()
+    assert "взрослые: все взрослые" in dialog.status_label.text().lower()
 
 
 def test_rating_view_opens_history_dialog_for_adult_scope(monkeypatch, tmp_path) -> None:
@@ -378,7 +378,7 @@ def test_rating_history_dialog_shows_adult_men_scope_rows(tmp_path) -> None:
     dialog.session_list.setCurrentRow(0)
     dialog._sync_selected_session()
     assert dialog.rows_table.rowCount() == 1
-    assert "adult:men" in dialog.status_label.text().lower()
+    assert "взрослые: мужчины" in dialog.status_label.text().lower()
 
 
 def test_rating_view_opens_history_dialog_for_adult_men_scope(monkeypatch, tmp_path) -> None:

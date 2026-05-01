@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
     QSpinBox,
     QTableView,
     QVBoxLayout,
@@ -42,6 +43,7 @@ ADULT_WOMEN_SCOPE_KEY = "women"
 class RatingView(QWidget):
     def __init__(self) -> None:
         super().__init__()
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._connection = get_connection()
         self._tournament_repo = TournamentRepository(self._connection)
         self._result_repo = ResultRepository(self._connection)
@@ -53,7 +55,10 @@ class RatingView(QWidget):
 
         self._table = QTableView(self)
         self._table.setSortingEnabled(False)
-        root_layout.addWidget(self._table)
+        self._table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self._table.setAlternatingRowColors(True)
+        self._table.horizontalHeader().setStretchLastSection(True)
+        root_layout.addWidget(self._table, 1)
 
         root_layout.addLayout(self._build_actions())
         self._restore_state()
@@ -76,7 +81,7 @@ class RatingView(QWidget):
 
         self._n_spin = QSpinBox(filters_box)
         self._n_spin.setRange(3, 12)
-        self._n_spin.setValue(6)
+        self._n_spin.setValue(3)
         self._n_spin.setSuffix(" турниров")
 
         self._search_input = QLineEdit(filters_box)

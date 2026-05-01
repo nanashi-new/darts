@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -25,6 +26,7 @@ from app.ui.player_card_dialog import PlayerCardDialog
 class DashboardView(QWidget):
     def __init__(self, *, navigate: Callable[[str], None] | None = None) -> None:
         super().__init__()
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._connection = get_connection()
         self._navigate = navigate
         self._tournament_repo = TournamentRepository(self._connection)
@@ -35,20 +37,26 @@ class DashboardView(QWidget):
 
         self.recent_tournaments_table = QTableWidget(0, 3, self)
         self.recent_tournaments_table.setHorizontalHeaderLabels(["Дата", "Турнир", "Статус"])
+        self._configure_table(self.recent_tournaments_table)
         layout.addWidget(QLabel("Последние турниры", self))
-        layout.addWidget(self.recent_tournaments_table)
+        layout.addWidget(self.recent_tournaments_table, 1)
 
         self.recent_imports_table = QTableWidget(0, 4, self)
         self.recent_imports_table.setHorizontalHeaderLabels(["Создан", "Турнир", "Статус", "Импортировано"])
+        self._configure_table(self.recent_imports_table)
         layout.addWidget(QLabel("Последние отчеты импорта", self))
-        layout.addWidget(self.recent_imports_table)
+        layout.addWidget(self.recent_imports_table, 1)
 
         self.follow_up_notes_table = QTableWidget(0, 3, self)
         self.follow_up_notes_table.setHorizontalHeaderLabels(["Объект", "Заголовок", "Доступ"])
+        self._configure_table(self.follow_up_notes_table)
         layout.addWidget(QLabel("Контрольные заметки", self))
-        layout.addWidget(self.follow_up_notes_table)
+        layout.addWidget(self.follow_up_notes_table, 1)
 
-        self.open_follow_up_player_button = QPushButton("Открыть карточку выбранного игрока", self)
+        self.open_follow_up_player_button = QPushButton("Карточка", self)
+        self.open_follow_up_player_button.setToolTip(
+            "Открыть карточку выбранного игрока из контрольных заметок."
+        )
         self.open_follow_up_player_button.clicked.connect(self._open_selected_follow_up_player)
         layout.addWidget(self.open_follow_up_player_button)
 
@@ -57,6 +65,13 @@ class DashboardView(QWidget):
 
         layout.addStretch(1)
         self.refresh()
+
+    @staticmethod
+    def _configure_table(table: QTableWidget) -> None:
+        table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        table.setAlternatingRowColors(True)
+        table.horizontalHeader().setStretchLastSection(True)
+        table.verticalHeader().setVisible(False)
 
     def _build_quick_actions(self) -> QHBoxLayout:
         layout = QHBoxLayout()

@@ -120,7 +120,7 @@ def test_correction_logs_old_new_and_recalculates_results(tmp_path: Path) -> Non
 
     result_rows = results.search(tournament_id=tournament_id)
     assert len(result_rows) == 1
-    assert result_rows[0]["calc_version"] == "v2"
+    assert result_rows[0]["calc_version"] == "v3_no_classification"
 
     correction_events = audit.list_events(event_type=TOURNAMENT_CORRECTED)
     assert len(correction_events) >= 2

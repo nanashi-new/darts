@@ -11,8 +11,8 @@ import pytest
 pytestmark = pytest.mark.integration
 
 def test_batch_import(tmp_path) -> None:
-    good_headers = ["ФИО", "Место", "Очки"]
-    good_rows = [["Иванов Иван", 1, 100]]
+    good_headers = ["ФИО", "Год рождения", "Место", "Очки", "С20", "БР"]
+    good_rows = [["Иванов Иван", 2012, 1, 100, 45, 78]]
     make_single_table_xlsx(tmp_path, good_headers, good_rows)
     make_single_table_xlsx(tmp_path, good_headers, good_rows)
 

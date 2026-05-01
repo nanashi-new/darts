@@ -10,9 +10,11 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
+    QWidget,
 )
 
 from app.db.repositories import PlayerRepository, ResultRepository
@@ -24,6 +26,8 @@ from app.ui.entity_notes_dialog import EntityNoteDialog, EntityNotesDialog
 from app.ui.labels import (
     adult_scope_label,
     category_label,
+    gender_label,
+    league_label,
     note_type_label,
     priority_label,
     scope_type_label,
@@ -50,13 +54,19 @@ class PlayerCardDialog(QDialog):
         self.setWindowTitle(f"Карточка игрока: {self._build_fio(player)}")
         self.resize(980, 760)
 
-        layout = QVBoxLayout(self)
+        root_layout = QVBoxLayout(self)
+        self.content_scroll = QScrollArea(self)
+        self.content_scroll.setWidgetResizable(True)
+        self.content_widget = QWidget(self.content_scroll)
+        layout = QVBoxLayout(self.content_widget)
         layout.addWidget(self._build_overview_group())
         layout.addWidget(self._build_notes_group())
         layout.addWidget(self._build_training_group())
         layout.addWidget(self._build_rating_group())
         layout.addWidget(self._build_tournament_history_group())
         layout.addWidget(self._build_league_history_group())
+        self.content_scroll.setWidget(self.content_widget)
+        root_layout.addWidget(self.content_scroll)
 
         self._load_context()
 
@@ -176,7 +186,7 @@ class PlayerCardDialog(QDialog):
             [
                 f"ФИО: {self._build_fio(player)}",
                 f"Дата рождения: {player.get('birth_date') or '—'}",
-                f"Пол: {player.get('gender') or '—'}",
+                f"Пол: {gender_label(player.get('gender')) if player.get('gender') else '—'}",
                 f"Клуб: {player.get('club') or '—'}",
                 f"Тренер: {player.get('coach') or '—'}",
                 f"Примечания: {player.get('notes') or '—'}",
@@ -244,8 +254,8 @@ class PlayerCardDialog(QDialog):
                 row_index,
                 [
                     str(row_data.created_at).replace("T", " ")[:19],
-                    row_data.from_league_code or "",
-                    row_data.to_league_code,
+                    league_label(row_data.from_league_code) if row_data.from_league_code else "",
+                    league_label(row_data.to_league_code),
                     row_data.tournament_name,
                 ],
             )
@@ -279,6 +289,8 @@ class PlayerCardDialog(QDialog):
             return adult_scope_label(row_data.scope_key)
         if row_data.scope_type == "category":
             return category_label(row_data.scope_key)
+        if row_data.scope_type == "league":
+            return league_label(row_data.scope_key)
         return row_data.scope_key
 
     def _open_selected_rating_history(self) -> None:

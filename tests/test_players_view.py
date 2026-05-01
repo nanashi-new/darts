@@ -114,6 +114,7 @@ def test_players_view_shows_league_history_for_selected_player(monkeypatch, tmp_
     assert hasattr(view, "_league_history_table")
     assert view._league_history_table.model() is not None
     assert view._league_history_table.model().rowCount() == 1
+    assert view._league_history_table.model().index(0, 2).data() == "Премьер-лига"
 
 
 def test_players_view_opens_player_card_for_selected_player(monkeypatch, tmp_path) -> None:

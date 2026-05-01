@@ -27,8 +27,7 @@ for %%P in (
 if "%ISCC_EXE%"=="" (
   where ISCC.exe >nul 2>&1
   if errorlevel 1 (
-    echo Inno Setup compiler not found. Install Inno Setup 6 or add ISCC.exe to PATH.
-    exit /b 1
+    goto missing_inno
   )
   set "ISCC_EXE=ISCC.exe"
 )
@@ -42,3 +41,9 @@ if errorlevel 1 (
 
 echo Installer artifact: release\DartsLiga-Setup.exe
 endlocal
+exit /b 0
+
+:missing_inno
+echo Inno Setup compiler not found. Install Inno Setup 6 or add ISCC.exe to PATH.
+endlocal
+exit /b 1

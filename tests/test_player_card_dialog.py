@@ -141,9 +141,17 @@ def test_player_card_dialog_shows_overview_and_context_tables(tmp_path) -> None:
 
     assert "Context Casey" in dialog.windowTitle()
     assert "Coach Zero" in dialog.overview_label.text()
+    assert "Пол: Женский" in dialog.overview_label.text()
+    assert hasattr(dialog, "content_scroll")
     assert dialog.tournament_history_table.rowCount() == 1
     assert dialog.league_history_table.rowCount() == 1
+    assert dialog.league_history_table.item(0, 2).text() == "Премьер-лига"
     assert dialog.rating_state_table.rowCount() >= 1
+    rating_values = {
+        dialog.rating_state_table.item(row, 1).text()
+        for row in range(dialog.rating_state_table.rowCount())
+    }
+    assert "Премьер-лига" in rating_values
     assert dialog.notes_table.rowCount() == 1
     assert dialog.training_table.rowCount() == 1
     assert hasattr(dialog, "coach_note_button")

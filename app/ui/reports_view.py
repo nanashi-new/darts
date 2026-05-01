@@ -3,9 +3,11 @@ from __future__ import annotations
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
+    QHBoxLayout,
     QLabel,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -25,29 +27,53 @@ class ReportsView(QWidget):
         self._batch_export_service = BatchExportService(self._connection)
         self._audit_log_service = AuditLogService(self._connection)
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Раздел «Отчёты»."))
+        scroll_area = QScrollArea(self)
+        scroll_area.setObjectName("reports_scroll_area")
+        scroll_area.setWidgetResizable(True)
+        layout.addWidget(scroll_area)
+
+        content = QWidget(self)
+        scroll_area.setWidget(content)
+        content_layout = QVBoxLayout(content)
+        title = QLabel("Отчеты и служебные операции", content)
+        title.setWordWrap(True)
+        content_layout.addWidget(title)
 
         self._batch_format_combo = QComboBox(self)
         self._batch_format_combo.addItems(["PDF", "XLSX", "PNG"])
-        layout.addWidget(QLabel("Формат пакетного экспорта:"))
-        layout.addWidget(self._batch_format_combo)
+        content_layout.addWidget(QLabel("Формат пакетного экспорта:"))
+        content_layout.addWidget(self._batch_format_combo)
 
-        batch_export_btn = QPushButton("Экспорт в папку", self)
+        actions = QHBoxLayout()
+        batch_export_btn = QPushButton("Экспорт", content)
+        batch_export_btn.setToolTip("Выгрузить рейтинги и протоколы в выбранную папку.")
         batch_export_btn.clicked.connect(self._export_batch)
-        layout.addWidget(batch_export_btn)
+        actions.addWidget(batch_export_btn)
 
-        recalc_btn = QPushButton("Пересчитать всё", self)
+        recalc_btn = QPushButton("Пересчет", content)
+        recalc_btn.setToolTip("Пересчитать результаты всех турниров.")
         recalc_btn.clicked.connect(self._recalculate_all)
-        layout.addWidget(recalc_btn)
+        actions.addWidget(recalc_btn)
 
-        journal_btn = QPushButton("Журнал", self)
+        journal_btn = QPushButton("Журнал", content)
+        journal_btn.setToolTip("Открыть журнал действий и ошибок.")
         journal_btn.clicked.connect(self._open_journal)
-        layout.addWidget(journal_btn)
+        actions.addWidget(journal_btn)
 
-        import_history_btn = QPushButton("История импортов", self)
+        import_history_btn = QPushButton("Импорты", content)
+        import_history_btn.setToolTip("Открыть историю импортов.")
         import_history_btn.clicked.connect(self._open_import_history)
-        layout.addWidget(import_history_btn)
-        layout.addStretch(1)
+        actions.addWidget(import_history_btn)
+        actions.addStretch(1)
+        content_layout.addLayout(actions)
+        hint = QLabel(
+            "Пакетный экспорт создает рейтинги и протоколы в выбранной папке. "
+            "Пересчет используйте перед финальной проверкой данных.",
+            content,
+        )
+        hint.setWordWrap(True)
+        content_layout.addWidget(hint)
+        content_layout.addStretch(1)
 
     def _export_batch(self) -> None:
         base_directory = QFileDialog.getExistingDirectory(self, "Выберите папку для экспорта")

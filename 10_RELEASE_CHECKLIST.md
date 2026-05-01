@@ -15,14 +15,14 @@ Expected release outputs:
 
 ## Code and test gates
 
-- [ ] `pytest -q` passes on the current branch
-- [ ] `python -m mypy app` passes
-- [ ] `python -m py_compile` over `app/` and `tests/` passes
-- [ ] UI smoke tests confirm Russian top-level tabs and no placeholder text
-- [ ] UI Russian text tests confirm visible app strings are localized
-- [ ] diagnostics/runtime/recovery tests pass
-- [ ] dependency installation uses `requirements-pinned.txt`
-- [ ] offline wheel manifest validation is part of `scripts/BUILD_RELEASE.bat`
+- [x] `pytest -q` passes on the current branch
+- [x] `python -m mypy app` passes
+- [x] `python -m py_compile` over `app/` and `tests/` passes
+- [x] UI smoke tests confirm Russian top-level tabs and no placeholder text
+- [x] UI Russian text tests confirm visible app strings are localized
+- [x] diagnostics/runtime/recovery tests pass
+- [x] dependency installation uses `requirements-pinned.txt`
+- [x] offline wheel manifest validation is part of `scripts/BUILD_RELEASE.bat`
 
 ## Packaging gates
 
@@ -37,12 +37,12 @@ Expected release outputs:
 
 ## Clean-profile smoke gates
 
-- [ ] packaged app starts with a fresh `DARTS_PROFILE_ROOT`
-- [ ] first run creates `app.db`
-- [ ] first run creates `settings.json`
-- [ ] first run writes `logs/startup.log`
-- [ ] second packaged run succeeds on the same profile
-- [ ] diagnostics/runtime metadata is available to the UI layer and included in the diagnostic bundle flow
+- [x] packaged app starts with a fresh `DARTS_PROFILE_ROOT`
+- [x] first run creates `app.db`
+- [x] first run creates `settings.json`
+- [x] first run writes `logs/startup.log`
+- [x] second packaged run succeeds on the same profile
+- [x] diagnostics/runtime metadata is available to the UI layer and included in the diagnostic bundle flow
 
 ## Installer gates
 
@@ -64,7 +64,29 @@ Expected release outputs:
 
 ## Decision
 
-The branch is ready for release only after the unchecked gates above are verified on Windows.
+The zip/exe fallback release is ready after the checked gates above. The Windows installer release remains blocked until the unchecked installer gates are verified on a machine with Inno Setup.
+
+## Local Run - 2026-04-30
+
+- Passed: `pytest -q` -> `142 passed, 14 deselected, 14 subtests passed`.
+- Passed: `python -m compileall -q app tests`.
+- Passed: `scripts\BUILD_RELEASE.bat` with `.venv\Scripts` first in `PATH`; produced `dist\DartsLiga.exe`.
+- Passed: `scripts\SMOKE_TEST.bat`; clean profile `DartsSmoke_180778817` created `app.db`, `settings.json`, `logs/startup.log`, and second packaged run succeeded.
+- Passed: `scripts\PACK_RELEASE.bat`; produced `release\DartsLiga-release.zip`.
+- Blocked: `scripts\BUILD_INSTALLER.bat` because Inno Setup compiler `ISCC.exe` is not installed; script now returns `LASTEXITCODE=1` for this blocker.
+- Manual gate still open: visual pass for «Турниры» at 1920x1080/1366x768 and reduced window.
+
+## Local Run - 2026-05-01
+
+- Passed: `pytest -q` -> `153 passed, 14 deselected, 14 subtests passed`.
+- Passed: `python -m mypy app` -> `Success: no issues found in 38 source files`.
+- Passed: `python -m compileall -q app tests`.
+- Passed: targeted rating/snapshot/import preview gate -> `34 passed`.
+- Dev tooling is now documented in `requirements-dev.txt`; release/offline dependencies remain in `requirements-pinned.txt`.
+- Passed: `scripts\BUILD_RELEASE.bat`; produced fresh `dist\DartsLiga.exe`.
+- Passed: `scripts\SMOKE_TEST.bat`; internal smoke tests passed (`12 passed`) and clean profile `DartsSmoke_1135032382` started twice.
+- Passed: `scripts\PACK_RELEASE.bat`; produced fresh `release\DartsLiga-release.zip`.
+- Blocked: `scripts\BUILD_INSTALLER.bat` because Inno Setup compiler `ISCC.exe` is not installed.
 
 Deferred by choice, not by release blocker:
 - attachments

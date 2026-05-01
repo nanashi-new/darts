@@ -1,4 +1,5 @@
-from PySide6.QtWidgets import QMainWindow, QTabWidget
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QMainWindow, QSizePolicy, QTabWidget
 
 from app.ui.about_view import AboutView
 from app.ui.context_view import ContextView
@@ -18,9 +19,14 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Дартс Лига")
-        self.setMinimumSize(1024, 640)
+        self.setMinimumSize(1280, 720)
 
         tabs = QTabWidget()
+        tabs.setObjectName("main_workspace_tabs")
+        tabs.setUsesScrollButtons(True)
+        tabs.setDocumentMode(True)
+        tabs.setElideMode(Qt.TextElideMode.ElideRight)
+        tabs.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         tabs.addTab(DashboardView(navigate=lambda target: self._activate_tab(tabs, target)), "Главная")
         tabs.addTab(RatingView(), "Рейтинг")
         tournaments_view = TournamentsView()
@@ -38,6 +44,9 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(tabs)
         self._restore_state()
         tabs.currentChanged.connect(self._persist_state)
+
+    def show_workspace(self) -> None:
+        self.showMaximized()
 
     @staticmethod
     def _activate_tab(tabs: QTabWidget, target: str) -> None:

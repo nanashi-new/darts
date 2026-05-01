@@ -27,7 +27,14 @@ class ColumnMappingDialog(QDialog):
         self.resize(950, 560)
 
         self._headers = [str(item) for item in headers]
-        self._required = ("fio", "place", "score_set")
+        self._required_groups = (
+            (("fio",), "ФИО"),
+            (("birth_year", "birth_date"), "Дата рождения или год рождения"),
+            (("place",), "Место"),
+            (("score_set",), "Набор очков"),
+            (("score_sector20",), "Сектор 20"),
+            (("score_big_round",), "Большой раунд"),
+        )
         self._labels = {
             "fio": "ФИО",
             "birth_year": "Год рождения",
@@ -102,8 +109,8 @@ class ColumnMappingDialog(QDialog):
             "birth_date": ("датарождения", "birth", "др"),
             "place": ("место", "place", "позиция"),
             "score_set": ("очки", "набор", "score"),
-            "score_sector20": ("сектор20", "sector20", "с20"),
-            "score_big_round": ("большойраунд", "biground", "бр"),
+            "score_sector20": ("сектор20", "sector20", "с20", "20"),
+            "score_big_round": ("большойраунд", "biground", "бр", "br"),
         }
         for key, keywords in hints.items():
             for normalized, header in normalized_headers.items():
@@ -121,7 +128,11 @@ class ColumnMappingDialog(QDialog):
 
     def _update_status(self) -> None:
         mapping = self.mapping()
-        missing = [self._labels[key] for key in self._required if not mapping.get(key)]
+        missing = [
+            label
+            for keys, label in self._required_groups
+            if not any(mapping.get(key) for key in keys)
+        ]
         if missing:
             self.status_label.setText(
                 "Не назначены обязательные колонки: " + ", ".join(missing)

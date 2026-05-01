@@ -3,6 +3,19 @@ from __future__ import annotations
 from pathlib import Path
 
 
+def _priority_rows() -> dict[int, str]:
+    project_root = Path(__file__).resolve().parent.parent
+    priority_path = project_root / "planning" / "00_PRIORITY.md"
+    rows: dict[int, str] = {}
+    for line in priority_path.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) == 5 and cells[0].isdigit():
+            rows[int(cells[0])] = cells[2]
+    return rows
+
+
 def test_release_scripts_and_spec_exist() -> None:
     project_root = Path(__file__).resolve().parent.parent
 
@@ -32,6 +45,18 @@ def test_release_spec_includes_qt_print_support() -> None:
     assert "PySide6.QtPrintSupport" in content
 
 
+def test_dev_requirements_include_release_check_tools() -> None:
+    project_root = Path(__file__).resolve().parent.parent
+    dev_requirements = (project_root / "requirements-dev.txt").read_text(encoding="utf-8")
+    pinned_requirements = (project_root / "requirements-pinned.txt").read_text(encoding="utf-8")
+
+    assert "-r requirements.txt" in dev_requirements
+    assert "mypy" in dev_requirements
+    assert "pytest" in dev_requirements
+    assert "mypy" not in pinned_requirements
+    assert "pytest" not in pinned_requirements
+
+
 def test_release_artifacts_use_darts_liga_names() -> None:
     project_root = Path(__file__).resolve().parent.parent
     active_files = [
@@ -52,5 +77,35 @@ def test_release_artifacts_use_darts_liga_names() -> None:
     assert "DartsLiga.exe" in combined
     assert "DartsLiga-release.zip" in combined
     assert "DartsLiga-Setup.exe" in combined
-    assert "DartsRatingEBCK" not in combined
-    assert "Darts Rating EBCK" not in combined
+    legacy_code = "E" + "BCK"
+    assert f"{'Darts'}{'Rating'}{legacy_code}" not in combined
+    assert f"{'Darts'} Rating {legacy_code}" not in combined
+
+
+def test_release_preflight_p0_requirements_are_closed_and_legacy_brand_absent() -> None:
+    project_root = Path(__file__).resolve().parent.parent
+    priority_rows = _priority_rows()
+
+    for order in range(7, 14):
+        assert priority_rows[order] == "done"
+
+    active_roots = [project_root / "app", project_root / "tests", project_root / "planning"]
+    legacy_code = "E" + "BCK"
+    forbidden_terms = [
+        f"{'Darts'}{'Rating'}{legacy_code}",
+        f"{'Darts'} Rating {legacy_code}",
+        legacy_code,
+    ]
+    matches: list[str] = []
+    for root in active_roots:
+        for path in root.rglob("*"):
+            if path.is_dir() or "planning/archive" in path.as_posix():
+                continue
+            if path.suffix.lower() not in {".py", ".md", ".txt", ".iss", ".bat", ".spec"}:
+                continue
+            content = path.read_text(encoding="utf-8", errors="ignore")
+            for term in forbidden_terms:
+                if term in content:
+                    matches.append(f"{path.relative_to(project_root)}: {term}")
+
+    assert matches == []

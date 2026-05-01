@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal, InvalidOperation
 from datetime import date, datetime
 import json
@@ -118,10 +118,10 @@ def detect_headers(row_values: Iterable[object]) -> dict[str, int]:
         "fio": ["фио", "игрок", "фамилияимя", "фамилия", "имя"],
         "birth": ["др", "датарождения", "годрождения", "рождения"],
         "coach": ["тренер", "coach"],
-        "place": ["место", "place"],
-        "score_set": ["набор", "очки", "наборочков", "score"],
-        "score_sector20": ["с20", "sector20", "сектор20"],
-        "score_big_round": ["бр", "biground", "большойраунд"],
+        "place": ["место", "place", "позиция"],
+        "score_set": ["набор", "очки", "наборочков", "score", "результат"],
+        "score_sector20": ["с20", "sector20", "сектор20", "20"],
+        "score_big_round": ["бр", "biground", "большойраунд", "br"],
     }
     normalized_synonyms = {
         key: {_normalize_header(item) for item in values}
@@ -143,8 +143,11 @@ def detect_headers(row_values: Iterable[object]) -> dict[str, int]:
 def _default_required_fields() -> dict[str, str]:
     return {
         "fio": "ФИО",
+        "birth": "Дата рождения",
         "place": "Место",
         "score_set": "Очки",
+        "score_sector20": "Сектор 20",
+        "score_big_round": "Большой раунд",
     }
 
 
@@ -1031,6 +1034,54 @@ def import_tournament_rows(
         players_created=players_created,
         players_reused=players_reused,
         players_matched_manually=players_matched_manually,
+    )
+
+
+def import_tournament_table_blocks(
+    *,
+    connection,
+    blocks: Iterable[TableBlock],
+    tournament_name: str,
+    tournament_date: str | None,
+    category_code: str | None,
+    is_adult_mode: bool = False,
+    source_files: list[str] | None = None,
+    player_match_resolver: Callable[[str, str | None, list[dict[str, object]]], PlayerMatchResolution | None] | None = None,
+    operation_group_id: str | None = None,
+) -> ImportApplyReport:
+    selected_blocks = list(blocks)
+    if not selected_blocks:
+        raise ValueError("Не выбраны таблицы для импорта.")
+
+    block_errors = [
+        f"{block.sheet_name}:{block.start_row} - {error}"
+        for block in selected_blocks
+        for error in block.errors
+    ]
+    if block_errors:
+        raise ValueError("В выбранных таблицах есть ошибки: " + "; ".join(block_errors))
+
+    rows: list[dict[str, object]] = []
+    for block in selected_blocks:
+        rows.extend(block.rows)
+    if not rows:
+        raise ValueError("В выбранных таблицах нет строк для импорта.")
+
+    report = import_tournament_rows(
+        connection=connection,
+        rows=rows,
+        tournament_name=tournament_name,
+        tournament_date=tournament_date,
+        category_code=category_code,
+        is_adult_mode=is_adult_mode,
+        source_files=source_files,
+        player_match_resolver=player_match_resolver,
+        operation_group_id=operation_group_id,
+    )
+    return replace(
+        report,
+        tables_processed=len(selected_blocks),
+        rows_read=len(rows),
     )
 
 

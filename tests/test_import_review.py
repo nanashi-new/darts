@@ -235,4 +235,4 @@ def test_build_import_rating_preview_returns_reason_when_category_missing(tmp_pa
     assert preview.available is False
     assert preview.rows == []
     assert preview.reason is not None
-    assert "category" in preview.reason.lower()
+    assert "категория" in preview.reason.lower()

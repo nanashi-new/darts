@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
     QSplitter,
     QTableView,
     QVBoxLayout,
@@ -21,6 +22,7 @@ from app.db.database import get_connection
 from app.db.repositories import PlayerRepository, ResultRepository
 from app.services.audit_log import AuditLogService, ERROR
 from app.services.league_transfer import list_player_league_transfers
+from app.ui.labels import category_label, gender_label, league_label
 from app.ui.messages import confirm_yes_no
 from app.ui.player_card_dialog import PlayerCardDialog
 from app.ui.player_edit_dialog import PlayerEditDialog
@@ -34,6 +36,7 @@ PLAYER_DELETE = "PLAYER_DELETE"
 class PlayersView(QWidget):
     def __init__(self) -> None:
         super().__init__()
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._connection = get_connection()
         self._player_repo = PlayerRepository(self._connection)
         self._result_repo = ResultRepository(self._connection)
@@ -65,9 +68,13 @@ class PlayersView(QWidget):
         toolbar.addWidget(delete_btn)
         layout.addLayout(toolbar)
 
-        splitter = QSplitter(Qt.Orientation.Vertical, self)
+        splitter = QSplitter(Qt.Orientation.Horizontal, self)
+        splitter.setObjectName("players_workspace_splitter")
 
         self._players_table = QTableView(self)
+        self._players_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self._players_table.setAlternatingRowColors(True)
+        self._players_table.horizontalHeader().setStretchLastSection(True)
         self._players_table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self._players_table.setSelectionMode(QTableView.SelectionMode.SingleSelection)
         self._players_table.setSortingEnabled(False)
@@ -78,9 +85,15 @@ class PlayersView(QWidget):
         history_layout = QVBoxLayout(history_container)
         self._history_title = QLabel("История игрока", self)
         self._history_table = QTableView(self)
+        self._history_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self._history_table.setAlternatingRowColors(True)
+        self._history_table.horizontalHeader().setStretchLastSection(True)
         self._history_table.setSortingEnabled(False)
         self._league_history_title = QLabel("История лиг", self)
         self._league_history_table = QTableView(self)
+        self._league_history_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self._league_history_table.setAlternatingRowColors(True)
+        self._league_history_table.horizontalHeader().setStretchLastSection(True)
         self._league_history_table.setSortingEnabled(False)
         history_layout.addWidget(self._history_title)
         history_layout.addWidget(self._history_table)
@@ -90,7 +103,7 @@ class PlayersView(QWidget):
 
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 2)
-        layout.addWidget(splitter)
+        layout.addWidget(splitter, 1)
 
         self._restore_state()
         self._refresh_players()
@@ -144,7 +157,11 @@ class PlayersView(QWidget):
         for player in self._players:
             row_items: list[QStandardItem] = []
             for key, _ in columns:
-                display = "" if player.get(key) is None else str(player.get(key))
+                value = player.get(key)
+                if key == "gender" and value:
+                    display = gender_label(value)
+                else:
+                    display = "" if value is None else str(value)
                 item = QStandardItem(display)
                 item.setEditable(False)
                 if key == "id":
@@ -214,6 +231,8 @@ class PlayersView(QWidget):
             row_items = []
             for key, _ in columns:
                 value = row_data.get(key)
+                if key == "category_code" and value:
+                    value = category_label(value)
                 item = QStandardItem("" if value is None else str(value))
                 item.setEditable(False)
                 row_items.append(item)
@@ -239,6 +258,8 @@ class PlayersView(QWidget):
                 value = getattr(row_data, key, None)
                 if key == "created_at" and value:
                     value = str(value).replace("T", " ")[:19]
+                if key in {"from_league_code", "to_league_code"} and value:
+                    value = league_label(value)
                 item = QStandardItem("" if value is None else str(value))
                 item.setEditable(False)
                 row_items.append(item)

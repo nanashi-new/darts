@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 
 def compute_tournament_points(points_classification: int | None, points_place: int | None) -> int:
@@ -77,7 +77,7 @@ def _rating_entry_sort_key(entry: Mapping[str, Any]) -> tuple[str, int]:
     return (tournament_date, tournament_id)
 
 
-def _group_rating_entries(results: list[Mapping[str, Any]]) -> dict[int, dict[str, Any]]:
+def _group_rating_entries(results: Sequence[Mapping[str, Any]]) -> dict[int, dict[str, Any]]:
     players: dict[int, dict[str, Any]] = {}
     for entry in results:
         player_id = int(entry["player_id"])
@@ -88,7 +88,7 @@ def _group_rating_entries(results: list[Mapping[str, Any]]) -> dict[int, dict[st
 
 
 def build_rating_snapshot(
-    results: list[Mapping[str, Any]],
+    results: Sequence[Mapping[str, Any]],
     n: int,
 ) -> list[RatingSnapshotRow]:
     if n <= 0:
@@ -127,7 +127,7 @@ def build_rating_snapshot(
 
 
 def build_rating_basis(
-    results: list[Mapping[str, Any]],
+    results: Sequence[Mapping[str, Any]],
     n: int,
 ) -> dict[int, list[RatingBasisItem]]:
     if n <= 0:
@@ -178,10 +178,14 @@ def build_rating_impact(
         if old_place is not None and new_place is not None:
             place_delta = old_place - new_place
 
+        impact_source = after_row if after_row is not None else before_row
+        if impact_source is None:
+            continue
+
         impact_rows.append(
             RatingImpactRow(
                 player_id=player_id,
-                fio=(after_row or before_row).fio,
+                fio=impact_source.fio,
                 old_place=old_place,
                 new_place=new_place,
                 place_delta=place_delta,

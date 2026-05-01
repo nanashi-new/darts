@@ -9,6 +9,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 pytestmark = pytest.mark.release_smoke
 
+LEGACY_ASCII_CODE = "E" + "BCK"
+LEGACY_CYRILLIC_CODE = "Е" + "ВСК"
+
 DISALLOWED_VISIBLE_FRAGMENTS = (
     "Dashboard",
     "Recent tournaments",
@@ -39,10 +42,10 @@ DISALLOWED_VISIBLE_FRAGMENTS = (
     "Summary is required",
     "Primary",
     "Duplicate",
-    "Darts Rating EBCK",
-    "DartsRatingEBCK",
-    "EBCK",
-    "ЕВСК",
+    "Darts" + " Rating " + LEGACY_ASCII_CODE,
+    "Darts" + "Rating" + LEGACY_ASCII_CODE,
+    LEGACY_ASCII_CODE,
+    LEGACY_CYRILLIC_CODE,
     "norms.xlsx",
     "норматив",
     "Норматив",
