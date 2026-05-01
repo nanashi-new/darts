@@ -6,7 +6,7 @@
 
 - Текущая рабочая ветка: `feature/darts-liga-no-evsk`.
 - База ветки: свежий `origin/main` после merge PR #65.
-- Локально есть commit `2691590 feat: complete Darts Liga release readiness`, который еще нужно отправить в `origin/feature/darts-liga-no-evsk`.
+- Ветка содержит закрытый v1.1 release-readiness слой и обновленное planning-состояние.
 
 ## Уже Сделано В Baseline
 
@@ -32,8 +32,8 @@
 
 - P0 для v1.1 закрыт и зафиксирован в release-readiness commit.
 - Zip/exe fallback release готов: `dist/DartsLiga.exe` и `release/DartsLiga-release.zip`.
-- Windows installer остается P1-задачей до машины с Inno Setup `ISCC.exe`.
-- Следующий рабочий слой после push/review: installer, dashboard command center, data safety и сезонные переходы лиг.
+- Windows installer gate закрыт: `release/DartsLiga-Setup.exe` собирается и проходит shortcut/uninstall smoke.
+- Следующий рабочий слой: dashboard command center, data safety и сезонные переходы лиг.
 
 ## Следующие Решения Уже Зафиксированы
 
@@ -53,7 +53,7 @@
   - `reporting-player-requirements-alignment` - clean-profile PDF/XLSX export и P0-сверка карточки игрока готовы;
   - `customer-requirements-alignment` - reference-сверка обновлена, обязательные P0-блоки закрыты, future-расширения явно вынесены в planned/optional/P1/P2.
 - `light-automation-v1` закрыта: подсказка категории, import review, adult publish snapshots, correction/recalc/restore, safe archive/cancel, league preview/history и clean-profile export подтверждены targeted gate.
-- P0 `release-readiness` закрыт для zip/exe fallback release; Windows installer остается отдельной P1-задачей до машины с Inno Setup.
+- P0 `release-readiness` закрыт; P1 `windows-installer` тоже закрыт после локальной установки Inno Setup и smoke-проверки установщика.
 - Новые улучшения после v1.1 зафиксированы как P1/P2/P3: dashboard command center, data safety, player card v2, tournament workflow polish, future workspace features и coach workflow.
 - P2-функции вроде тегов, вложений и кастомных полей не начинать до v1.1 release-ready.
 
@@ -72,7 +72,8 @@
 - Последний targeted gate по customer requirements alignment: `32 passed`; reference больше не содержит устаревших P0-статусов по закрытым обязательным блокам.
 - Последний guard gate по planning/release/app startup: `8 passed`; `done` в `00_PRIORITY.md` синхронизирован с task-файлами, P0 7-11 закрыты перед release-readiness, старый бренд запрещен в активных файлах.
 - Последний targeted gate по light automation: `26 passed` вне sandbox из-за pytest temp/AppData permission issue; feature-часть закрыта, финальный release smoke и ручной UI pass перенесены в `release-readiness`.
-- Последний release-readiness gate: `pytest -q` -> `153 passed, 14 deselected, 14 subtests passed`; `compileall` прошел; `python -m mypy app` прошел; 2026-05-01 `BUILD_RELEASE`, packaged `SMOKE_TEST` и `PACK_RELEASE` прошли на свежем `DartsLiga.exe`; installer заблокирован отсутствующим Inno Setup `ISCC.exe`.
+- Последний release-readiness gate: `pytest -q` -> `153 passed, 14 deselected, 14 subtests passed`; `compileall` прошел; `python -m mypy app` прошел; 2026-05-01 `BUILD_RELEASE`, packaged `SMOKE_TEST`, `PACK_RELEASE` и `BUILD_INSTALLER` прошли на свежем `DartsLiga.exe`.
+- Последний installer smoke: `DartsLiga-Setup.exe` тихо устанавливает приложение, создает Start menu shortcut и optional desktop shortcut, установленный exe стартует на чистом профиле, silent uninstall удаляет программу и ярлыки, но сохраняет профиль данных.
 - Последний UI polish срез по `Турниры`: добавлена модалка деталей турнира, кнопка `Турнир`, компактная строка сводки и screenshot layout-pass 1366x768; targeted Qt smoke обновлен.
 - Последний UI polish срез по `Контекст`: добавлены details-модалки для заметок и тренировок; длинные тексты раскрываются отдельно, без расширения таблиц.
 - Последний UI polish срез по `Отчеты`/`О программе`: добавлены scroll-friendly основы, короткие отчетные кнопки с tooltip и word wrap для длинных строк о версии/сборке.

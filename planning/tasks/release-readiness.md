@@ -49,5 +49,5 @@
 - Done: добавлен `requirements-dev.txt` для локальных проверок с `pytest` и `mypy`; release/offline зависимости остаются в `requirements-pinned.txt`.
 - Done: свежий release gate 2026-05-01 после UI/FAQ/typecheck изменений: `BUILD_RELEASE`, `SMOKE_TEST` (`12 passed`) и `PACK_RELEASE` прошли.
 - Done: visual layout pass всех основных вкладок на 1366x768 и 1920x1080 добавлен в release smoke.
-- Blocked: installer artifact не собран, потому что на машине нет Inno Setup `ISCC.exe`.
-- Done with external blocker: v1.1 готов к zip/exe fallback release; installer остается в P1 `windows-installer` до проверки на машине с Inno Setup.
+- Done: первоначальный installer-блокер снят локальной установкой Inno Setup 6.7.1 в `.local/Inno`.
+- Done: `release\DartsLiga-Setup.exe` собран и проверен installer shortcut/uninstall smoke; zip/exe fallback остается запасным артефактом.

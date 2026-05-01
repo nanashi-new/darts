@@ -18,6 +18,8 @@ if not exist "%SCRIPT%" (
 
 set "ISCC_EXE="
 for %%P in (
+  ".local\Inno\ISCC.exe"
+  ".local\Inno Setup 6\ISCC.exe"
   "%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
   "%ProgramFiles%\Inno Setup 6\ISCC.exe"
 ) do (

@@ -35,7 +35,7 @@ Source: "..\docs\11_RELEASE_TEST_RUN.md"; DestDir: "{app}\docs"; Flags: ignoreve
 Source: "..\docs\14_WINDOWS_INSTALLER.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{userprograms}\{#MyAppName}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]

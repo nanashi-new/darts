@@ -1,5 +1,7 @@
 # Task: Windows Installer И Релизная Удобность
 
+Статус: done
+
 ## Цель
 
 Сделать установку на Windows понятной для обычного пользователя.
@@ -31,3 +33,12 @@
 - Installer UI русский.
 - Установленное приложение стартует с чистым профилем.
 - Uninstall удаляет программу, но не пользовательские данные.
+
+## Статус
+
+- Done: Inno Setup 6.7.1 установлен локально в `.local/Inno` для этой workspace.
+- Done: `scripts\BUILD_INSTALLER.bat` находит локальный `ISCC.exe` и собирает `release\DartsLiga-Setup.exe`.
+- Done: Start menu shortcut создается через `{userprograms}\Дартс Лига\Дартс Лига`.
+- Done: optional desktop shortcut создается при `desktopicon`.
+- Done: installed app стартует на чистом `DARTS_PROFILE_ROOT` и создает `app.db`, `settings.json`, `logs/startup.log`.
+- Done: silent uninstall удаляет установленный exe и ярлыки, но оставляет пользовательский профиль данных.

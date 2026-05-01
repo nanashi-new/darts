@@ -33,7 +33,7 @@ scripts\BUILD_INSTALLER.bat
 - Inno Setup 6
 - готовый файл `dist\DartsLiga.exe`
 
-Скрипт ищет `ISCC.exe` в стандартных папках установки Inno Setup и в `PATH`.
+Скрипт ищет `ISCC.exe` в локальной `.local\Inno`, `.local\Inno Setup 6`, стандартных папках установки Inno Setup и в `PATH`.
 
 ## Проверка
 

@@ -46,11 +46,11 @@ Expected release outputs:
 
 ## Installer gates
 
-- [ ] `scripts\BUILD_INSTALLER.bat` produces `release\DartsLiga-Setup.exe`
-- [ ] installer UI is Russian
-- [ ] installed app starts from Start menu shortcut
-- [ ] optional desktop shortcut works
-- [ ] uninstall removes the installed executable but leaves user profile data intact
+- [x] `scripts\BUILD_INSTALLER.bat` produces `release\DartsLiga-Setup.exe`
+- [x] installer UI is Russian
+- [x] installed app starts from Start menu shortcut
+- [x] optional desktop shortcut works
+- [x] uninstall removes the installed executable but leaves user profile data intact
 
 ## Release scripts
 
@@ -64,7 +64,7 @@ Expected release outputs:
 
 ## Decision
 
-The zip/exe fallback release is ready after the checked gates above. The Windows installer release remains blocked until the unchecked installer gates are verified on a machine with Inno Setup.
+The zip/exe fallback release and Windows installer release are ready after the checked gates above.
 
 ## Local Run - 2026-04-30
 
@@ -73,7 +73,7 @@ The zip/exe fallback release is ready after the checked gates above. The Windows
 - Passed: `scripts\BUILD_RELEASE.bat` with `.venv\Scripts` first in `PATH`; produced `dist\DartsLiga.exe`.
 - Passed: `scripts\SMOKE_TEST.bat`; clean profile `DartsSmoke_180778817` created `app.db`, `settings.json`, `logs/startup.log`, and second packaged run succeeded.
 - Passed: `scripts\PACK_RELEASE.bat`; produced `release\DartsLiga-release.zip`.
-- Blocked: `scripts\BUILD_INSTALLER.bat` because Inno Setup compiler `ISCC.exe` is not installed; script now returns `LASTEXITCODE=1` for this blocker.
+- Earlier gap: `scripts\BUILD_INSTALLER.bat` required Inno Setup compiler `ISCC.exe`; script returns `LASTEXITCODE=1` when it is unavailable.
 - Manual gate still open: visual pass for «Турниры» at 1920x1080/1366x768 and reduced window.
 
 ## Local Run - 2026-05-01
@@ -86,7 +86,9 @@ The zip/exe fallback release is ready after the checked gates above. The Windows
 - Passed: `scripts\BUILD_RELEASE.bat`; produced fresh `dist\DartsLiga.exe`.
 - Passed: `scripts\SMOKE_TEST.bat`; internal smoke tests passed (`12 passed`) and clean profile `DartsSmoke_1135032382` started twice.
 - Passed: `scripts\PACK_RELEASE.bat`; produced fresh `release\DartsLiga-release.zip`.
-- Blocked: `scripts\BUILD_INSTALLER.bat` because Inno Setup compiler `ISCC.exe` is not installed.
+- Earlier same-day gap: `scripts\BUILD_INSTALLER.bat` needed Inno Setup compiler `ISCC.exe`.
+- Passed: installed Inno Setup 6.7.1 locally in `.local\Inno`; `scripts\BUILD_INSTALLER.bat` produced `release\DartsLiga-Setup.exe`.
+- Passed: installer shortcut/uninstall smoke; Start menu shortcut, optional desktop shortcut, clean-profile installed app start, and uninstall/profile preservation were verified.
 
 Deferred by choice, not by release blocker:
 - attachments
