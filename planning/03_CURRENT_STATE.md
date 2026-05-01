@@ -1,12 +1,12 @@
 # 03 - Текущее Состояние
 
-Дата фиксации: 2026-04-25.
+Дата фиксации: 2026-05-01.
 
 ## Ветка
 
-- Текущая рабочая ветка: feature-ветка для «Дартс Лига».
+- Текущая рабочая ветка: `feature/darts-liga-no-evsk`.
 - База ветки: свежий `origin/main` после merge PR #65.
-- В рабочем дереве есть незакоммиченные изменения по fullscreen workspace UI и обновлению planning-правил.
+- Локально есть commit `2691590 feat: complete Darts Liga release readiness`, который еще нужно отправить в `origin/feature/darts-liga-no-evsk`.
 
 ## Уже Сделано В Baseline
 
@@ -30,19 +30,10 @@
 
 ## Сейчас В Работе
 
-- Русский UI и диалоги.
-- `app/ui/labels.py` для отображения технических кодов русскими подписями.
-- `app/ui/messages.py` для русских подтверждений `Да`/`Нет`.
-- Smoke-тесты русских вкладок и видимых строк.
-- Windows installer script и `scripts/BUILD_INSTALLER.bat`.
-- Русская installer-документация.
-- Система планирования `planning/`.
-- Старые root-документы, `docs_to_work/` и исторические release-артефакты перенесены в `planning/archive/`.
-- Default `pytest` сжат: slow/fuzz/legacy проверки помечены markers и исключены из обычного запуска.
-- Fullscreen workspace UI реализован на уровне кода: точка запуска приложения переведена на максимизированное главное окно, добавлены smoke-ожидания для workspace launch и wide-layout contract.
-- Code-аудит основных вкладок зафиксирован в `planning/06_UI_AUDIT.md`; headless Qt smoke подтвержден локальным Python/Qt окружением.
-- Начата P0-сверка с требованиями заказчика: таблица очков, default `N=3`, обязательные XLSX-колонки и часть aliases закреплены тестами.
-- Добавлена первая безопасная автоматизация: подсказка категории по дате рождения/дате турнира без скрытого изменения поля.
+- P0 для v1.1 закрыт и зафиксирован в release-readiness commit.
+- Zip/exe fallback release готов: `dist/DartsLiga.exe` и `release/DartsLiga-release.zip`.
+- Windows installer остается P1-задачей до машины с Inno Setup `ISCC.exe`.
+- Следующий рабочий слой после push/review: installer, dashboard command center, data safety и сезонные переходы лиг.
 
 ## Следующие Решения Уже Зафиксированы
 
@@ -79,7 +70,7 @@
 - Последний targeted gate по rating requirements: `31 passed` для customer/adult/manual/snapshot/recalculation.
 - Последний targeted gate по tournament/league requirements: `17 passed` для manual adult, correction, safe status, league transfers, correction snapshots и UI entrypoint.
 - Последний targeted gate по customer requirements alignment: `32 passed`; reference больше не содержит устаревших P0-статусов по закрытым обязательным блокам.
-- Последний guard gate по planning/release preflight: `6 passed`; `done` в `00_PRIORITY.md` синхронизирован с task-файлами, P0 7-11 закрыты перед release-readiness, старый бренд запрещен в активных файлах.
+- Последний guard gate по planning/release/app startup: `8 passed`; `done` в `00_PRIORITY.md` синхронизирован с task-файлами, P0 7-11 закрыты перед release-readiness, старый бренд запрещен в активных файлах.
 - Последний targeted gate по light automation: `26 passed` вне sandbox из-за pytest temp/AppData permission issue; feature-часть закрыта, финальный release smoke и ручной UI pass перенесены в `release-readiness`.
 - Последний release-readiness gate: `pytest -q` -> `153 passed, 14 deselected, 14 subtests passed`; `compileall` прошел; `python -m mypy app` прошел; 2026-05-01 `BUILD_RELEASE`, packaged `SMOKE_TEST` и `PACK_RELEASE` прошли на свежем `DartsLiga.exe`; installer заблокирован отсутствующим Inno Setup `ISCC.exe`.
 - Последний UI polish срез по `Турниры`: добавлена модалка деталей турнира, кнопка `Турнир`, компактная строка сводки и screenshot layout-pass 1366x768; targeted Qt smoke обновлен.
