@@ -27,7 +27,7 @@
 | Порядок | Задача | Статус | Task | Зависимости |
 |---:|---|---|---|---|
 | 14 | Windows installer и релизная удобность | done | [windows-installer.md](tasks/windows-installer.md) | `DartsLiga*` артефакты |
-| 15 | Главная как рабочий центр | planned | [dashboard-command-center.md](tasks/dashboard-command-center.md) | v1.1 release-ready |
+| 15 | Главная как рабочий центр | done | [dashboard-command-center.md](tasks/dashboard-command-center.md) | v1.1 release-ready |
 | 16 | Безопасность данных и backup/restore | planned | [data-safety-and-backups.md](tasks/data-safety-and-backups.md) | release readiness |
 | 17 | Автоматические сезонные переходы лиг “нижние 4 / верхние 4” | planned | [league-season-transitions-v2.md](tasks/league-season-transitions-v2.md) | v1.1 release-ready |
 

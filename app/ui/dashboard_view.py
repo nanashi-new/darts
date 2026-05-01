@@ -4,6 +4,8 @@ from collections.abc import Callable
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QGridLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -16,6 +18,7 @@ from PySide6.QtWidgets import (
 
 from app.db.database import get_connection
 from app.db.repositories import TournamentRepository
+from app.runtime_paths import get_runtime_paths
 from app.services.import_report import list_import_reports
 from app.services.notes import list_notes_hub
 from app.settings import get_last_self_check
@@ -33,25 +36,28 @@ class DashboardView(QWidget):
         layout = QVBoxLayout(self)
 
         layout.addWidget(QLabel("Главная", self))
+        layout.addWidget(self._build_profile_status_group())
         layout.addLayout(self._build_quick_actions())
+        layout.addWidget(self._build_summary_group())
+        layout.addWidget(self._build_attention_group(), 1)
 
         self.recent_tournaments_table = QTableWidget(0, 3, self)
         self.recent_tournaments_table.setHorizontalHeaderLabels(["Дата", "Турнир", "Статус"])
         self._configure_table(self.recent_tournaments_table)
         layout.addWidget(QLabel("Последние турниры", self))
-        layout.addWidget(self.recent_tournaments_table, 1)
+        layout.addWidget(self.recent_tournaments_table, 2)
 
         self.recent_imports_table = QTableWidget(0, 4, self)
         self.recent_imports_table.setHorizontalHeaderLabels(["Создан", "Турнир", "Статус", "Импортировано"])
         self._configure_table(self.recent_imports_table)
         layout.addWidget(QLabel("Последние отчеты импорта", self))
-        layout.addWidget(self.recent_imports_table, 1)
+        layout.addWidget(self.recent_imports_table, 2)
 
         self.follow_up_notes_table = QTableWidget(0, 3, self)
         self.follow_up_notes_table.setHorizontalHeaderLabels(["Объект", "Заголовок", "Доступ"])
         self._configure_table(self.follow_up_notes_table)
         layout.addWidget(QLabel("Контрольные заметки", self))
-        layout.addWidget(self.follow_up_notes_table, 1)
+        layout.addWidget(self.follow_up_notes_table, 2)
 
         self.open_follow_up_player_button = QPushButton("Карточка", self)
         self.open_follow_up_player_button.setToolTip(
@@ -75,18 +81,159 @@ class DashboardView(QWidget):
 
     def _build_quick_actions(self) -> QHBoxLayout:
         layout = QHBoxLayout()
-        for label in ["Турниры", "Игроки", "Контекст", "Диагностика"]:
+        actions = [
+            ("Рейтинг", "Рейтинг", "Открыть текущие рейтинги по категориям и взрослым зачетам."),
+            ("Турниры", "Турниры", "Открыть турниры, публикацию и корректировки."),
+            ("Игроки", "Игроки", "Открыть список игроков и карточки."),
+            ("Импорт", "Импорт/Экспорт", "Импортировать XLSX и проверить отчет перед публикацией."),
+            ("Отчеты", "Отчеты", "Открыть экспорт, журнал и историю импортов."),
+            ("Диагностика", "Диагностика", "Проверить профиль, логи и точки восстановления."),
+        ]
+        for label, target, tooltip in actions:
             button = QPushButton(label, self)
-            button.clicked.connect(lambda _checked=False, target=label: self._navigate_to(target))
+            button.setToolTip(tooltip)
+            button.clicked.connect(lambda _checked=False, target=target: self._navigate_to(target))
             layout.addWidget(button)
         layout.addStretch(1)
         return layout
 
+    def _build_profile_status_group(self) -> QGroupBox:
+        group = QGroupBox("Статус рабочего профиля", self)
+        layout = QGridLayout(group)
+        self.profile_status_label = QLabel("Профиль: -", group)
+        self.database_status_label = QLabel("База: -", group)
+        self.dashboard_diagnostics_label = QLabel("Диагностика: -", group)
+        self.refresh_button = QPushButton("Обновить", group)
+        self.refresh_button.setToolTip("Обновить сводку главной страницы.")
+        self.refresh_button.clicked.connect(self.refresh)
+        layout.addWidget(self.profile_status_label, 0, 0)
+        layout.addWidget(self.database_status_label, 0, 1)
+        layout.addWidget(self.dashboard_diagnostics_label, 0, 2)
+        layout.addWidget(self.refresh_button, 0, 3)
+        return group
+
+    def _build_summary_group(self) -> QGroupBox:
+        group = QGroupBox("Операционная сводка", self)
+        layout = QGridLayout(group)
+        self.summary_labels: dict[str, QLabel] = {}
+        entries = [
+            ("players", "Игроки"),
+            ("tournaments", "Турниры"),
+            ("drafts", "Черновики"),
+            ("review", "На проверке"),
+            ("published", "Опубликованы"),
+            ("follow_up", "Контрольные заметки"),
+            ("restore_points", "Точки восстановления"),
+        ]
+        for index, (key, title) in enumerate(entries):
+            label = QLabel(f"{title}: 0", group)
+            self.summary_labels[key] = label
+            layout.addWidget(label, index // 4, index % 4)
+        return group
+
+    def _build_attention_group(self) -> QGroupBox:
+        group = QGroupBox("Требует внимания", self)
+        layout = QVBoxLayout(group)
+        self.attention_table = QTableWidget(0, 3, group)
+        self.attention_table.setHorizontalHeaderLabels(["Приоритет", "Сценарий", "Что сделать"])
+        self._configure_table(self.attention_table)
+        layout.addWidget(self.attention_table)
+        return group
+
     def refresh(self) -> None:
+        self._fill_profile_status()
+        self._fill_summary()
+        self._fill_attention()
         self._fill_recent_tournaments()
         self._fill_recent_imports()
         self._fill_follow_up_notes()
         self._fill_diagnostics_summary()
+
+    def _fill_profile_status(self) -> None:
+        paths = get_runtime_paths()
+        self.profile_status_label.setText(f"Профиль: {paths.profile_root.name}")
+        self.profile_status_label.setToolTip(str(paths.profile_root))
+        self.database_status_label.setText(
+            "База: доступна" if paths.db_path.exists() else "База: будет создана"
+        )
+        last_self_check = get_last_self_check()
+        if not last_self_check:
+            self.dashboard_diagnostics_label.setText("Диагностика: самопроверка не запускалась")
+            return
+        issues = last_self_check.get("issues", [])
+        created_at = last_self_check.get("created_at", "-")
+        self.dashboard_diagnostics_label.setText(
+            f"Диагностика: проблем - {len(issues)}, проверка - {created_at}"
+        )
+
+    def _fill_summary(self) -> None:
+        counts = {
+            "players": self._count_rows("players"),
+            "tournaments": self._count_rows("tournaments"),
+            "drafts": self._count_rows("tournaments", "status = ?", ("draft",)),
+            "review": self._count_rows("tournaments", "status = ?", ("review",)),
+            "published": self._count_rows("tournaments", "status = ?", ("published",)),
+            "follow_up": self._count_rows("notes", "note_type = ? AND is_archived = 0", ("follow_up",)),
+            "restore_points": self._count_rows("restore_points"),
+        }
+        titles = {
+            "players": "Игроки",
+            "tournaments": "Турниры",
+            "drafts": "Черновики",
+            "review": "На проверке",
+            "published": "Опубликованы",
+            "follow_up": "Контрольные заметки",
+            "restore_points": "Точки восстановления",
+        }
+        for key, value in counts.items():
+            self.summary_labels[key].setText(f"{titles[key]}: {value}")
+
+    def _fill_attention(self) -> None:
+        self.attention_table.setRowCount(0)
+        for tournament in self._tournament_repo.list():
+            status = str(tournament.get("status") or "")
+            if status not in {"draft", "review"}:
+                continue
+            action = "Проверить и отправить на публикацию" if status == "draft" else "Подтвердить или вернуть к правкам"
+            self._append_attention_row(
+                "Турнир",
+                str(tournament.get("name") or "Без названия"),
+                action,
+            )
+            if self.attention_table.rowCount() >= 4:
+                break
+
+        for report_record in list_import_reports(self._connection):
+            report = report_record.report
+            if report.warnings_count <= 0 and report.errors_count <= 0:
+                continue
+            details = "; ".join(report.warnings[:2]) or "Проверить отчет импорта"
+            self._append_attention_row("Импорт", report.tournament_name, details)
+            if self.attention_table.rowCount() >= 6:
+                break
+
+        last_self_check = get_last_self_check()
+        issues = last_self_check.get("issues", []) if last_self_check else []
+        if issues:
+            self._append_attention_row("Диагностика", "Самопроверка", "; ".join(str(issue) for issue in issues[:2]))
+
+    def _append_attention_row(self, priority: str, scenario: str, action: str) -> None:
+        row_index = self.attention_table.rowCount()
+        self.attention_table.insertRow(row_index)
+        for column, value in enumerate([priority, scenario, action]):
+            self.attention_table.setItem(row_index, column, QTableWidgetItem(value))
+
+    def _count_rows(
+        self,
+        table_name: str,
+        where_sql: str | None = None,
+        params: tuple[object, ...] = (),
+    ) -> int:
+        query = f"SELECT COUNT(*) AS count FROM {table_name}"
+        if where_sql:
+            query += f" WHERE {where_sql}"
+        row = self._connection.execute(query, params).fetchone()
+        return int(row["count"] if row is not None else 0)
 
     def _fill_recent_tournaments(self) -> None:
         self.recent_tournaments_table.setRowCount(0)

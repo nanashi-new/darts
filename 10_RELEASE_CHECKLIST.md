@@ -89,6 +89,7 @@ The zip/exe fallback release and Windows installer release are ready after the c
 - Earlier same-day gap: `scripts\BUILD_INSTALLER.bat` needed Inno Setup compiler `ISCC.exe`.
 - Passed: installed Inno Setup 6.7.1 locally in `.local\Inno`; `scripts\BUILD_INSTALLER.bat` produced `release\DartsLiga-Setup.exe`.
 - Passed: installer shortcut/uninstall smoke; Start menu shortcut, optional desktop shortcut, clean-profile installed app start, and uninstall/profile preservation were verified.
+- Passed: dashboard command center update; `pytest -q` -> `154 passed, 14 deselected, 14 subtests passed`.
 
 Deferred by choice, not by release blocker:
 - attachments
