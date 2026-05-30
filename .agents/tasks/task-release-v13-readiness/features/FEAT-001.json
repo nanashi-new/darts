@@ -1,0 +1,30 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Code cleanup: fix all ruff F401 unused imports found in the codebase and remove dead code file",
+  "status": "completed",
+  "steps": [
+    "In app/db/database.py line 9: remove APP_DIR_NAME from the import statement (keep get_runtime_paths)",
+    "In app/ui/entity_notes_dialog.py line 27: remove ENTITY_TYPE_LABELS from the import block (keep the other imports)",
+    "Delete app/ui/player_note_dialog.py entirely - it contains only unused re-export aliases (PlayerNoteDialog, PlayerNoteFormData) with no consumers anywhere in the project",
+    "In app/services/coach_tasks.py line 4: remove 'from datetime import datetime' - it is imported but not used",
+    "In app/ui/tournaments_view.py line 8: remove QHeaderView from the import block",
+    "Run 'ruff check app/ --select F401' and confirm zero errors remain",
+    "Run 'python -m mypy app' and confirm it still passes cleanly",
+    "Run 'python -m pytest -q -rs' and confirm all tests still pass"
+  ],
+  "acceptance_criteria": [
+    "ruff check app/ --select F401 returns zero errors",
+    "python -m mypy app reports 'Success: no issues found in 46 source files' (or 45 if player_note_dialog.py deletion reduces count - mypy ignores ui/ anyway)",
+    "python -m pytest -q -rs passes with 151+ tests",
+    "python -m compileall app -q succeeds with no errors"
+  ],
+  "verification": [
+    "ruff check app/ --select F401",
+    "python -m mypy app",
+    "python -m pytest -q -rs",
+    "python -m compileall app -q"
+  ],
+  "blocked_reason": null,
+  "findings": "All 5 unused imports removed (6 F401 violations across 5 files, one file deleted entirely). ruff F401 clean, mypy clean (46 source files), pytest 151 passed, compileall success."
+}
