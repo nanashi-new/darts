@@ -1,0 +1,32 @@
+{
+  "id": "FEAT-002",
+  "type": "docs",
+  "description": "Update all release documentation for v1.3: Release Notes, FAQ, SECURITY.md, Roadmap, Release Checklist, Current State, and dev log",
+  "status": "in_progress",
+  "steps": [
+    "Update planning/07_RELEASE_NOTES_DRAFT.md: add v1.2.0 section (data safety, season transfers, player card v2, tournament polish, tags/attachments/custom fields, themes/customization, status bar/welcome/sorting) and v1.3.0 section (coach workflow: tasks with priorities/deadlines, training plans with exercises, Coach tab with analytics, coach plan integration in player card)",
+    "Update FAQ.txt: add 9 new Q&A entries in Russian covering: backup export/import, season transfers, player tags, file attachments, custom fields, theme/customization, creating coach tasks, creating training plans, viewing overdue tasks",
+    "Rewrite SECURITY.md: replace default GitHub template with real information - supported versions (v1.3.x), local data storage (SQLite), no network communication, restore points for data protection, how to report issues",
+    "Update planning/02_ROADMAP.md: mark v1.2 and v1.3 as completed (add checkmarks or 'Выполнено' labels), add v1.4 section with ideas (improved tournament analytics, additional import formats, configurable reports, multi-profile support, auto-updates)",
+    "Update 10_RELEASE_CHECKLIST.md: add new v1.3 gate section with items for coach workflow tests, theme system tests, workspace extensions tests, season transfer tests, backup/restore tests, mypy 46 files count, 151+ test count, and latest run results",
+    "Update planning/03_CURRENT_STATE.md: change 'Что Дальше' section to indicate release-ready v1.3 status, update date",
+    "Create logs/general/2025-01-16-release-v13-preparation.md: add dev log entry about release preparation activities (code cleanup, docs update, verification)"
+  ],
+  "acceptance_criteria": [
+    "planning/07_RELEASE_NOTES_DRAFT.md contains v1.2.0 and v1.3.0 sections with all listed features",
+    "FAQ.txt contains 9 new Q&A entries covering backup, seasons, tags, attachments, custom fields, themes, coach tasks, training plans, overdue tasks",
+    "SECURITY.md no longer contains '5.1.x' placeholder text and has real project security info",
+    "planning/02_ROADMAP.md has v1.2 and v1.3 marked as completed and v1.4 section exists",
+    "10_RELEASE_CHECKLIST.md has a v1.3 gates section with coach/theme/workspace/season/backup test gates",
+    "planning/03_CURRENT_STATE.md reflects release-ready v1.3 state",
+    "logs/general/2025-01-16-release-v13-preparation.md exists with release preparation log"
+  ],
+  "verification": [
+    "python -m pytest -q -rs (ensure no test references broken doc paths)",
+    "grep -c 'v1.2.0' planning/07_RELEASE_NOTES_DRAFT.md (should be >= 1)",
+    "grep -c 'v1.3.0' planning/07_RELEASE_NOTES_DRAFT.md (should be >= 1)",
+    "grep -c '5.1.x' SECURITY.md (should be 0)"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
