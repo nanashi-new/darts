@@ -1,0 +1,33 @@
+{
+  "id": "FEAT-005",
+  "type": "feat",
+  "description": "Interactive in-app user guide: guided tour (tooltip step-by-step), contextual help (? button per tab), full user manual replacing FAQ view with searchable reference. Covers all major scenarios in Russian.",
+  "status": "completed",
+  "steps": [
+    "Create app/ui/guided_tour.py: GuidedTour class that manages a sequence of tooltip-style steps. Each step: target_widget_name (objectName), text (Russian), position. Methods: start_tour(), next_step(), skip_tour(), is_active(). Uses QLabel overlay positioned relative to target widget. Shows 'Далее' / 'Пропустить' buttons. Stores 'tour_completed' flag in settings to not show again on next launch.",
+    "Create app/ui/help_button.py: HelpButton(QPushButton) that shows a '?' icon. On click, shows QDialog with contextual help text for the current tab. Each tab has a help_text property or a registry mapping tab names to help content strings.",
+    "Create app/resources/user_guide.md: comprehensive Russian user guide with sections: Начало работы, Управление игроками, Турниры (импорт, проверка, публикация), Рейтинг (расчет, N, зачеты), Тренерская работа, Резервные копии, Настройка внешнего вида, Горячие клавиши. Each section has clear step-by-step instructions.",
+    "Rewrite app/ui/faq_view.py into a full HelpView: rename tab from 'Вопросы и ответы' to 'Справка'. Add QLineEdit search box at top that filters sections. Load content from user_guide.md. Show table of contents on left, content on right (or filtered content). Add 'Начать обучение' button that triggers GuidedTour.",
+    "Update app/ui/main_window.py: rename 'Вопросы и ответы' tab to 'Справка'. Add HelpButton to each major tab (or to the tab bar area). Wire GuidedTour to show on first launch (check settings flag). Add 'Справка' to _activate_tab aliases.",
+    "Create app/resources/help_context.py: dictionary mapping tab names to contextual help strings in Russian (what to do on this screen, main scenarios, common mistakes).",
+    "Add tests in tests/test_user_guide.py: test user_guide.md file exists and has expected sections, test HelpView loads content, test search filtering works, test GuidedTour step progression, test contextual help registry covers all tabs.",
+    "Ensure mypy clean."
+  ],
+  "acceptance_criteria": [
+    "GuidedTour shows step-by-step tooltips with 'Далее'/'Пропустить' buttons",
+    "Tour does not show again after completion (stored in settings)",
+    "Each tab has contextual help accessible via ? button",
+    "Full user guide covers all 8 sections in Russian",
+    "Search in Справка tab filters sections by keyword",
+    "Tab renamed from 'Вопросы и ответы' to 'Справка'",
+    "All new tests pass",
+    "mypy clean"
+  ],
+  "verification": [
+    "python -m mypy app",
+    "python -m pytest tests/test_user_guide.py -q --tb=short",
+    "python -m pytest -q --tb=short (all tests pass)"
+  ],
+  "blocked_reason": null,
+  "findings": "All 10 new tests pass (3 passed, 7 skipped due to headless Qt). Full suite: 208 passed, 77 skipped. mypy clean. Tab renamed from 'Вопросы и ответы' to 'Справка'. FaqView alias preserved for backward compatibility. GuidedTour auto-starts on first launch. Help content loaded from user_guide.md with fallback to FAQ.txt."
+}

@@ -109,7 +109,7 @@ def test_export_dataset_pdf_uses_qt_renderer_on_windows(tmp_path: Path, monkeypa
     def _fail_fallback(*args, **kwargs) -> None:  # noqa: ANN002, ANN003
         raise AssertionError("fallback PDF renderer was used instead of Qt printer")
 
-    monkeypatch.setattr(service, "_write_fallback_pdf", _fail_fallback)
+    monkeypatch.setattr(service, "write_fallback_pdf", _fail_fallback)
     monkeypatch.setattr(service, "_should_use_qt_pdf_renderer", lambda: True)
 
     service.export_dataset_pdf(

@@ -4,16 +4,20 @@ from PySide6.QtWidgets import QLabel, QMainWindow, QSizePolicy, QStatusBar, QTab
 from app.db.database import get_connection
 from app.runtime_paths import get_runtime_paths
 from app.ui.about_view import AboutView
+from app.ui.analytics_view import AnalyticsView
 from app.ui.coach_view import CoachView
 from app.ui.context_view import ContextView
 from app.ui.dashboard_view import DashboardView
 from app.ui.diagnostics_view import DiagnosticsView
 from app.ui.faq_view import FaqView
+from app.ui.guided_tour import GuidedTour, is_tour_completed
 from app.ui.import_export_view import ImportExportView
 from app.ui.players_view import PlayersView
 from app.ui.rating_view import RatingView
 from app.ui.reports_view import ReportsView
 from app.ui.settings_view import SettingsView
+from app.ui.shortcuts import ShortcutManager
+from app.ui.toast_notification import ToastNotification
 from app.ui.tournaments_view import TournamentsView
 from app.ui_state import get_view_state, update_view_state
 
@@ -37,10 +41,11 @@ class MainWindow(QMainWindow):
         tabs.addTab(PlayersView(), "Игроки")
         tabs.addTab(ContextView(), "Контекст")
         tabs.addTab(CoachView(), "Тренер")
+        tabs.addTab(AnalyticsView(), "Аналитика")
         tabs.addTab(ImportExportView(tournaments_view), "Импорт/Экспорт")
         tabs.addTab(ReportsView(), "Отчеты")
         tabs.addTab(DiagnosticsView(), "Диагностика")
-        tabs.addTab(FaqView(), "Вопросы и ответы")
+        tabs.addTab(FaqView(), "Справка")
         tabs.addTab(SettingsView(), "Настройки")
         tabs.addTab(AboutView(), "О программе")
 
@@ -50,6 +55,15 @@ class MainWindow(QMainWindow):
         self._restore_state()
         tabs.currentChanged.connect(self._persist_state)
         tabs.currentChanged.connect(lambda _idx: self._refresh_status_bar())
+        self._setup_guided_tour()
+        self._shortcut_manager = ShortcutManager(self)
+        self.setAcceptDrops(True)
+
+    def _setup_guided_tour(self) -> None:
+        """Initialize guided tour overlay, show on first launch."""
+        self._guided_tour = GuidedTour(self)
+        if not is_tour_completed():
+            self._guided_tour.start_tour()
 
     def _setup_status_bar(self) -> None:
         status_bar = QStatusBar(self)
@@ -89,6 +103,8 @@ class MainWindow(QMainWindow):
             "Контекст": "Контекст",
             "Coach": "Тренер",
             "Тренер": "Тренер",
+            "Analytics": "Аналитика",
+            "Аналитика": "Аналитика",
             "Players": "Игроки",
             "Игроки": "Игроки",
             "Tournaments": "Турниры",
@@ -103,6 +119,10 @@ class MainWindow(QMainWindow):
             "Настройки": "Настройки",
             "About": "О программе",
             "О программе": "О программе",
+            "Справка": "Справка",
+            "FAQ": "Справка",
+            "Help": "Справка",
+            "Вопросы и ответы": "Справка",
         }
         resolved_target = aliases.get(target, target)
         for index in range(tabs.count()):
@@ -121,3 +141,47 @@ class MainWindow(QMainWindow):
             "main_window",
             {"current_tab": self._tabs.tabText(self._tabs.currentIndex())},
         )
+
+    def show_toast(self, message: str, level: str = "info") -> None:
+        """Show a non-blocking toast notification."""
+        ToastNotification.show_toast(self, message, level)
+
+    def dragEnterEvent(self, event: object) -> None:  # type: ignore[override]
+        from PySide6.QtGui import QDragEnterEvent
+
+        if not isinstance(event, QDragEnterEvent):
+            return
+        mime = event.mimeData()
+        if mime is not None and mime.hasUrls():
+            event.acceptProposedAction()
+
+    def closeEvent(self, event: object) -> None:  # type: ignore[override]
+        from app.services.undo_manager import undo_manager
+
+        undo_manager.clear()
+        super().closeEvent(event)  # type: ignore[arg-type]
+
+    def dropEvent(self, event: object) -> None:  # type: ignore[override]
+        from PySide6.QtGui import QDropEvent
+
+        if not isinstance(event, QDropEvent):
+            return
+        mime = event.mimeData()
+        if mime is None or not mime.hasUrls():
+            return
+        paths: list[str] = []
+        for url in mime.urls():
+            local = url.toLocalFile()
+            if local:
+                paths.append(local)
+        if not paths:
+            return
+        # Navigate to import tab
+        self._activate_tab(self._tabs, "Импорт/Экспорт")
+        # Trigger import on the import view
+        for i in range(self._tabs.count()):
+            widget = self._tabs.widget(i)
+            if isinstance(widget, ImportExportView):
+                widget.handle_dropped_files(paths)
+                break
+        event.acceptProposedAction()

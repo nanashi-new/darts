@@ -1,0 +1,34 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "New import formats: CSV (auto-detect delimiter), JSON (array of objects with field mapping), clipboard paste (Ctrl+V from Excel/Google Sheets). Unified import pipeline with format auto-detection by file extension. All formats feed into the same review/apply flow as XLSX.",
+  "status": "completed",
+  "steps": [
+    "Create app/services/import_csv.py: function parse_tables_from_csv(path: str) -> list[TableBlock] that auto-detects delimiter (comma, semicolon, tab) using csv.Sniffer, parses rows, detects headers using detect_headers() from import_xlsx.py, returns TableBlock objects compatible with existing pipeline.",
+    "Create app/services/import_json.py: function parse_tables_from_json(path: str) -> list[TableBlock] that reads JSON array of objects, maps field names to internal keys (fio, place, score_set etc.), returns TableBlock objects. Support flexible field mapping via synonyms similar to XLSX.",
+    "Create app/services/import_clipboard.py: function parse_tables_from_clipboard(text: str) -> list[TableBlock] that parses tab-separated text (Excel/Google Sheets clipboard format), detects headers, returns TableBlock objects.",
+    "Create app/services/import_pipeline.py: unified import entry point. Function detect_format(path: str) -> str by extension (.xlsx, .csv, .json). Function parse_tables_from_file(path: str) -> list[TableBlock] that dispatches to the correct parser. Function parse_tables_from_clipboard_text(text: str) -> list[TableBlock].",
+    "Update app/ui/import_export_view.py: add 'Импорт CSV/JSON' button alongside existing file import. Add 'Вставить из буфера (Ctrl+V)' button. Wire CSV/JSON import through the same TableBlocksDialog -> ImportApplyReviewDialog flow. Update file dialog filter to include *.csv and *.json.",
+    "Add tests in tests/test_import_csv.py: test delimiter auto-detection (comma, semicolon, tab), test header detection, test empty file handling, test encoding (utf-8 with BOM).",
+    "Add tests in tests/test_import_json.py: test valid JSON array, test field mapping, test malformed JSON error handling.",
+    "Add tests in tests/test_import_clipboard.py: test tab-separated paste, test header detection from clipboard text.",
+    "Ensure mypy clean for all new files."
+  ],
+  "acceptance_criteria": [
+    "CSV files with comma, semicolon, or tab delimiters are parsed correctly",
+    "JSON arrays of objects are parsed into TableBlock with correct field mapping",
+    "Clipboard text (tab-separated) is parsed into valid TableBlock objects",
+    "File format auto-detected by extension (.csv, .json, .xlsx)",
+    "All formats produce TableBlock objects compatible with existing import review/apply flow",
+    "UI shows import buttons for CSV/JSON and clipboard paste",
+    "All new tests pass",
+    "mypy clean"
+  ],
+  "verification": [
+    "python -m mypy app",
+    "python -m pytest tests/test_import_csv.py tests/test_import_json.py tests/test_import_clipboard.py -q --tb=short",
+    "python -m pytest -q --tb=short (all tests pass)"
+  ],
+  "blocked_reason": null,
+  "findings": "All 22 new tests pass. Full suite: 182 passed, 70 skipped. mypy clean. Created import_csv.py (auto-delimiter detection via csv.Sniffer), import_json.py (field synonym mapping), import_clipboard.py (tab-separated paste), import_pipeline.py (unified dispatch). Updated import_export_view.py with two new buttons: 'Импорт CSV/JSON' and 'Вставить из буфера (Ctrl+V)' that wire into the existing TableBlocksDialog review flow."
+}

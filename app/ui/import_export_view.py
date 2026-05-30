@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QDateEdit,
     QDialog,
@@ -33,6 +34,10 @@ from app.services.category_suggestion import suggest_category_code
 from app.services.import_report import build_import_session_report, persist_import_session_report
 from app.services.import_review import build_import_rating_preview
 from app.services.league_transfer import build_league_transfer_preview
+from app.services.import_pipeline import (
+    parse_tables_from_clipboard_text,
+    parse_tables_from_file,
+)
 from app.services.import_xlsx import (
     ImportApplyReport,
     TableBlock,
@@ -178,6 +183,7 @@ class ImportExportView(QWidget):
         self._tournament_repo = TournamentRepository(self._connection)
         self._audit_log_service = AuditLogService(self._connection)
         self._tournaments_view = tournaments_view
+        self.setAcceptDrops(True)
 
         root_layout = QVBoxLayout(self)
         scroll_area = QScrollArea(self)
@@ -226,6 +232,17 @@ class ImportExportView(QWidget):
         self.import_profiles_button = QPushButton("Профили импорта", self)
         self.import_profiles_button.clicked.connect(self._on_import_profiles_clicked)
         layout.addWidget(self.import_profiles_button)
+
+        self.import_csv_json_button = QPushButton("Импорт CSV/JSON", self)
+        self.import_csv_json_button.setToolTip("Выбрать CSV или JSON файл для импорта.")
+        self.import_csv_json_button.clicked.connect(self._on_import_csv_json_clicked)
+        layout.addWidget(self.import_csv_json_button)
+
+        self.paste_clipboard_button = QPushButton("Вставить из буфера (Ctrl+V)", self)
+        self.paste_clipboard_button.setToolTip("Вставить данные из буфера обмена (Excel/Google Sheets).")
+        self.paste_clipboard_button.clicked.connect(self._on_paste_clipboard_clicked)
+        layout.addWidget(self.paste_clipboard_button)
+
         layout.addStretch(1)
 
     def _resolve_player_match(
@@ -500,6 +517,119 @@ class ImportExportView(QWidget):
             f"Импорт завершён и турнир опубликован.\nТурнир ID: {apply_report.tournament_id}",
         )
 
+    def _on_import_csv_json_clicked(self) -> None:
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Выберите CSV или JSON", "", "CSV/JSON файлы (*.csv *.json);;CSV (*.csv);;JSON (*.json)"
+        )
+        if not file_path:
+            return
+
+        blocks = parse_tables_from_file(file_path)
+        if not blocks:
+            self._audit_log_service.log_event(
+                IMPORT_FILE,
+                "Импорт файла: таблицы не найдены",
+                f"Файл: {file_path}",
+                level="warning",
+                context={"path": file_path},
+            )
+            QMessageBox.information(self, "Импорт", "Не удалось найти таблицы в файле.")
+            return
+
+        self._import_blocks(blocks, source_files=[file_path])
+
+    def _on_paste_clipboard_clicked(self) -> None:
+        clipboard = QApplication.clipboard()
+        if clipboard is None:
+            QMessageBox.information(self, "Импорт", "Буфер обмена недоступен.")
+            return
+        text = clipboard.text()
+        if not text or not text.strip():
+            QMessageBox.information(self, "Импорт", "Буфер обмена пуст.")
+            return
+
+        blocks = parse_tables_from_clipboard_text(text)
+        if not blocks:
+            QMessageBox.information(self, "Импорт", "Не удалось распознать таблицу из буфера обмена.")
+            return
+
+        self._import_blocks(blocks, source_files=["clipboard"])
+
+    def _import_blocks(self, blocks: list[TableBlock], *, source_files: list[str]) -> None:
+        blocks_dialog = TableBlocksDialog(blocks, self)
+        if blocks_dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        selected = blocks_dialog.selected_indexes()
+        if not selected:
+            QMessageBox.information(self, "Импорт", "Не выбраны блоки для импорта.")
+            return
+
+        selected_blocks: list[TableBlock] = [blocks[i] for i in selected]
+
+        preview_rows = [row for block in selected_blocks for row in block.rows]
+        preview_warnings = [
+            f"{block.sheet_name}:{block.start_row} - {warning}"
+            for block in selected_blocks
+            for warning in block.warnings
+        ]
+        self._update_category_hint(preview_rows)
+
+        preview = ImportPreviewDialog(preview_rows, preview_warnings, self)
+        if preview.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        tournament_name = self.tournament_name_input.text().strip()
+        if not tournament_name:
+            QMessageBox.warning(self, "Импорт", "Введите название турнира.")
+            return
+
+        tournament_date = self.tournament_date_input.date().toString("yyyy-MM-dd")
+        category_code = self.category_code_input.text().strip() or None
+        is_adult_mode = self.is_adult_mode_checkbox.isChecked()
+        operation_group_id = uuid4().hex
+
+        try:
+            apply_report = import_tournament_table_blocks(
+                connection=self._connection,
+                blocks=selected_blocks,
+                tournament_name=tournament_name,
+                tournament_date=tournament_date,
+                category_code=category_code,
+                is_adult_mode=is_adult_mode,
+                source_files=source_files,
+                player_match_resolver=self._resolve_player_match,
+                operation_group_id=operation_group_id,
+            )
+        except ValueError as exc:
+            self._audit_log_service.log_event(
+                ERROR,
+                "Ошибка импорта файла",
+                str(exc),
+                level="error",
+                context={"source": str(source_files)},
+                operation_group_id=operation_group_id,
+            )
+            QMessageBox.warning(self, "Импорт", str(exc))
+            return
+
+        tournament_id = apply_report.tournament_id
+        if self._tournaments_view is not None:
+            refresh = getattr(self._tournaments_view, "refresh_latest_tournament", None)
+            if callable(refresh):
+                refresh(tournament_id)
+
+        self._audit_log_service.log_event(
+            IMPORT_FILE,
+            "Импорт файла: применено в черновик",
+            (
+                f"Турнир ID: {tournament_id}; импортировано: {apply_report.imported_rows}; "
+                f"пропущено: {apply_report.skipped_rows}; предупреждений: {len(apply_report.warnings)}"
+            ),
+            context={"source": str(source_files), "tournament_id": tournament_id},
+            operation_group_id=apply_report.operation_group_id or None,
+        )
+        self._show_apply_review(apply_report)
+
     def _on_import_folder_clicked(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, "Выберите папку с XLSX")
         if not folder:
@@ -522,3 +652,42 @@ class ImportExportView(QWidget):
     def _on_import_profiles_clicked(self) -> None:
         dialog = ImportProfilesDialog(self)
         dialog.exec()
+
+    def dragEnterEvent(self, event: object) -> None:  # type: ignore[override]
+        from PySide6.QtGui import QDragEnterEvent
+
+        if not isinstance(event, QDragEnterEvent):
+            return
+        mime = event.mimeData()
+        if mime is not None and mime.hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event: object) -> None:  # type: ignore[override]
+        from PySide6.QtGui import QDropEvent
+
+        if not isinstance(event, QDropEvent):
+            return
+        mime = event.mimeData()
+        if mime is None or not mime.hasUrls():
+            return
+        paths: list[str] = []
+        for url in mime.urls():
+            local = url.toLocalFile()
+            if local:
+                paths.append(local)
+        if paths:
+            self.handle_dropped_files(paths)
+        event.acceptProposedAction()
+
+    def handle_dropped_files(self, paths: list[str]) -> None:
+        """Process files dropped onto the import view."""
+        all_blocks: list[TableBlock] = []
+        for path in paths:
+            blocks = parse_tables_from_file(path)
+            all_blocks.extend(blocks)
+
+        if not all_blocks:
+            QMessageBox.information(self, "Импорт", "Не удалось найти таблицы в перетащенных файлах.")
+            return
+
+        self._import_blocks(all_blocks, source_files=paths)

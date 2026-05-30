@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import sys
 from dataclasses import asdict, dataclass
@@ -64,6 +65,24 @@ def get_default_profile_root() -> Path:
     return _resolve_profile_root()
 
 
+def get_profiles_base_dir() -> Path:
+    """Return the parent directory that contains all profile directories."""
+    if os.name == "nt":
+        base_dir = os.environ.get("APPDATA") or os.environ.get("LOCALAPPDATA")
+        if base_dir:
+            root = Path(base_dir)
+        else:
+            root = Path.home() / "AppData" / "Roaming"
+    else:
+        root = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+    return (root / APP_DIR_NAME).resolve()
+
+
+def get_profiles_registry_path() -> Path:
+    """Return the path to the global profiles registry (profiles.json)."""
+    return get_profiles_base_dir() / "profiles.json"
+
+
 def get_application_root() -> Path:
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         return Path(getattr(sys, "_MEIPASS"))
@@ -82,6 +101,21 @@ def _resolve_profile_root() -> Path:
     override = os.environ.get(PROFILE_ROOT_ENV_VAR)
     if override:
         return Path(override).expanduser().resolve()
+    # Check profiles registry for last-used profile
+    registry_path = get_profiles_registry_path()
+    if registry_path.exists():
+        try:
+            text = registry_path.read_text(encoding="utf-8")
+            registry = json.loads(text)
+            if isinstance(registry, dict):
+                last_used = registry.get("last_used", "")
+                if last_used:
+                    last_used_path = Path(last_used)
+                    if last_used_path.is_dir():
+                        return last_used_path.resolve()
+        except (json.JSONDecodeError, OSError):
+            pass
+    # Default: create/use APP_DIR_NAME in data directory
     if os.name == "nt":
         base_dir = os.environ.get("APPDATA") or os.environ.get("LOCALAPPDATA")
         if base_dir:

@@ -1,0 +1,31 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Configurable reports: report constructor dialog where user selects data sections (rating, tournaments, players, analytics), filters (period, league, category, specific players), output format (PDF/XLSX/text). Report templates saved to DB for reuse. DB table report_templates (id, name, config_json, created_at). UI: constructor dialog, templates list in ReportsView.",
+  "status": "completed",
+  "steps": [
+    "Add REPORT_TEMPLATES_TABLE_SQL to app/db/schema.py: CREATE TABLE IF NOT EXISTS report_templates (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, config_json TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP). Add to SCHEMA_SQL list. Add index on name.",
+    "Create app/services/report_builder.py: ReportBuilderService with methods: build_report(config: ReportConfig) -> ReportResult that assembles data based on config (sections, filters, format). ReportConfig dataclass with fields: sections (list of str), period_start/end (optional date), league_code (optional), category_code (optional), player_ids (optional list), output_format (pdf/xlsx/text). ReportResult dataclass with content path and metadata. Use existing export_service.py, export_xlsx.py, export_pdf.py for rendering.",
+    "Add to app/db/repositories.py: ReportTemplateRepository with save_template(name, config_json), list_templates(), get_template(id), delete_template(id) methods.",
+    "Create app/ui/report_constructor_dialog.py: QDialog with checkboxes for sections (Рейтинг, Турниры, Игроки, Аналитика), date range pickers, combo for league/category, multi-select for players, format combo (PDF/XLSX/Текст). Buttons: Сформировать, Сохранить как шаблон, Отмена.",
+    "Update app/ui/reports_view.py: add 'Конструктор отчетов' button, add 'Шаблоны' section with list of saved templates and buttons (Загрузить, Удалить). Wire constructor dialog to ReportBuilderService.",
+    "Add tests in tests/test_report_builder.py: test report generation with various configs, test template CRUD in DB, test filter application (period, league, category).",
+    "Ensure mypy clean."
+  ],
+  "acceptance_criteria": [
+    "report_templates table created via schema migration",
+    "ReportBuilderService generates reports with selected sections and filters",
+    "Templates can be saved, listed, loaded, and deleted",
+    "Constructor dialog shows all filter/section options in Russian",
+    "Generated report files are valid (PDF has content, XLSX has sheets, text is readable)",
+    "All new tests pass",
+    "mypy clean"
+  ],
+  "verification": [
+    "python -m mypy app",
+    "python -m pytest tests/test_report_builder.py -q --tb=short",
+    "python -m pytest -q --tb=short (all tests pass)"
+  ],
+  "blocked_reason": null,
+  "findings": "All 13 new tests pass. Full suite: 195 passed, 70 skipped. mypy clean. Added report_templates table to schema, ReportTemplateRepository for CRUD, ReportBuilderService with text/xlsx/pdf output, ReportConstructorDialog with section checkboxes and filters, templates list in ReportsView."
+}
