@@ -1,0 +1,14 @@
+{
+  "task_id": "task-v14-extended-features",
+  "task_description": "Implement v1.4 for Darts Liga: extended analytics (tournaments/players), new import formats (CSV/JSON/clipboard), configurable reports with templates, multi-profile support, interactive user guide, and UX automation (shortcuts, toasts, undo, drag-drop, session state).",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005", "FEAT-006"],
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "mypy clean (56 source files). 214 tests pass, 80 skipped (GUI), 14 deselected. All 6 features implemented with comprehensive tests. No regressions from baseline 151 tests."
+  }
+}

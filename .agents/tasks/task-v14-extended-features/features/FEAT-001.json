@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "feat",
   "description": "Extended analytics for tournaments and players: new analytics service, analytics tab in MainWindow with sub-tabs (Tournaments, Players, Comparison). Text/table-based analytics including tournament stats (avg/median/min/max points, place distribution), tournament comparison, trends, top-10 results; player progress, comparison of 2-3 players, win percentage, average position, stability (standard deviation).",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Create app/services/analytics.py with AnalyticsService class: methods for tournament_stats(tournament_id) returning dataclass with avg/median/min/max points and place distribution; compare_tournaments(tournament_ids) returning comparative data; player_progress(player_id) returning list of tournament results over time; compare_players(player_ids) returning comparative stats; player_stability(player_id) returning std deviation; top_results(period_start, period_end, limit=10). Use sqlite3.Connection as parameter, frozen dataclass results.",
     "Create app/ui/analytics_view.py with AnalyticsView(QWidget) containing QTabWidget with 3 sub-tabs: TournamentAnalyticsTab, PlayerAnalyticsTab, ComparisonTab. TournamentAnalyticsTab: combo to select tournament, button to load stats, QTableWidget showing stats, section for trends (participants over time). PlayerAnalyticsTab: combo to select player, table showing progress by tournament, stats summary (win %, avg position, best/worst, stability). ComparisonTab: multi-select for tournaments or players, table showing side-by-side comparison.",
@@ -25,5 +25,5 @@
     "python -m pytest -q --tb=short (all 151+ tests pass)"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All 9 analytics tests pass. Full suite now 160 passed (up from 151), 70 skipped. mypy clean. Analytics tab registered successfully between Тренер and Импорт/Экспорт."
 }
