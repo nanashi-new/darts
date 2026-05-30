@@ -1,4 +1,11 @@
-"""Attachment management service."""
+"""Attachment management service.
+
+Note on orphan records: attachments uses (entity_type, entity_id) as TEXT columns
+without foreign keys to parent tables. If an entity (e.g. player) is deleted, its
+attachment records become orphaned. This is an acceptable trade-off for a local desktop
+app where data volume is small. Orphan cleanup can be added as a periodic maintenance
+task or handled at the application level in entity delete paths if needed.
+"""
 from __future__ import annotations
 
 import sqlite3

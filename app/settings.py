@@ -58,7 +58,13 @@ def set_last_self_check(report_payload: dict[str, object]) -> None:
 
 
 def get_appearance_settings() -> dict[str, object]:
-    """Get appearance settings with defaults."""
+    """Get appearance settings with defaults.
+
+    Note: custom_logo_path and custom_icon_path are stored as absolute paths because
+    QFileDialog returns absolute paths and the app guards against missing files at
+    startup (Path.is_file() check in __main__.py). For a local desktop app this is
+    acceptable; portability across machines is not a primary use case.
+    """
     settings = load_settings()
     appearance = settings.get("appearance")
     if not isinstance(appearance, dict):

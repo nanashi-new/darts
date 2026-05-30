@@ -127,6 +127,8 @@ class TournamentDetailsDialog(QDialog):
         h_layout.setContentsMargins(4, 4, 4, 4)
 
         step_keys = [s[0] for s in steps]
+        is_archived = current_status == "archived"
+        is_canceled = current_status == "canceled"
         current_index = step_keys.index(current_status) if current_status in step_keys else -1
 
         for i, (key, label_text) in enumerate(steps):
@@ -136,7 +138,13 @@ class TournamentDetailsDialog(QDialog):
                 h_layout.addWidget(arrow)
 
             step_label = QLabel(label_text, widget)
-            if i == current_index:
+            if is_archived:
+                # Archived: all steps shown as completed (green)
+                step_label.setStyleSheet("color: #4CAF50; font-weight: bold;")
+            elif is_canceled:
+                # Canceled: all steps shown as grey
+                step_label.setStyleSheet("color: #9E9E9E;")
+            elif i == current_index:
                 color = tournament_status_color(key)
                 step_label.setStyleSheet(f"font-weight: bold; color: {color};")
             elif i < current_index:
@@ -144,6 +152,22 @@ class TournamentDetailsDialog(QDialog):
             else:
                 step_label.setStyleSheet("color: #9E9E9E;")
             h_layout.addWidget(step_label)
+
+        # Add terminal status label for archived/canceled
+        if is_archived:
+            arrow = QLabel(" \u2192 ", widget)
+            arrow.setStyleSheet("color: #9E9E9E;")
+            h_layout.addWidget(arrow)
+            terminal_label = QLabel("\u0412 \u0430\u0440\u0445\u0438\u0432\u0435", widget)
+            terminal_label.setStyleSheet("color: #4CAF50; font-weight: bold;")
+            h_layout.addWidget(terminal_label)
+        elif is_canceled:
+            arrow = QLabel(" \u2192 ", widget)
+            arrow.setStyleSheet("color: #9E9E9E;")
+            h_layout.addWidget(arrow)
+            terminal_label = QLabel("\u041E\u0442\u043C\u0435\u043D\u0435\u043D", widget)
+            terminal_label.setStyleSheet("color: #F44336; font-weight: bold;")
+            h_layout.addWidget(terminal_label)
 
         h_layout.addStretch(1)
         return widget

@@ -315,6 +315,10 @@ class PlayerCardDialog(QDialog):
     # ─── Data loading ───────────────────────────────────────────
 
     def _load_context(self) -> None:
+        # Note: _load_context fires multiple synchronous DB reads on dialog open.
+        # For local SQLite this is acceptable performance-wise (sub-millisecond queries).
+        # Lazy-loading tabs on first activation could be added in the future if profiles
+        # grow large enough to cause noticeable UI delay.
         self.overview_label.setText(self._build_overview_text())
 
         # Tournament history

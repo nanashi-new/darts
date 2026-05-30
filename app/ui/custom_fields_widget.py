@@ -170,8 +170,25 @@ class CustomFieldsWidget(QWidget):
             self._form_layout.addRow(f"{field.name}:", edit)
 
     def _on_save(self) -> None:
+        fields = list_custom_fields(self._connection, active_only=True)
+        field_type_map = {f.id: f.field_type for f in fields}
+
         for field_id, edit in self._field_edits.items():
             value = edit.text().strip() or None
+            field_type = field_type_map.get(field_id, "text")
+
+            # Validate number fields
+            if field_type == "number" and value is not None:
+                try:
+                    float(value)
+                except ValueError:
+                    QMessageBox.warning(
+                        self,
+                        "Ошибка валидации",
+                        f"Поле должно содержать число, но получено: '{value}'",
+                    )
+                    continue
+
             set_field_value(self._connection, field_id, self._player_id, value)
 
     def _on_manage(self) -> None:

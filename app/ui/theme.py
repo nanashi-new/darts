@@ -351,7 +351,13 @@ class ThemeManager:
         qss += f"\nQWidget {{ font-size: {size}; }}\n"
 
         if accent_color:
-            qss += f"\nQPushButton {{ background-color: {accent_color}; }}\n"
+            hover_color = cls._lighten_color(accent_color, 20)
+            pressed_color = cls._darken_color(accent_color, 20)
+            qss += (
+                f"\nQPushButton {{ background-color: {accent_color}; }}\n"
+                f"QPushButton:hover {{ background-color: {hover_color}; }}\n"
+                f"QPushButton:pressed {{ background-color: {pressed_color}; }}\n"
+            )
 
         app.setStyleSheet(qss)
 
@@ -359,3 +365,25 @@ class ThemeManager:
     def get_available_themes(cls) -> list[str]:
         """Return available theme names."""
         return ["light", "dark"]
+
+    @staticmethod
+    def _lighten_color(hex_color: str, amount: int) -> str:
+        """Return a lighter shade of the given hex color."""
+        hex_color = hex_color.lstrip("#")
+        if len(hex_color) != 6:
+            return f"#{hex_color}"
+        r = min(255, int(hex_color[0:2], 16) + amount)
+        g = min(255, int(hex_color[2:4], 16) + amount)
+        b = min(255, int(hex_color[4:6], 16) + amount)
+        return f"#{r:02X}{g:02X}{b:02X}"
+
+    @staticmethod
+    def _darken_color(hex_color: str, amount: int) -> str:
+        """Return a darker shade of the given hex color."""
+        hex_color = hex_color.lstrip("#")
+        if len(hex_color) != 6:
+            return f"#{hex_color}"
+        r = max(0, int(hex_color[0:2], 16) - amount)
+        g = max(0, int(hex_color[2:4], 16) - amount)
+        b = max(0, int(hex_color[4:6], 16) - amount)
+        return f"#{r:02X}{g:02X}{b:02X}"

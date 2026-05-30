@@ -1,6 +1,8 @@
 """Attachments widget for entity file management."""
 from __future__ import annotations
 
+import os
+import shutil
 import sqlite3
 
 from PySide6.QtWidgets import (
@@ -16,6 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.runtime_paths import get_runtime_paths
 from app.services.attachments import (
     AttachmentRecord,
     create_attachment,
@@ -87,18 +90,32 @@ class AttachmentsWidget(QWidget):
         file_path, _ = QFileDialog.getOpenFileName(self, "Выбрать файл")
         if not file_path:
             return
-        import os
 
         file_name = os.path.basename(file_path)
         try:
             file_size = os.path.getsize(file_path)
         except OSError:
             file_size = None
+
+        # Copy file into profile attachments directory
+        profile_root = get_runtime_paths().profile_root
+        dest_dir = profile_root / "attachments" / self._entity_type / self._entity_id
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest_path = dest_dir / file_name
+        try:
+            shutil.copy2(file_path, dest_path)
+        except OSError:
+            QMessageBox.warning(self, "Ошибка", "Не удалось скопировать файл.")
+            return
+
+        # Store path relative to profile_root
+        relative_path = str(dest_path.relative_to(profile_root))
+
         create_attachment(
             self._connection,
             self._entity_type,
             self._entity_id,
-            file_path,
+            relative_path,
             file_name,
             description=None,
             file_size=file_size,
