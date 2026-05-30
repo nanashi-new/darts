@@ -54,21 +54,25 @@ def test_main_workspace_renders_all_tabs_at_release_sizes(monkeypatch, tmp_path)
         raise
 
     window = MainWindow()
-    tabs = window.centralWidget()
-    expected_tabs = {
-        "Главная",
-        "Рейтинг",
-        "Турниры",
-        "Игроки",
-        "Контекст",
-        "Импорт/Экспорт",
-        "Отчеты",
-        "Диагностика",
-        "Вопросы и ответы",
-        "Настройки",
-        "О программе",
+    stacked = window._stacked
+
+    expected_keys = {
+        "dashboard",
+        "rating",
+        "tournaments",
+        "players",
+        "context",
+        "coach",
+        "analytics",
+        "import_export",
+        "reports",
+        "diagnostics",
+        "faq",
+        "settings",
+        "about",
     }
-    assert {tabs.tabText(index) for index in range(tabs.count())} == expected_tabs
+    assert set(window._VIEW_KEYS) == expected_keys
+    assert stacked.count() == 13
 
     for width, height in [(1366, 768), (1920, 1080)]:
         window.resize(width, height)
@@ -77,23 +81,23 @@ def test_main_workspace_renders_all_tabs_at_release_sizes(monkeypatch, tmp_path)
         assert window.minimumSize().width() <= width
         assert window.minimumSize().height() <= height
 
-        for index in range(tabs.count()):
-            tabs.setCurrentIndex(index)
+        for index in range(stacked.count()):
+            stacked.setCurrentIndex(index)
             app.processEvents()
-            current_tab = tabs.currentWidget()
-            assert current_tab.minimumSizeHint().width() <= width, tabs.tabText(index)
-            assert current_tab.minimumSizeHint().height() <= height, tabs.tabText(index)
+            current_view = stacked.currentWidget()
+            assert current_view.minimumSizeHint().width() <= width, window._VIEW_KEYS[index]
+            assert current_view.minimumSizeHint().height() <= height, window._VIEW_KEYS[index]
             visible_children = [
                 child
-                for child in current_tab.findChildren(QWidget)
+                for child in current_view.findChildren(QWidget)
                 if child.isVisible() and child.width() > 0 and child.height() > 0
             ]
-            assert visible_children, tabs.tabText(index)
+            assert visible_children, window._VIEW_KEYS[index]
 
-            pixmap = current_tab.grab()
+            pixmap = current_view.grab()
             image = pixmap.toImage()
-            assert image.size() == QSize(current_tab.width(), current_tab.height())
-            assert not image.isNull(), tabs.tabText(index)
+            assert image.size() == QSize(current_view.width(), current_view.height())
+            assert not image.isNull(), window._VIEW_KEYS[index]
 
         window_image = window.grab().toImage()
         sampled_colors = {

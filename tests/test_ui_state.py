@@ -108,6 +108,8 @@ def test_views_restore_saved_workspace_state(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(main_window_module, "TournamentsView", _StubView)
     monkeypatch.setattr(main_window_module, "PlayersView", players_view_module.PlayersView)
     monkeypatch.setattr(main_window_module, "ContextView", context_view_module.ContextView)
+    monkeypatch.setattr(main_window_module, "CoachView", _StubView)
+    monkeypatch.setattr(main_window_module, "AnalyticsView", _StubView)
     monkeypatch.setattr(main_window_module, "ImportExportView", _StubView)
     monkeypatch.setattr(main_window_module, "ReportsView", _StubView)
     monkeypatch.setattr(main_window_module, "DiagnosticsView", _StubView)
@@ -116,9 +118,9 @@ def test_views_restore_saved_workspace_state(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(main_window_module, "AboutView", _StubView)
 
     window = main_window_module.MainWindow()
-    tabs = window.centralWidget()
 
-    assert tabs.tabText(tabs.currentIndex()) == "Контекст"
+    # The sidebar should have navigated to "context" based on saved state
+    assert window._sidebar.current_item() == "context"
 
     rating_view = window.findChild(rating_view_module.RatingView)
     assert rating_view is not None

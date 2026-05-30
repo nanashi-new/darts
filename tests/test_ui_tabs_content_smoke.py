@@ -43,7 +43,7 @@ def _qt_widgets():
             QPushButton,
             QSizePolicy,
             QSplitter,
-            QTabWidget,
+            QStackedWidget,
             QTableView,
             QTableWidget,
             QWidget,
@@ -59,7 +59,7 @@ def _qt_widgets():
         QPushButton,
         QSizePolicy,
         QSplitter,
-        QTabWidget,
+        QStackedWidget,
         QTableView,
         QTableWidget,
         QWidget,
@@ -74,12 +74,12 @@ def _ensure_app() -> object:
     return app
 
 
-def _collect_tab_text(tab_widget) -> str:
+def _collect_view_text(view_widget) -> str:
     _, QLabel, QPlainTextEdit, *_ = _qt_widgets()
     chunks: list[str] = []
-    for label in tab_widget.findChildren(QLabel):
+    for label in view_widget.findChildren(QLabel):
         chunks.append(label.text())
-    for plain_text in tab_widget.findChildren(QPlainTextEdit):
+    for plain_text in view_widget.findChildren(QPlainTextEdit):
         chunks.append(plain_text.toPlainText())
     return "\n".join(chunks).lower()
 
@@ -91,32 +91,40 @@ def test_main_tabs_are_russian_and_not_placeholders(monkeypatch, tmp_path) -> No
         from app.ui.main_window import MainWindow
 
         window = MainWindow()
-        _, _, _, _, _, _, q_tab_widget, _, _, _ = _qt_widgets()
+        _, _, _, _, _, _, q_stacked_widget, _, _, q_widget = _qt_widgets()
     except Exception as exc:  # noqa: BLE001
         if _is_expected_headless_qt_failure(exc):
             pytest.skip(f"Qt headless UI smoke unavailable: {exc}")
         raise
 
-    tabs = window.centralWidget()
-    assert isinstance(tabs, q_tab_widget)
+    container = window.centralWidget()
+    assert isinstance(container, q_widget)
 
-    tab_names = [tabs.tabText(index) for index in range(tabs.count())]
-    assert tab_names == [
-        "Главная",
-        "Рейтинг",
-        "Турниры",
-        "Игроки",
-        "Контекст",
-        "Импорт/Экспорт",
-        "Отчеты",
-        "Диагностика",
-        "Вопросы и ответы",
-        "Настройки",
-        "О программе",
+    stacked = window._stacked
+    assert isinstance(stacked, q_stacked_widget)
+
+    # All 13 views must be present
+    assert stacked.count() == 13
+
+    expected_keys = [
+        "dashboard",
+        "rating",
+        "tournaments",
+        "players",
+        "context",
+        "coach",
+        "analytics",
+        "import_export",
+        "reports",
+        "diagnostics",
+        "faq",
+        "settings",
+        "about",
     ]
+    assert list(window._VIEW_KEYS) == expected_keys
 
-    for index in range(tabs.count()):
-        content = _collect_tab_text(tabs.widget(index))
+    for index in range(stacked.count()):
+        content = _collect_view_text(stacked.widget(index))
         for placeholder in _PLACEHOLDER_TEXTS:
             assert placeholder not in content
 
@@ -149,20 +157,24 @@ def test_main_workspace_tabs_are_configured_for_wide_desktop(monkeypatch, tmp_pa
         from app.ui.main_window import MainWindow
 
         window = MainWindow()
-        _, _, _, _, q_size_policy, _, q_tab_widget, _, _, _ = _qt_widgets()
+        _, _, _, _, q_size_policy, _, q_stacked_widget, _, _, q_widget = _qt_widgets()
     except Exception as exc:  # noqa: BLE001
         if _is_expected_headless_qt_failure(exc):
             pytest.skip(f"Qt headless UI smoke unavailable: {exc}")
         raise
 
-    tabs = window.centralWidget()
-    assert isinstance(tabs, q_tab_widget)
-    assert tabs.objectName() == "main_workspace_tabs"
-    assert tabs.usesScrollButtons()
-    assert tabs.documentMode()
-    assert tabs.elideMode() == Qt.TextElideMode.ElideRight
-    assert tabs.sizePolicy().horizontalPolicy() == q_size_policy.Policy.Expanding
-    assert tabs.sizePolicy().verticalPolicy() == q_size_policy.Policy.Expanding
+    container = window.centralWidget()
+    assert isinstance(container, q_widget)
+    assert container.objectName() == "main_container"
+
+    stacked = window._stacked
+    assert isinstance(stacked, q_stacked_widget)
+    assert stacked.objectName() == "main_workspace_stack"
+    assert stacked.sizePolicy().horizontalPolicy() == q_size_policy.Policy.Expanding
+    assert stacked.sizePolicy().verticalPolicy() == q_size_policy.Policy.Expanding
+
+    sidebar = window._sidebar
+    assert sidebar.objectName() == "sidebar_widget"
 
 
 def test_core_tabs_expose_wide_workspace_layout_contracts(monkeypatch, tmp_path) -> None:
@@ -179,24 +191,25 @@ def test_core_tabs_expose_wide_workspace_layout_contracts(monkeypatch, tmp_path)
             pytest.skip(f"Qt headless UI smoke unavailable: {exc}")
         raise
 
-    tabs = window.centralWidget()
-    tab_widgets = {tabs.tabText(index): tabs.widget(index) for index in range(tabs.count())}
+    views = window._views
 
-    for tab_name in ["Главная", "Рейтинг", "Турниры", "Игроки", "Импорт/Экспорт", "Диагностика", "Настройки"]:
-        policy = tab_widgets[tab_name].sizePolicy()
+    for view_key in ["dashboard", "rating", "tournaments", "players", "import_export", "diagnostics", "settings"]:
+        view = views[view_key]
+        policy = view.sizePolicy()
         assert policy.horizontalPolicy() == q_size_policy.Policy.Expanding
         assert policy.verticalPolicy() == q_size_policy.Policy.Expanding
 
-    players_splitter = tab_widgets["Игроки"].findChild(q_splitter, "players_workspace_splitter")
+    players_splitter = views["players"].findChild(q_splitter, "players_workspace_splitter")
     assert players_splitter is not None
     assert players_splitter.orientation() == Qt.Orientation.Horizontal
 
-    tournaments_actions = tab_widgets["Турниры"].findChild(q_widget, "tournaments_workspace_actions")
+    tournaments_actions = views["tournaments"].findChild(q_widget, "tournaments_workspace_actions")
     assert tournaments_actions is not None
 
-    for tab_name in ["Главная", "Рейтинг", "Турниры", "Игроки"]:
-        tables = tab_widgets[tab_name].findChildren(q_table_view) + tab_widgets[tab_name].findChildren(q_table_widget)
-        assert tables, f"{tab_name} should expose at least one workspace table"
+    for view_key in ["dashboard", "rating", "tournaments", "players"]:
+        view = views[view_key]
+        tables = view.findChildren(q_table_view) + view.findChildren(q_table_widget)
+        assert tables, f"{view_key} should expose at least one workspace table"
         assert any(table.sizePolicy().horizontalPolicy() == q_size_policy.Policy.Expanding for table in tables)
 
 
@@ -213,14 +226,10 @@ def test_polished_tabs_use_short_buttons_with_tooltips(monkeypatch, tmp_path) ->
             pytest.skip(f"Qt headless UI smoke unavailable: {exc}")
         raise
 
-    tabs = window.centralWidget()
-    tab_widgets = {tabs.tabText(index): tabs.widget(index) for index in range(tabs.count())}
+    views = window._views
 
     expected_buttons = {
-        "Главная": {
-            "Карточка": "Открыть карточку выбранного игрока из контрольных заметок.",
-        },
-        "Турниры": {
+        "tournaments": {
             "Турнир": "Открыть детали выбранного турнира.",
             "Открыть": "Открыть детали выбранного результата.",
             "Взрослый": "Создать черновик взрослого турнира вручную.",
@@ -229,16 +238,16 @@ def test_polished_tabs_use_short_buttons_with_tooltips(monkeypatch, tmp_path) ->
             "Архив": "Безопасно архивировать выбранный турнир с причиной.",
             "Отменить": "Безопасно отменить выбранный турнир с причиной.",
         },
-        "Импорт/Экспорт": {
+        "import_export": {
             "Импорт файла": "Выбрать XLSX-файл и пройти предпросмотр перед импортом.",
         },
-        "Отчеты": {
+        "reports": {
             "Экспорт": "Выгрузить рейтинги и протоколы в выбранную папку.",
             "Пересчет": "Пересчитать результаты всех турниров.",
             "Журнал": "Открыть журнал действий и ошибок.",
             "Импорты": "Открыть историю импортов.",
         },
-        "Диагностика": {
+        "diagnostics": {
             "Самопроверка": "Запустить проверку профиля, базы и окружения.",
             "Архив": "Создать диагностический архив для поддержки.",
             "Логи": "Открыть папку с журналами приложения.",
@@ -250,8 +259,9 @@ def test_polished_tabs_use_short_buttons_with_tooltips(monkeypatch, tmp_path) ->
         },
     }
 
-    for tab_name, button_tooltips in expected_buttons.items():
-        buttons = {button.text(): button for button in tab_widgets[tab_name].findChildren(q_push_button)}
+    for view_key, button_tooltips in expected_buttons.items():
+        view = views[view_key]
+        buttons = {button.text(): button for button in view.findChildren(q_push_button)}
         for text, tooltip in button_tooltips.items():
             assert text in buttons
             assert tooltip in buttons[text].toolTip()
@@ -270,8 +280,6 @@ def test_import_export_tab_has_no_demo_copy(monkeypatch, tmp_path) -> None:
             pytest.skip(f"Qt headless UI smoke unavailable: {exc}")
         raise
 
-    tabs = window.centralWidget()
-    tab_widgets = {tabs.tabText(index): tabs.widget(index) for index in range(tabs.count())}
-    content = _collect_tab_text(tab_widgets["Импорт/Экспорт"])
+    content = _collect_view_text(window._views["import_export"])
 
-    assert "демо" not in content
+    assert "\u0434\u0435\u043c\u043e" not in content
