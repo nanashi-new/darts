@@ -5,6 +5,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
+    QFileDialog,
     QLabel,
     QListWidget,
     QListWidgetItem,
@@ -20,6 +21,7 @@ from PySide6.QtWidgets import (
 from app import __build_metadata__
 from app.db.database import get_connection
 from app.runtime_paths import get_runtime_paths
+from app.services.backup_restore import export_profile_backup, import_profile_from_backup, run_health_check
 from app.services.diagnostics import export_diagnostic_bundle, format_self_check_summary, run_self_check
 from app.services.restore_points import (
     RestorePointRecord,
@@ -106,7 +108,22 @@ class DiagnosticsView(QWidget):
         self.open_profile_button.clicked.connect(lambda: self._open_folder(self._paths.profile_root))
         layout.addWidget(self.open_profile_button)
 
-        self.create_restore_point_button = QPushButton("Точка", self)
+        self.export_backup_button = QPushButton("Экспорт профиля", self)
+        self.export_backup_button.setToolTip("Сохранить копию базы данных в выбранное место.")
+        self.export_backup_button.clicked.connect(self._export_backup)
+        layout.addWidget(self.export_backup_button)
+
+        self.import_backup_button = QPushButton("Импорт профиля", self)
+        self.import_backup_button.setToolTip("Восстановить профиль из ранее сохраненной копии.")
+        self.import_backup_button.clicked.connect(self._import_backup)
+        layout.addWidget(self.import_backup_button)
+
+        self.health_check_button = QPushButton("Проверка здоровья", self)
+        self.health_check_button.setToolTip("Проверить целостность, размер и состояние профиля.")
+        self.health_check_button.clicked.connect(self._run_health_check)
+        layout.addWidget(self.health_check_button)
+
+        self.create_restore_point_button = QPushButton("Создать точку", self)
         self.create_restore_point_button.setToolTip("Создать точку восстановления профиля.")
         self.create_restore_point_button.clicked.connect(self._create_restore_point)
         layout.addWidget(self.create_restore_point_button)
@@ -205,6 +222,14 @@ class DiagnosticsView(QWidget):
         if record is None:
             QMessageBox.warning(self, "Диагностика", "Выберите точку восстановления.")
             return
+        reply = QMessageBox.warning(
+            self,
+            "Подтверждение",
+            "Вы уверены? Текущие данные будут заменены данными из точки восстановления. Это действие необратимо.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
         queue_restore_from_point(
             connection=self._connection,
             restore_point_id=record.id,
@@ -217,6 +242,14 @@ class DiagnosticsView(QWidget):
         )
 
     def _safe_reset(self) -> None:
+        reply = QMessageBox.warning(
+            self,
+            "Подтверждение",
+            "Вы уверены? Все данные профиля будут сброшены. Резервная копия будет создана автоматически.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
         queue_safe_profile_reset(
             connection=self._connection,
             source="diagnostics_view",
@@ -226,3 +259,62 @@ class DiagnosticsView(QWidget):
             "Диагностика",
             "Сброс профиля запланирован. Перезапустите приложение.",
         )
+
+    def _export_backup(self) -> None:
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Экспорт профиля",
+            str(self._paths.exports_dir / "profile_backup.db"),
+            "SQLite DB (*.db)",
+        )
+        if not file_path:
+            return
+        result = export_profile_backup(
+            connection=self._connection,
+            destination_path=Path(file_path),
+        )
+        QMessageBox.information(
+            self,
+            "Диагностика",
+            f"Профиль экспортирован:\n{result.destination_path}\nРазмер: {result.size_bytes} байт",
+        )
+
+    def _import_backup(self) -> None:
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Импорт профиля",
+            "",
+            "SQLite DB (*.db)",
+        )
+        if not file_path:
+            return
+        reply = QMessageBox.warning(
+            self,
+            "Подтверждение",
+            "Вы уверены? Текущий профиль будет заменен данными из выбранного файла. "
+            "Точка восстановления текущего состояния будет создана автоматически.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        result = import_profile_from_backup(
+            connection=self._connection,
+            source_path=Path(file_path),
+        )
+        if result.success:
+            QMessageBox.information(self, "Диагностика", result.message)
+        else:
+            QMessageBox.warning(self, "Диагностика", result.message)
+
+    def _run_health_check(self) -> None:
+        result = run_health_check(connection=self._connection)
+        integrity_text = "ОК" if result.integrity_ok else result.integrity_message
+        size_mb = result.db_size_bytes / (1024 * 1024)
+        last_backup = result.last_backup_date or "нет"
+        lines = [
+            f"Целостность: {integrity_text}",
+            f"Размер базы: {size_mb:.2f} МБ",
+            f"Последний бэкап: {last_backup}",
+            f"Точек восстановления: {result.restore_points_count}",
+        ]
+        self.self_check_output.setPlainText("\n".join(lines))
