@@ -1,0 +1,35 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Add Coach UI: task/plan dialogs, task list view with filters, Coach tab in MainWindow, coach section in PlayerCardDialog, and basic analytics dashboard.",
+  "status": "pending",
+  "steps": [
+    "1. Create app/ui/coach_task_dialog.py: QDialog for creating/editing a coach task. Fields: title (QLineEdit, required), description (QTextEdit), player_id (QComboBox with players list from PlayerRepository, nullable/optional for general tasks), due_date (QDateEdit, optional), priority (QComboBox: low/normal/high/urgent), category (QLineEdit, optional), status (QComboBox for edit mode: open/in_progress/done/cancelled). Dataclass CoachTaskFormData. Pattern: follow TrainingEntryDialog. All labels in Russian. Save/Cancel buttons. Validation: title required.",
+    "2. Create app/ui/training_plan_dialog.py: QDialog for creating/editing a training plan. Fields: title (QLineEdit, required), player_id (QComboBox with players list, required), description (QTextEdit), goal (QTextEdit), start_date (QDateEdit), end_date (QDateEdit), status (QComboBox: active/completed/paused for edit), exercises (QTextEdit with JSON placeholder, e.g. [{\"name\": \"...\", \"reps\": 10}]). Dataclass TrainingPlanFormData. Validation: title required, exercises must be valid JSON array.",
+    "3. Create app/ui/coach_view.py: QWidget (Coach tab view) with QTabWidget containing sub-tabs: 'Задачи' (task list with filters), 'Планы' (training plans list), 'Сводка' (dashboard/analytics). Task list sub-tab: QTableWidget with columns [Статус, Приоритет, Игрок, Задача, Срок, Категория, Создано]. Filter bar: status QComboBox (Все/Открыта/В работе/Выполнена/Отменена), priority QComboBox (Все/Низкий/Обычный/Высокий/Срочный), player QComboBox (Все + player list), search QLineEdit. Buttons: 'Создать задачу', 'Редактировать', 'Завершить', 'Удалить'. Double-click opens edit dialog. Plans sub-tab: QTableWidget [Статус, Игрок, Название, Цель, Период, Создано]. Buttons: 'Создать план', 'Редактировать', 'Удалить'. Dashboard sub-tab: QLabel widgets showing counts: open tasks, overdue tasks, urgent tasks, done this month, active plans.",
+    "4. In app/ui/main_window.py: Add import for CoachView. Add tab 'Тренер' (insert after 'Контекст' tab, before 'Импорт/Экспорт'). Add alias mappings for 'Тренер'/'Coach' in _activate_tab.",
+    "5. In app/ui/player_card_dialog.py: Add a new tab 'План тренера' (7th tab, after 'История'). Contents: QGroupBox 'Задачи тренера' with QTableWidget [Статус, Приоритет, Задача, Срок, Категория] showing tasks for this player. QPushButton 'Создать задачу' to open CoachTaskDialog pre-filled with this player. QPushButton 'Завершить задачу' to complete selected task. QGroupBox 'Тренировочный план' with QTableWidget [Статус, Название, Цель, Период] showing plans for this player. QPushButton 'Создать план' to open TrainingPlanDialog pre-filled with player.",
+    "6. Update the coach_view.py dashboard sub-tab (Сводка): Display summary stats using QLabel/QGroupBox: total open tasks, overdue tasks count (red color if >0), urgent tasks count, tasks completed this week/month, active training plans count. Show 'Ближайшие задачи' mini-table with top 5 upcoming due-date tasks. Show 'Просроченные' mini-table with overdue tasks.",
+    "7. Create tests/test_coach_view.py: Test that CoachView widget can be instantiated (with QApplication or skipped if no display). Test that coach_task_dialog.py CoachTaskFormData dataclass works. Test that training_plan_dialog.py TrainingPlanFormData dataclass works. Use same skip pattern as other UI tests (pytest.mark.skipif no display).",
+    "8. In app/ui/labels.py: Ensure all new label functions are importable and used in the UI modules. If any new session/status types are needed for coach view, add them."
+  ],
+  "acceptance_criteria": [
+    "python -m mypy app/ tests/ --ignore-missing-imports passes clean",
+    "python -m pytest -x -q passes all tests (existing + new)",
+    "MainWindow has 'Тренер' tab that renders CoachView",
+    "CoachView has 3 sub-tabs: Задачи, Планы, Сводка",
+    "PlayerCardDialog has 7th tab 'План тренера' with tasks and plans sections",
+    "CoachTaskDialog validates title is required before accepting",
+    "TrainingPlanDialog validates title and exercises JSON before accepting",
+    "All UI text is in Russian"
+  ],
+  "verification": [
+    "python -m mypy app/ tests/ --ignore-missing-imports",
+    "python -m pytest -x -q",
+    "python -c \"from app.ui.coach_view import CoachView; print('CoachView importable')\"",
+    "python -c \"from app.ui.coach_task_dialog import CoachTaskDialog; print('CoachTaskDialog importable')\"",
+    "python -c \"from app.ui.training_plan_dialog import TrainingPlanDialog; print('TrainingPlanDialog importable')\""
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

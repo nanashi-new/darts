@@ -1,0 +1,25 @@
+{
+  "id": "FEAT-003",
+  "type": "chore",
+  "description": "Final integration: update planning docs, add dev log entry, run full verification.",
+  "status": "pending",
+  "steps": [
+    "1. Update planning/00_PRIORITY.md: Find task P3-23 and mark it as done (change status indicator).",
+    "2. Update planning/03_CURRENT_STATE.md: Add entry about Coach Workflow v1 being implemented (coach_tasks table, training_plans table, CoachView tab, PlayerCardDialog coach tab).",
+    "3. Create logs/priority/P3-23-coach-workflow-v1.md: Brief dev log entry describing what was implemented, key decisions made (table design, JSON for exercises, integration points).",
+    "4. Run final verification: python -m mypy app/ tests/ --ignore-missing-imports && python -m pytest -x -q. Confirm all tests pass and mypy is clean."
+  ],
+  "acceptance_criteria": [
+    "planning/00_PRIORITY.md shows P3-23 as done",
+    "planning/03_CURRENT_STATE.md mentions coach workflow",
+    "logs/priority/P3-23-coach-workflow-v1.md exists with implementation summary",
+    "Full test suite passes",
+    "mypy passes clean"
+  ],
+  "verification": [
+    "python -m mypy app/ tests/ --ignore-missing-imports",
+    "python -m pytest -x -q"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

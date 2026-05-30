@@ -1,0 +1,34 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Add coach_tasks and training_plans database tables, repository classes, and CRUD service modules with full test coverage.",
+  "status": "in_progress",
+  "steps": [
+    "1. In app/db/schema.py: Add COACH_TASKS_TABLE_SQL with columns (id INTEGER PK AUTOINCREMENT, player_id INTEGER nullable FK->players, title TEXT NOT NULL, description TEXT, due_date TEXT, status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','in_progress','done','cancelled')), priority TEXT NOT NULL DEFAULT 'normal' CHECK(priority IN ('low','normal','high','urgent')), category TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, completed_at TEXT). Add COACH_TASKS_INDEXES_SQL with indexes on (player_id, status, due_date) and (status, priority, due_date). Add to SCHEMA_SQL list.",
+    "2. In app/db/schema.py: Add TRAINING_PLANS_TABLE_SQL with columns (id INTEGER PK AUTOINCREMENT, player_id INTEGER NOT NULL FK->players, title TEXT NOT NULL, description TEXT, goal TEXT, start_date TEXT, end_date TEXT, status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','completed','paused')), exercises_json TEXT NOT NULL DEFAULT '[]', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP). Add TRAINING_PLANS_INDEXES_SQL with index on (player_id, status). Add to SCHEMA_SQL list.",
+    "3. In app/db/repositories.py: Add CoachTaskRepository class with methods: create(data) -> int, get(task_id) -> dict|None, update(task_id, data) -> None, delete(task_id) -> None, list_all(status=None, priority=None, player_id=None, include_done=False) -> list[dict], list_for_player(player_id, include_done=False) -> list[dict], list_overdue() -> list[dict], complete(task_id) -> None. Follow existing patterns - use _lastrowid_as_int, dict(row) for results. Join with players table for player FIO in list methods.",
+    "4. In app/db/repositories.py: Add TrainingPlanRepository class with methods: create(data) -> int, get(plan_id) -> dict|None, update(plan_id, data) -> None, delete(plan_id) -> None, list_all(status=None, player_id=None) -> list[dict], list_for_player(player_id, status=None) -> list[dict]. Join with players table for player FIO.",
+    "5. In app/services/audit_log.py: Add event type constants COACH_TASK_CREATED = 'COACH_TASK_CREATED', COACH_TASK_UPDATED = 'COACH_TASK_UPDATED', COACH_TASK_COMPLETED = 'COACH_TASK_COMPLETED', TRAINING_PLAN_CREATED = 'TRAINING_PLAN_CREATED', TRAINING_PLAN_UPDATED = 'TRAINING_PLAN_UPDATED'. Add them to EVENT_TYPES list.",
+    "6. Create app/services/coach_tasks.py: Module with dataclass CoachTaskRecord (id, player_id, player_fio, title, description, due_date, status, priority, category, created_at, updated_at, completed_at). Functions: create_coach_task(**kwargs, connection) -> int (validate title not empty, audit log), update_coach_task(task_id, connection, **kwargs) -> None, complete_coach_task(task_id, connection) -> None (set status=done, completed_at=now, audit), list_coach_tasks(connection, status=None, priority=None, player_id=None, include_done=False) -> list[CoachTaskRecord], list_player_coach_tasks(connection, player_id, include_done=False) -> list[CoachTaskRecord], list_overdue_tasks(connection) -> list[CoachTaskRecord], get_coach_task(connection, task_id) -> CoachTaskRecord|None, delete_coach_task(connection, task_id) -> None.",
+    "7. Create app/services/training_plans.py: Module with dataclass TrainingPlanRecord (id, player_id, player_fio, title, description, goal, start_date, end_date, status, exercises, created_at, updated_at). Functions: create_training_plan(**kwargs, connection) -> int (validate title not empty, parse exercises_json, audit), update_training_plan(plan_id, connection, **kwargs) -> None, list_training_plans(connection, status=None, player_id=None) -> list[TrainingPlanRecord], list_player_training_plans(connection, player_id, status=None) -> list[TrainingPlanRecord], get_training_plan(connection, plan_id) -> TrainingPlanRecord|None, delete_training_plan(connection, plan_id) -> None.",
+    "8. Create tests/test_coach_tasks.py: Integration test with tmp_path DB. Test create_coach_task (valid + validation error), list_coach_tasks (filter by status/priority/player), complete_coach_task (sets status+completed_at), list_overdue_tasks (insert task with past due_date), delete_coach_task.",
+    "9. Create tests/test_training_plans.py: Integration test with tmp_path DB. Test create_training_plan (valid + validation error), list_training_plans (filter by status/player), update_training_plan, delete_training_plan. Verify exercises stored/retrieved as list.",
+    "10. In app/ui/labels.py: Add COACH_TASK_STATUS_LABELS = {'open': 'Открыта', 'in_progress': 'В работе', 'done': 'Выполнена', 'cancelled': 'Отменена'}. Add COACH_TASK_PRIORITY_LABELS = {'low': 'Низкий', 'normal': 'Обычный', 'high': 'Высокий', 'urgent': 'Срочный'}. Add TRAINING_PLAN_STATUS_LABELS = {'active': 'Активный', 'completed': 'Завершен', 'paused': 'На паузе'}. Add helper functions: coach_task_status_label, coach_task_priority_label, training_plan_status_label. Add audit event labels for COACH_TASK_CREATED, COACH_TASK_UPDATED, COACH_TASK_COMPLETED, TRAINING_PLAN_CREATED, TRAINING_PLAN_UPDATED to AUDIT_EVENT_LABELS dict and imports."
+  ],
+  "acceptance_criteria": [
+    "python -m mypy app/ tests/ --ignore-missing-imports passes clean",
+    "python -m pytest tests/test_coach_tasks.py -v passes all tests",
+    "python -m pytest tests/test_training_plans.py -v passes all tests",
+    "All existing 136 tests still pass",
+    "Schema creates coach_tasks and training_plans tables with correct columns",
+    "CoachTaskRepository and TrainingPlanRepository follow the same patterns as existing repos",
+    "Services follow same pattern as training_journal.py (dataclass record, connection param, audit log)"
+  ],
+  "verification": [
+    "python -m mypy app/ tests/ --ignore-missing-imports",
+    "python -m pytest tests/test_coach_tasks.py tests/test_training_plans.py -v",
+    "python -m pytest -x -q"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from app.domain.tournament_lifecycle import TournamentStatus
 from app.services.audit_log import (
+    COACH_TASK_COMPLETED,
+    COACH_TASK_CREATED,
+    COACH_TASK_UPDATED,
     DIAGNOSTIC_BUNDLE_EXPORTED,
     ERROR,
     EXPORT_BATCH,
@@ -28,6 +31,8 @@ from app.services.audit_log import (
     TOURNAMENT_PUBLISHED,
     TOURNAMENT_UPDATED,
     TRAINING_ENTRY_CREATED,
+    TRAINING_PLAN_CREATED,
+    TRAINING_PLAN_UPDATED,
 )
 
 
@@ -106,6 +111,26 @@ SESSION_TYPE_LABELS = {
     "fitness": "Физическая подготовка",
 }
 
+COACH_TASK_STATUS_LABELS = {
+    "open": "Открыта",
+    "in_progress": "В работе",
+    "done": "Выполнена",
+    "cancelled": "Отменена",
+}
+
+COACH_TASK_PRIORITY_LABELS = {
+    "low": "Низкий",
+    "normal": "Обычный",
+    "high": "Высокий",
+    "urgent": "Срочный",
+}
+
+TRAINING_PLAN_STATUS_LABELS = {
+    "active": "Активный",
+    "completed": "Завершен",
+    "paused": "На паузе",
+}
+
 GENDER_LABELS = {
     "M": "Мужской",
     "F": "Женский",
@@ -151,6 +176,11 @@ AUDIT_EVENT_LABELS = {
     TOURNAMENT_PUBLISHED: "Турнир опубликован",
     TOURNAMENT_CORRECTED: "Коррекция турнира",
     TOURNAMENT_DELETED: "Турнир удален",
+    COACH_TASK_CREATED: "Задача тренера создана",
+    COACH_TASK_UPDATED: "Задача тренера обновлена",
+    COACH_TASK_COMPLETED: "Задача тренера выполнена",
+    TRAINING_PLAN_CREATED: "План тренировок создан",
+    TRAINING_PLAN_UPDATED: "План тренировок обновлен",
 }
 
 
@@ -247,3 +277,15 @@ def audit_event_label(value: object) -> str:
 
 def level_label(value: object) -> str:
     return display_label(value, LEVEL_LABELS)
+
+
+def coach_task_status_label(value: object) -> str:
+    return display_label(value, COACH_TASK_STATUS_LABELS)
+
+
+def coach_task_priority_label(value: object) -> str:
+    return display_label(value, COACH_TASK_PRIORITY_LABELS)
+
+
+def training_plan_status_label(value: object) -> str:
+    return display_label(value, TRAINING_PLAN_STATUS_LABELS)

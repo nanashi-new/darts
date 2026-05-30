@@ -256,6 +256,49 @@ ATTACHMENTS_INDEXES_SQL = [
     "CREATE INDEX IF NOT EXISTS idx_attachments_entity ON attachments (entity_type, entity_id);",
 ]
 
+COACH_TASKS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS coach_tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id INTEGER,
+    title TEXT NOT NULL,
+    description TEXT,
+    due_date TEXT,
+    status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','in_progress','done','cancelled')),
+    priority TEXT NOT NULL DEFAULT 'normal' CHECK(priority IN ('low','normal','high','urgent')),
+    category TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TEXT,
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE SET NULL
+);
+"""
+
+COACH_TASKS_INDEXES_SQL = [
+    "CREATE INDEX IF NOT EXISTS idx_coach_tasks_player_status_due ON coach_tasks (player_id, status, due_date);",
+    "CREATE INDEX IF NOT EXISTS idx_coach_tasks_status_priority_due ON coach_tasks (status, priority, due_date);",
+]
+
+TRAINING_PLANS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS training_plans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    goal TEXT,
+    start_date TEXT,
+    end_date TEXT,
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','completed','paused')),
+    exercises_json TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
+);
+"""
+
+TRAINING_PLANS_INDEXES_SQL = [
+    "CREATE INDEX IF NOT EXISTS idx_training_plans_player_status ON training_plans (player_id, status);",
+]
+
 CUSTOM_FIELDS_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS custom_fields (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -303,6 +346,8 @@ SCHEMA_SQL = [
     ATTACHMENTS_TABLE_SQL,
     CUSTOM_FIELDS_TABLE_SQL,
     CUSTOM_FIELD_VALUES_TABLE_SQL,
+    COACH_TASKS_TABLE_SQL,
+    TRAINING_PLANS_TABLE_SQL,
     *PLAYER_INDEXES_SQL,
     *RESULT_INDEXES_SQL,
     *RATING_SNAPSHOTS_INDEXES_SQL,
@@ -314,6 +359,8 @@ SCHEMA_SQL = [
     *ENTITY_TAGS_INDEXES_SQL,
     *ATTACHMENTS_INDEXES_SQL,
     *CUSTOM_FIELD_VALUES_INDEXES_SQL,
+    *COACH_TASKS_INDEXES_SQL,
+    *TRAINING_PLANS_INDEXES_SQL,
 ]
 
 TOURNAMENT_LIFECYCLE_COLUMNS: list[tuple[str, str]] = [
