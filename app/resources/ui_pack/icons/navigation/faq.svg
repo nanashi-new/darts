@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FAQ">
+<title>FAQ</title>
+<desc>Вопросы и справка</desc>
+
+<path d="M52 62C52 42 68 30 92 30H166C190 30 206 46 206 70V132C206 156 190 172 166 172H108L66 210L76 172C60 168 52 153 52 132V62Z" fill="#FFFFFF" stroke="#1F2328" stroke-width="9" stroke-linejoin="round"/>
+<text x="128" y="130" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="90" font-weight="800" fill="#1D3F8C">?</text>
+<circle cx="128" cy="148" r="8" fill="#D52B1E"/>
+
+</svg>

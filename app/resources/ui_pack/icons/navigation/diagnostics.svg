@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Диагностика">
+<title>Диагностика</title>
+<desc>Диагностика и проверка состояния</desc>
+
+<path d="M128 34C100 52 78 58 56 62V120C56 166 84 198 128 218C172 198 200 166 200 120V62C178 58 156 52 128 34Z" fill="#FFFFFF" stroke="#1F2328" stroke-width="9" stroke-linejoin="round"/>
+<path d="M78 130H104L116 92L138 166L154 130H178" stroke="#1D3F8C" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="182" cy="182" r="32" fill="#FFFFFF" stroke="#1F2328" stroke-width="7"/>
+<path d="M169 182L180 193L198 172" stroke="#D52B1E" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+
+</svg>

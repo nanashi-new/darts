@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Контекст">
+<title>Контекст</title>
+<desc>Слои и контекст данных</desc>
+
+<path d="M128 45L218 86L128 127L38 86L128 45Z" fill="#1F2328" stroke="#1F2328" stroke-linejoin="round"/>
+<path d="M50 122L128 158L206 122" stroke="#1D3F8C" stroke-width="18" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M52 157L128 191L204 157" stroke="#D52B1E" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M52 175L128 209L204 175" stroke="#1F2328" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+
+</svg>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Настройки">
+<title>Настройки</title>
+<desc>Настройки приложения</desc>
+
+<polygon points="128.0,50.0 144.0,68.1 167.0,60.5 171.8,84.2 195.5,89.0 187.9,112.0 206.0,128.0 187.9,144.0 195.5,167.0 171.8,171.8 167.0,195.5 144.0,187.9 128.0,206.0 112.0,187.9 89.0,195.5 84.2,171.8 60.5,167.0 68.1,144.0 50.0,128.0 68.1,112.0 60.5,89.0 84.2,84.2 89.0,60.5 112.0,68.1" fill="#FFFFFF" stroke="#1F2328" stroke-width="9" stroke-linejoin="round"/>
+<circle cx="128" cy="128" r="39" fill="#FFFFFF" stroke="#1D3F8C" stroke-width="10"/>
+
+</svg>

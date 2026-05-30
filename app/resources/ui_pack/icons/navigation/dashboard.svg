@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dashboard / Панель">
+<title>Dashboard / Панель</title>
+<desc>Навигационная иконка панели обзора</desc>
+
+<rect x="34" y="34" width="188" height="188" rx="20" fill="#FFFFFF" stroke="#1F2328" stroke-width="9" stroke-linejoin="round"/>
+<path d="M70 120A58 58 0 0 1 186 120" stroke="#1D3F8C" stroke-width="12" stroke-linecap="round"/>
+<path d="M128 120L166 78" stroke="#D52B1E" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="128" cy="120" r="13" fill="#1F2328"/>
+<path d="M34 142H222" stroke="#1F2328" stroke-width="9"/>
+<path d="M96 142V222" stroke="#1F2328" stroke-width="9"/>
+<rect x="54" y="164" width="54" height="34" rx="6" fill="#1D3F8C"/>
+<path d="M132 166L192 166" stroke="#1F2328" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M132 188L178 188" stroke="#1F2328" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+
+</svg>

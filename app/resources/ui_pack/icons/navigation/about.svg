@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="О программе">
+<title>О программе</title>
+<desc>Информация о программе</desc>
+
+<circle cx="128" cy="128" r="82" fill="#FFFFFF" stroke="#1F2328" stroke-width="9"/>
+<circle cx="128" cy="80" r="11" fill="#D52B1E"/>
+<path d="M122 116H130V174" stroke="#1D3F8C" stroke-width="16" stroke-linecap="round"/>
+<path d="M112 174H146" stroke="#1D3F8C" stroke-width="16" stroke-linecap="round"/>
+
+</svg>

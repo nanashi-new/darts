@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Игроки">
+<title>Игроки</title>
+<desc>Карточка игроков</desc>
+
+<rect x="34" y="46" width="188" height="164" rx="18" fill="#FFFFFF" stroke="#1F2328" stroke-width="9" stroke-linejoin="round"/>
+<circle cx="104" cy="100" r="23" fill="#1D3F8C"/>
+<path d="M64 164C69 136 85 124 104 124C123 124 139 136 144 164" fill="#1D3F8C"/>
+<circle cx="158" cy="104" r="21" fill="#1F2328"/>
+<path d="M128 166C134 140 147 128 164 128C181 128 195 140 199 166" fill="#1F2328"/>
+<path d="M70 184L146 184" stroke="#1F2328" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M70 199L126 199" stroke="#1F2328" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="198" cy="184" r="8" fill="#D52B1E"/>
+
+</svg>

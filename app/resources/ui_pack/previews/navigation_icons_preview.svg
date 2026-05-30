@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="1200" height="900" fill="#F7F9FC"/>
+<text x="600.0" y="76" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="800" fill="#1F2328">Навигационные иконки — Дартс Рейтинг</text>
+
+<g transform="translate(60 145) scale(0.55)">
+
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dashboard / Панель">
+<title>Dashboard / Панель</title>
+<desc>Навигационная иконка панели обзора</desc>
+
+<rect x="34" y="34" width="188" height="188" rx="20" fill="#FFFFFF" stroke="#1F2328" stroke-width="9" stroke-linejoin="round"/>
+<path d="M70 120A58 58 0 0 1 186 120" stroke="#1D3F8C" stroke-width="12" stroke-linecap="round"/>
+<path d="M128 120L166 78" stroke="#D52B1E" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="128" cy="120" r="13" fill="#1F2328"/>
+<path d="M34 142H222" stroke="#1F2328" stroke-width="9"/>
+<path d="M96 142V222" stroke="#1F2328" stroke-width="9"/>
+<rect x="54" y="164" width="54" height="34" rx="6" fill="#1D3F8C"/>
+<path d="M132 166L192 166" stroke="#1F2328" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M132 188L178 188" stroke="#1F2328" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+
+
+</g>
+<text x="130" y="317" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="500" fill="#1F2328">Панель</text>
+<g transform="translate(340 145) scale(0.55)">
+
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Рейтинг">
+<title>Рейтинг</title>
+<desc>Рейтинг, пьедестал и дартс-мишень</desc>
+
+<path d="M44 204H212" stroke="#1F2328" stroke-width="10" stroke-linecap="round"/>
+<rect x="62" y="142" width="38" height="62" rx="7" fill="#1F2328"/>
+<rect x="109" y="102" width="38" height="102" rx="7" fill="#1D3F8C"/>
+<rect x="156" y="132" width="38" height="72" rx="7" fill="#D52B1E"/>
+<circle cx="128" cy="62" r="31" fill="#FFFFFF" stroke="#1F2328" stroke-width="5"/>
+<path d="M128 62L159.0 62.0" stroke="#1F2328" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M128 62L149.9 83.9" stroke="#1F2328" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M128 62L128.0 93.0" stroke="#1F2328" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M128 62L106.1 83.9" stroke="#1F2328" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M128 62L97.0 62.0" stroke="#1F2328" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M128 62L106.1 40.1" stroke="#1F2328" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M128 62L128.0 31.0" stroke="#1F2328" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M128 62L149.9 40.1" stroke="#1F2328" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="128" cy="62" r="17.98" fill="none" stroke="#1D3F8C" stroke-width="4"/>
+<circle cx="128" cy="62" r="8.370000000000001" fill="#D52B1E" stroke="#FFFFFF" stroke-width="4"/>
+
+
+</g>
+<text x="410" y="317" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="500" fill="#1F2328">Рейтинг</text>
+<g transform="translate(620 145) scale(0.55)">
+
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Турниры">
+<title>Турниры</title>
+<desc>Календарь турниров и мишень</desc>
+
+<g transform="translate(34 30)">
+<circle cx="72" cy="78" r="64" fill="#FFFFFF" stroke="#1F2328" stroke-width="7"/>
+<path d="M72 78L136.0 78.0" stroke="#1F2328" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M72 78L117.3 123.3" stroke="#1F2328" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M72 78L72.0 142.0" stroke="#1F2328" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M72 78L26.7 123.3" stroke="#1F2328" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M72 78L8.0 78.0" stroke="#1F2328" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M72 78L26.7 32.7" stroke="#1F2328" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M72 78L72.0 14.0" stroke="#1F2328" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M72 78L117.3 32.7" stroke="#1F2328" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="72" cy="78" r="37.12" fill="none" stroke="#1D3F8C" stroke-width="5"/>
+<circle cx="72" cy="78" r="17.28" fill="#D52B1E" stroke="#FFFFFF" stroke-width="5"/>
+</g>
+<rect x="118" y="74" width="96" height="116" rx="13" fill="#FFFFFF" stroke="#1F2328" stroke-width="9" stroke-linejoin="round"/>
+<path d="M118 104H214" stroke="#1D3F8C" stroke-width="18" stroke-linecap="round"/>
+<path d="M146 58L146 86" stroke="#1F2328" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M186 58L186 86" stroke="#1F2328" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="136" y="122" width="18" height="18" rx="3" fill="#1F2328"/>
+<rect x="166" y="122" width="18" height="18" rx="3" fill="#1F2328"/>
+<rect x="136" y="152" width="18" height="18" rx="3" fill="#1F2328"/>
+<rect x="166" y="152" width="18" height="18" rx="3" fill="#D52B1E"/>
+
+
+</g>
+<text x="690" y="317" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="500" fill="#1F2328">Турниры</text>
+<g transform="translate(900 145) scale(0.55)">
+
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Игроки">
+<title>Игроки</title>
+<desc>Карточка игроков</desc>
+
+<rect x="34" y="46" width="188" height="164" rx="18" fill="#FFFFFF" stroke="#1F2328" stroke-width="9" stroke-linejoin="round"/>
+<circle cx="104" cy="100" r="23" fill="#1D3F8C"/>
+<path d="M64 164C69 136 85 124 104 124C123 124 139 136 144 164" fill="#1D3F8C"/>
+<circle cx="158" cy="104" r="21" fill="#1F2328"/>
+<path d="M128 166C134 140 147 128 164 128C181 128 195 140 199 166" fill="#1F2328"/>
+<path d="M70 184L146 184" stroke="#1F2328" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M70 199L126 199" stroke="#1F2328" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="198" cy="184" r="8" fill="#D52B1E"/>
+
+
+</g>
+<text x="970" y="317" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="500" fill="#1F2328">Игроки</text>
+<g transform="translate(60 385) scale(0.55)">
+
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Контекст">
+<title>Контекст</title>
+<desc>Слои и контекст данных</desc>
+
+<path d="M128 45L218 86L128 127L38 86L128 45Z" fill="#1F2328" stroke="#1F2328" stroke-linejoin="round"/>
+<path d="M50 122L128 158L206 122" stroke="#1D3F8C" stroke-width="18" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M52 157L128 191L204 157" stroke="#D52B1E" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M52 175L128 209L204 175" stroke="#1F2328" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+
+
+</g>
+<text x="130" y="557" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="500" fill="#1F2328">Контекст</text>
+<g transform="translate(340 385) scale(0.55)">
+
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Импорт/Экспорт">
+<title>Импорт/Экспорт</title>
+<desc>Импорт и экспорт таблиц</desc>
+
+<path d="M62 38H152L188 74V218H62V38Z" fill="#FFFFFF" stroke="#1F2328" stroke-width="9" stroke-linejoin="round"/>
+<path d="M152 38V78H188" stroke="#1F2328" stroke-width="9" stroke-linejoin="round"/>
+<path d="M84 94H132M84 124H132M84 154H132" stroke="#1F2328" stroke-width="7" stroke-linecap="round"/>
+<path d="M84 88V168" stroke="#1F2328" stroke-width="7" stroke-linecap="round"/>
+<path d="M108 88V168" stroke="#1F2328" stroke-width="5" stroke-linecap="round"/>
+<path d="M132 88V168" stroke="#1F2328" stroke-width="5" stroke-linecap="round"/>
+<polygon points="160,100 206,100 206,82 230,116 206,150 206,132 160,132" fill="#1D3F8C" stroke="#1D3F8C" stroke-linejoin="round"/>
+<polygon points="160,176 206,176 206,158 230,192 206,226 206,208 160,208" fill="#D52B1E" stroke="#D52B1E" stroke-linejoin="round"/>
+
+
+</g>
+<text x="410" y="557" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="500" fill="#1F2328">Импорт/Экспорт</text>
+<g transform="translate(620 385) scale(0.55)">
+
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Отчёты">
+<title>Отчёты</title>
+<desc>Документы и отчёты</desc>
+
+<path d="M62 34H166L206 74V222H62V34Z" fill="#FFFFFF" stroke="#1F2328" stroke-width="9" stroke-linejoin="round"/>
+<path d="M166 34V78H206" fill="#1D3F8C" stroke="#1F2328" stroke-width="9" stroke-linejoin="round"/>
+<rect x="90" y="122" width="20" height="42" rx="4" fill="#1D3F8C"/>
+<rect x="122" y="96" width="20" height="68" rx="4" fill="#1D3F8C"/>
+<rect x="154" y="136" width="20" height="28" rx="4" fill="#1D3F8C"/>
+<path d="M88 188L172 188" stroke="#1F2328" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M88 204L142 204" stroke="#D52B1E" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+
+
+</g>
+<text x="690" y="557" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="500" fill="#1F2328">Отчёты</text>
+<g transform="translate(900 385) scale(0.55)">
+
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Диагностика">
+<title>Диагностика</title>
+<desc>Диагностика и проверка состояния</desc>
+
+<path d="M128 34C100 52 78 58 56 62V120C56 166 84 198 128 218C172 198 200 166 200 120V62C178 58 156 52 128 34Z" fill="#FFFFFF" stroke="#1F2328" stroke-width="9" stroke-linejoin="round"/>
+<path d="M78 130H104L116 92L138 166L154 130H178" stroke="#1D3F8C" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="182" cy="182" r="32" fill="#FFFFFF" stroke="#1F2328" stroke-width="7"/>
+<path d="M169 182L180 193L198 172" stroke="#D52B1E" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+
+
+</g>
+<text x="970" y="557" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="500" fill="#1F2328">Диагностика</text>
+<g transform="translate(200.0 625) scale(0.55)">
+
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FAQ">
+<title>FAQ</title>
+<desc>Вопросы и справка</desc>
+
+<path d="M52 62C52 42 68 30 92 30H166C190 30 206 46 206 70V132C206 156 190 172 166 172H108L66 210L76 172C60 168 52 153 52 132V62Z" fill="#FFFFFF" stroke="#1F2328" stroke-width="9" stroke-linejoin="round"/>
+<text x="128" y="130" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="90" font-weight="800" fill="#1D3F8C">?</text>
+<circle cx="128" cy="148" r="8" fill="#D52B1E"/>
+
+
+</g>
+<text x="270.0" y="797" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="500" fill="#1F2328">FAQ</text>
+<g transform="translate(480.0 625) scale(0.55)">
+
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Настройки">
+<title>Настройки</title>
+<desc>Настройки приложения</desc>
+
+<polygon points="128.0,50.0 144.0,68.1 167.0,60.5 171.8,84.2 195.5,89.0 187.9,112.0 206.0,128.0 187.9,144.0 195.5,167.0 171.8,171.8 167.0,195.5 144.0,187.9 128.0,206.0 112.0,187.9 89.0,195.5 84.2,171.8 60.5,167.0 68.1,144.0 50.0,128.0 68.1,112.0 60.5,89.0 84.2,84.2 89.0,60.5 112.0,68.1" fill="#FFFFFF" stroke="#1F2328" stroke-width="9" stroke-linejoin="round"/>
+<circle cx="128" cy="128" r="39" fill="#FFFFFF" stroke="#1D3F8C" stroke-width="10"/>
+
+
+</g>
+<text x="550.0" y="797" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="500" fill="#1F2328">Настройки</text>
+<g transform="translate(760.0 625) scale(0.55)">
+
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="О программе">
+<title>О программе</title>
+<desc>Информация о программе</desc>
+
+<circle cx="128" cy="128" r="82" fill="#FFFFFF" stroke="#1F2328" stroke-width="9"/>
+<circle cx="128" cy="80" r="11" fill="#D52B1E"/>
+<path d="M122 116H130V174" stroke="#1D3F8C" stroke-width="16" stroke-linecap="round"/>
+<path d="M112 174H146" stroke="#1D3F8C" stroke-width="16" stroke-linecap="round"/>
+
+
+</g>
+<text x="830.0" y="797" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="500" fill="#1F2328">О программе</text>
+</svg>

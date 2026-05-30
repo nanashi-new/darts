@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Отчёты">
+<title>Отчёты</title>
+<desc>Документы и отчёты</desc>
+
+<path d="M62 34H166L206 74V222H62V34Z" fill="#FFFFFF" stroke="#1F2328" stroke-width="9" stroke-linejoin="round"/>
+<path d="M166 34V78H206" fill="#1D3F8C" stroke="#1F2328" stroke-width="9" stroke-linejoin="round"/>
+<rect x="90" y="122" width="20" height="42" rx="4" fill="#1D3F8C"/>
+<rect x="122" y="96" width="20" height="68" rx="4" fill="#1D3F8C"/>
+<rect x="154" y="136" width="20" height="28" rx="4" fill="#1D3F8C"/>
+<path d="M88 188L172 188" stroke="#1F2328" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M88 204L142 204" stroke="#D52B1E" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+
+</svg>

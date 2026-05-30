@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Рейтинг">
+<title>Рейтинг</title>
+<desc>Рейтинг, пьедестал и дартс-мишень</desc>
+
+<path d="M44 204H212" stroke="#1F2328" stroke-width="10" stroke-linecap="round"/>
+<rect x="62" y="142" width="38" height="62" rx="7" fill="#1F2328"/>
+<rect x="109" y="102" width="38" height="102" rx="7" fill="#1D3F8C"/>
+<rect x="156" y="132" width="38" height="72" rx="7" fill="#D52B1E"/>
+<circle cx="128" cy="62" r="31" fill="#FFFFFF" stroke="#1F2328" stroke-width="5"/>
+<path d="M128 62L159.0 62.0" stroke="#1F2328" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M128 62L149.9 83.9" stroke="#1F2328" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M128 62L128.0 93.0" stroke="#1F2328" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M128 62L106.1 83.9" stroke="#1F2328" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M128 62L97.0 62.0" stroke="#1F2328" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M128 62L106.1 40.1" stroke="#1F2328" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M128 62L128.0 31.0" stroke="#1F2328" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M128 62L149.9 40.1" stroke="#1F2328" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="128" cy="62" r="17.98" fill="none" stroke="#1D3F8C" stroke-width="4"/>
+<circle cx="128" cy="62" r="8.370000000000001" fill="#D52B1E" stroke="#FFFFFF" stroke-width="4"/>
+
+</svg>
