@@ -278,4 +278,7 @@ class ReportBuilderService:
                 for row in rows:
                     padded = row + [""] * (len(all_columns) - len(row))
                     all_rows.append(padded[:len(all_columns)])
-        self._export._write_fallback_pdf(path, header_lines, all_columns, all_rows)
+        # NOTE: write_fallback_pdf uses latin-1 encoding (Helvetica Type1 font).
+        # Cyrillic text will be replaced with '?'. Prefer text or xlsx output
+        # for full Unicode support.
+        self._export.write_fallback_pdf(path, header_lines, all_columns, all_rows)

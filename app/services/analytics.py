@@ -162,23 +162,41 @@ class AnalyticsService:
     def compare_players(
         self, connection: sqlite3.Connection, player_ids: list[int]
     ) -> list[PlayerComparisonEntry]:
+        if not player_ids:
+            return []
+
+        # Batch query: fetch all players in one query
+        placeholders = ", ".join("?" for _ in player_ids)
+        player_rows = connection.execute(
+            f"SELECT id, last_name, first_name, middle_name FROM players WHERE id IN ({placeholders})",
+            player_ids,
+        ).fetchall()
+        player_map: dict[int, str] = {}
+        for row in player_rows:
+            fio = " ".join(part for part in [row[1], row[2], row[3]] if part)
+            player_map[int(row[0])] = fio
+
+        # Batch query: fetch all results for the requested players in one query
+        result_rows = connection.execute(
+            f"SELECT player_id, place, points_total FROM results WHERE player_id IN ({placeholders})",
+            player_ids,
+        ).fetchall()
+
+        # Group results by player_id
+        results_by_player: dict[int, list[tuple[int | None, int | None]]] = {}
+        for row in result_rows:
+            pid = int(row[0])
+            if pid not in results_by_player:
+                results_by_player[pid] = []
+            results_by_player[pid].append((row[1], row[2]))
+
+        # Build comparison entries preserving input order
         result: list[PlayerComparisonEntry] = []
         for player_id in player_ids:
-            player_row = connection.execute(
-                "SELECT last_name, first_name, middle_name FROM players WHERE id = ?",
-                (player_id,),
-            ).fetchone()
-            if player_row is None:
+            if player_id not in player_map:
                 continue
-            fio = " ".join(
-                part
-                for part in [player_row[0], player_row[1], player_row[2]]
-                if part
-            )
-            rows = connection.execute(
-                "SELECT place, points_total FROM results WHERE player_id = ?",
-                (player_id,),
-            ).fetchall()
+            fio = player_map[player_id]
+            rows = results_by_player.get(player_id, [])
             if not rows:
                 result.append(
                     PlayerComparisonEntry(

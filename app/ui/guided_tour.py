@@ -18,6 +18,10 @@ from app.settings import load_settings, update_setting
 
 _SETTINGS_KEY = "guided_tour_completed"
 
+# Tour completion is stored per-profile intentionally. Each profile represents a
+# separate user context (potentially a different person), so the tour replays
+# when a new profile is created or switched to.
+
 
 @dataclass(frozen=True)
 class TourStep:

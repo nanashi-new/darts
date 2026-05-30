@@ -681,14 +681,10 @@ class ImportExportView(QWidget):
 
     def handle_dropped_files(self, paths: list[str]) -> None:
         """Process files dropped onto the import view."""
-        from app.services.import_pipeline import detect_format, parse_tables_from_file
-
         all_blocks: list[TableBlock] = []
         for path in paths:
-            fmt = detect_format(path)
-            if fmt in ("xlsx", "csv", "json"):
-                blocks = parse_tables_from_file(path)
-                all_blocks.extend(blocks)
+            blocks = parse_tables_from_file(path)
+            all_blocks.extend(blocks)
 
         if not all_blocks:
             QMessageBox.information(self, "Импорт", "Не удалось найти таблицы в перетащенных файлах.")

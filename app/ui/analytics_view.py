@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -17,6 +19,8 @@ from PySide6.QtWidgets import (
 
 from app.db.database import get_connection
 from app.services.analytics import AnalyticsService
+
+logger = logging.getLogger(__name__)
 
 
 class TournamentAnalyticsTab(QWidget):
@@ -71,7 +75,7 @@ class TournamentAnalyticsTab(QWidget):
                     f"{row[1]} ({row[2]})", userData=int(row[0])
                 )
         except Exception:  # noqa: BLE001
-            pass
+            logger.exception("Failed to load tournaments list")
 
     def _load_stats(self) -> None:
         tournament_id = self._tournament_combo.currentData()
@@ -112,7 +116,7 @@ class TournamentAnalyticsTab(QWidget):
                     i, 3, QTableWidgetItem(f"{entry.avg_level:.1f}")
                 )
         except Exception:  # noqa: BLE001
-            pass
+            logger.exception("Failed to load tournament stats")
 
 
 class PlayerAnalyticsTab(QWidget):
@@ -165,7 +169,7 @@ class PlayerAnalyticsTab(QWidget):
                     f"{row[1]} {row[2]}", userData=int(row[0])
                 )
         except Exception:  # noqa: BLE001
-            pass
+            logger.exception("Failed to load players list")
 
     def _load_progress(self) -> None:
         player_id = self._player_combo.currentData()
@@ -209,7 +213,7 @@ class PlayerAnalyticsTab(QWidget):
             else:
                 self._summary_label.setText("")
         except Exception:  # noqa: BLE001
-            pass
+            logger.exception("Failed to load player progress")
 
 
 class ComparisonTab(QWidget):
@@ -276,7 +280,7 @@ class ComparisonTab(QWidget):
                     if item is not None:
                         item.setData(256, int(row[0]))
         except Exception:  # noqa: BLE001
-            pass
+            logger.exception("Failed to refresh comparison list")
 
     def _compare(self) -> None:
         selected_items = self._selection_list.selectedItems()
@@ -338,7 +342,7 @@ class ComparisonTab(QWidget):
                         i, 7, QTableWidgetItem(f"{e.stability:.1f}")
                     )
         except Exception:  # noqa: BLE001
-            pass
+            logger.exception("Failed to compare items")
 
 
 class AnalyticsView(QWidget):

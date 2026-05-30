@@ -45,6 +45,14 @@ class UndoManager:
         """Return True if there are actions to undo."""
         return len(self._stack) > 0
 
+    def clear(self) -> None:
+        """Clear all actions from the stack.
+
+        Call this when switching context (e.g., profile switch) to release
+        closures that may hold references to stale objects.
+        """
+        self._stack.clear()
+
     def peek_description(self) -> str | None:
         """Return description of the top action without executing it."""
         if not self._stack:

@@ -19,13 +19,20 @@ class ExportService:
     def _escape_pdf_text(text: str) -> str:
         return text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
-    def _write_fallback_pdf(
+    def write_fallback_pdf(
         self,
         path: str,
         header_lines: list[str],
         columns: Sequence[str],
         rows: Sequence[Sequence[str]],
     ) -> None:
+        """Write a minimal PDF using latin-1 encoding.
+
+        Known limitation: this renderer uses the Helvetica Type1 font which only
+        supports latin-1 characters. Cyrillic and other non-latin text will be
+        replaced with '?' in the output. Prefer text or xlsx format for full
+        Unicode support.
+        """
         lines: list[str] = []
         lines.extend(str(item) for item in header_lines)
         if columns:
@@ -195,7 +202,7 @@ class ExportService:
             except Exception:  # noqa: BLE001
                 pass
 
-        self._write_fallback_pdf(path, header_lines_list, columns, rows_list)
+        self.write_fallback_pdf(path, header_lines_list, columns, rows_list)
         if not os.path.exists(path):
             raise OSError("Не удалось сохранить PDF файл.")
 

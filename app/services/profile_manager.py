@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import shutil
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -100,11 +103,19 @@ class ProfileManager:
         self._write_registry(registry)
 
     def delete_profile(self, profile_path: Path) -> bool:
-        """Delete profile directory. Returns False if it's the current active profile."""
+        """Delete profile directory. Returns False if it's the current active profile.
+
+        WARNING: This operation is irreversible. The profile directory (including
+        app.db with all tournament data, player records, and audit logs) is
+        permanently removed. The UI should confirm with the user before calling.
+        """
         last_used = self.get_last_used_profile_path()
         if last_used is not None and last_used.resolve() == profile_path.resolve():
             return False
         if profile_path.is_dir():
+            logger.warning(
+                "Permanently deleting profile directory: %s", profile_path
+            )
             shutil.rmtree(profile_path)
         # Remove from registry
         registry = self._read_registry()
