@@ -20,9 +20,19 @@ def main() -> int:
     try:
         from PySide6.QtWidgets import QApplication
 
+        from app.settings import load_settings
         from app.ui.main_window import MainWindow
+        from app.ui.theme import ThemeManager
 
         app = QApplication([])
+        settings = load_settings()
+        appearance = settings.get("appearance")
+        theme = (
+            str(appearance.get("theme", "light"))
+            if isinstance(appearance, dict)
+            else "light"
+        )
+        ThemeManager.apply_theme(app, theme)
         window = MainWindow()
         window.show_workspace()
         return app.exec()

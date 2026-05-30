@@ -62,7 +62,7 @@ class TournamentsView(QWidget):
         layout.addWidget(self.metadata_label)
 
         self.results_table = QTableView(self)
-        self.results_table.setSortingEnabled(False)
+        self.results_table.setSortingEnabled(True)
         self.results_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.results_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.results_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)

@@ -17,6 +17,9 @@ def test_app_main_uses_workspace_show(monkeypatch, tmp_path) -> None:
             calls.append("exec")
             return 0
 
+        def setStyleSheet(self, _qss: str) -> None:
+            pass
+
     class FakeMainWindow:
         def show_workspace(self) -> None:
             calls.append("show_workspace")
