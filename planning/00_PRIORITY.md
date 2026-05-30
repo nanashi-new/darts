@@ -45,7 +45,7 @@
 
 | Порядок | Задача | Статус | Task | Зависимости |
 |---:|---|---|---|---|
-| 23 | Coach workflow v1: follow-up, планы, контекст | planned | [coach-workflow-v1.md](tasks/coach-workflow-v1.md) | P2 daily workspace |
+| 23 | Coach workflow v1: follow-up, планы, контекст | done | [coach-workflow-v1.md](tasks/coach-workflow-v1.md) | P2 daily workspace |
 
 ## P4 - Финальная Документация
 

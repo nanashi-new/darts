@@ -2,7 +2,7 @@
   "id": "FEAT-003",
   "type": "chore",
   "description": "Final integration: update planning docs, add dev log entry, run full verification.",
-  "status": "pending",
+  "status": "in_progress",
   "steps": [
     "1. Update planning/00_PRIORITY.md: Find task P3-23 and mark it as done (change status indicator).",
     "2. Update planning/03_CURRENT_STATE.md: Add entry about Coach Workflow v1 being implemented (coach_tasks table, training_plans table, CoachView tab, PlayerCardDialog coach tab).",
