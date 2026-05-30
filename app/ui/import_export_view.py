@@ -183,6 +183,7 @@ class ImportExportView(QWidget):
         self._tournament_repo = TournamentRepository(self._connection)
         self._audit_log_service = AuditLogService(self._connection)
         self._tournaments_view = tournaments_view
+        self.setAcceptDrops(True)
 
         root_layout = QVBoxLayout(self)
         scroll_area = QScrollArea(self)
@@ -651,3 +652,46 @@ class ImportExportView(QWidget):
     def _on_import_profiles_clicked(self) -> None:
         dialog = ImportProfilesDialog(self)
         dialog.exec()
+
+    def dragEnterEvent(self, event: object) -> None:  # type: ignore[override]
+        from PySide6.QtGui import QDragEnterEvent
+
+        if not isinstance(event, QDragEnterEvent):
+            return
+        mime = event.mimeData()
+        if mime is not None and mime.hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event: object) -> None:  # type: ignore[override]
+        from PySide6.QtGui import QDropEvent
+
+        if not isinstance(event, QDropEvent):
+            return
+        mime = event.mimeData()
+        if mime is None or not mime.hasUrls():
+            return
+        paths: list[str] = []
+        for url in mime.urls():
+            local = url.toLocalFile()
+            if local:
+                paths.append(local)
+        if paths:
+            self.handle_dropped_files(paths)
+        event.acceptProposedAction()
+
+    def handle_dropped_files(self, paths: list[str]) -> None:
+        """Process files dropped onto the import view."""
+        from app.services.import_pipeline import detect_format, parse_tables_from_file
+
+        all_blocks: list[TableBlock] = []
+        for path in paths:
+            fmt = detect_format(path)
+            if fmt in ("xlsx", "csv", "json"):
+                blocks = parse_tables_from_file(path)
+                all_blocks.extend(blocks)
+
+        if not all_blocks:
+            QMessageBox.information(self, "Импорт", "Не удалось найти таблицы в перетащенных файлах.")
+            return
+
+        self._import_blocks(all_blocks, source_files=paths)

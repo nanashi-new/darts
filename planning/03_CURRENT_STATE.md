@@ -1,12 +1,12 @@
 # 03 - Текущее Состояние
 
-Дата фиксации: 2025-01-16.
+Дата фиксации: 2025-01-17.
 
 ## Ветка
 
-- Текущая рабочая ветка: `feature/darts-liga-no-evsk`.
+- Текущая рабочая ветка: `feature/p1-data-safety-season-transitions`.
 - База ветки: свежий `origin/main` после merge PR #65.
-- Ветка содержит закрытый v1.1 release-readiness слой и обновленное planning-состояние.
+- Ветка содержит закрытый v1.1 release-readiness слой, обновленное planning-состояние и все v1.4 расширения.
 
 ## Уже Сделано В Baseline
 
@@ -62,8 +62,17 @@
 
 ## Что Дальше
 
-- Release v1.3 подготовлен. Код вычищен, документация обновлена, все тесты зелёные.
+- Release v1.4 подготовлен. Все расширения реализованы, тесты зелёные, документация обновлена.
 - Следующий этап: финальный ручной UI pass и публикация релиза.
+
+## v1.4 Расширенная Функциональность (завершено)
+
+- Расширенная аналитика (AnalyticsService + AnalyticsView): статистика, сравнение, тренды, топ-10.
+- CSV/JSON/clipboard import (unified pipeline): detect_format, parse_tables_from_file, parse_tables_from_clipboard_text.
+- Конструктор отчетов с шаблонами (ReportBuilder + шаблоны).
+- Мультипрофильность (ProfileManager + ProfileSelectorDialog): создание, переключение, удаление профилей.
+- Интерактивная инструкция (GuidedTour + HelpView + контекстная справка): guided tour, поиск по справке, help_context.
+- UX: горячие клавиши (ShortcutManager), toast-уведомления (ToastNotification), undo (UndoManager), drag-drop (MainWindow + ImportExportView), session state persistence (get_session_filters/set_session_filters).
 
 ## Проверка
 

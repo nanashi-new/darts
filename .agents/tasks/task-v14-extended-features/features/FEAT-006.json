@@ -1,0 +1,38 @@
+{
+  "id": "FEAT-006",
+  "type": "feat",
+  "description": "UX automation improvements: keyboard shortcuts (Ctrl+N, Ctrl+I, Ctrl+E, Ctrl+F, Ctrl+S, F1, Ctrl+1..9), toast notifications (non-blocking), warning badges on tabs, undo/redo for simple operations, drag-and-drop file import, session state persistence (last table position, filters). Update planning docs (00_PRIORITY.md, 02_ROADMAP.md, 03_CURRENT_STATE.md) to reflect v1.4 completion.",
+  "status": "in_progress",
+  "steps": [
+    "Create app/ui/toast_notification.py: ToastNotification(QLabel) that shows a temporary non-blocking message at bottom-right of MainWindow. Auto-hides after 3 seconds. Methods: show_toast(parent, message, level='info'). Levels: info (green), warning (yellow), error (red). Uses QTimer for auto-hide, styled with QSS.",
+    "Create app/ui/shortcuts.py: ShortcutManager class that registers QShortcut objects on MainWindow. Shortcuts: Ctrl+N (new player/tournament depending on active tab), Ctrl+I (import file), Ctrl+E (export), Ctrl+F (focus search/filter field), Ctrl+S (create backup), F1 (open help/справка tab), Ctrl+1..9 (switch tabs by index). Each shortcut calls appropriate method on MainWindow or active view.",
+    "Create app/services/undo_manager.py: UndoManager with push_action(action_type, undo_fn, description), undo() -> bool, can_undo() -> bool. Simple stack of undo closures (max 20 items). Used for: delete player (restore from backup), close task (reopen), delete note (restore). Wire into relevant services.",
+    "Update app/ui/main_window.py: integrate ShortcutManager, add method for showing ToastNotification, add tab badge support (small red circle on tab with count via QTabWidget.setTabIcon or custom painting), integrate drag-and-drop (accept file drops on window, route to import pipeline).",
+    "Update app/ui_state.py: extend session state to include last scroll positions, selected filters per view. Add get_session_state(view_key)/set_session_state(view_key, state) that persist table scroll position, active filter values, and selected rows.",
+    "Update app/ui/import_export_view.py: accept drag-and-drop files (override dragEnterEvent/dropEvent), detect format and start import flow.",
+    "Wire toast notifications into key operations: tournament publish (in tournament_lifecycle), backup creation (in backup_restore), import completion (in import_export_view).",
+    "Update planning/00_PRIORITY.md: add P5 section for v1.4 tasks (25-30) with done status.",
+    "Update planning/02_ROADMAP.md: mark v1.4 as completed with description of all delivered features.",
+    "Update planning/03_CURRENT_STATE.md: update to reflect v1.4 completion including all 6 blocks.",
+    "Add tests in tests/test_ux_automation.py: test UndoManager push/undo/can_undo, test ShortcutManager shortcut registration, test ToastNotification creation, test session state persistence round-trip.",
+    "Ensure mypy clean."
+  ],
+  "acceptance_criteria": [
+    "Keyboard shortcuts Ctrl+1..9 switch tabs, F1 opens help, Ctrl+I triggers import",
+    "Toast notifications appear and auto-hide after 3 seconds",
+    "UndoManager correctly undoes last action (verified with mock undo function)",
+    "Drag-and-drop files onto window triggers import flow",
+    "Session state (scroll position, filters) persisted and restored",
+    "Planning docs updated to reflect v1.4 completion",
+    "All new tests pass",
+    "mypy clean",
+    "Full test suite still passes (151+ tests)"
+  ],
+  "verification": [
+    "python -m mypy app",
+    "python -m pytest tests/test_ux_automation.py -q --tb=short",
+    "python -m pytest -q --tb=short (all tests pass)"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

@@ -16,6 +16,8 @@ from app.ui.players_view import PlayersView
 from app.ui.rating_view import RatingView
 from app.ui.reports_view import ReportsView
 from app.ui.settings_view import SettingsView
+from app.ui.shortcuts import ShortcutManager
+from app.ui.toast_notification import ToastNotification
 from app.ui.tournaments_view import TournamentsView
 from app.ui_state import get_view_state, update_view_state
 
@@ -54,6 +56,8 @@ class MainWindow(QMainWindow):
         tabs.currentChanged.connect(self._persist_state)
         tabs.currentChanged.connect(lambda _idx: self._refresh_status_bar())
         self._setup_guided_tour()
+        self._shortcut_manager = ShortcutManager(self)
+        self.setAcceptDrops(True)
 
     def _setup_guided_tour(self) -> None:
         """Initialize guided tour overlay, show on first launch."""
@@ -137,3 +141,41 @@ class MainWindow(QMainWindow):
             "main_window",
             {"current_tab": self._tabs.tabText(self._tabs.currentIndex())},
         )
+
+    def show_toast(self, message: str, level: str = "info") -> None:
+        """Show a non-blocking toast notification."""
+        ToastNotification.show_toast(self, message, level)
+
+    def dragEnterEvent(self, event: object) -> None:  # type: ignore[override]
+        from PySide6.QtGui import QDragEnterEvent
+
+        if not isinstance(event, QDragEnterEvent):
+            return
+        mime = event.mimeData()
+        if mime is not None and mime.hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event: object) -> None:  # type: ignore[override]
+        from PySide6.QtGui import QDropEvent
+
+        if not isinstance(event, QDropEvent):
+            return
+        mime = event.mimeData()
+        if mime is None or not mime.hasUrls():
+            return
+        paths: list[str] = []
+        for url in mime.urls():
+            local = url.toLocalFile()
+            if local:
+                paths.append(local)
+        if not paths:
+            return
+        # Navigate to import tab
+        self._activate_tab(self._tabs, "Импорт/Экспорт")
+        # Trigger import on the import view
+        for i in range(self._tabs.count()):
+            widget = self._tabs.widget(i)
+            if isinstance(widget, ImportExportView):
+                widget.handle_dropped_files(paths)
+                break
+        event.acceptProposedAction()
