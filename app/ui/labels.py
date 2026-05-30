@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from app.domain.tournament_lifecycle import TournamentStatus
 from app.services.audit_log import (
+    COACH_TASK_COMPLETED,
+    COACH_TASK_CREATED,
+    COACH_TASK_DELETED,
+    COACH_TASK_UPDATED,
     DIAGNOSTIC_BUNDLE_EXPORTED,
     ERROR,
     EXPORT_BATCH,
@@ -28,6 +32,9 @@ from app.services.audit_log import (
     TOURNAMENT_PUBLISHED,
     TOURNAMENT_UPDATED,
     TRAINING_ENTRY_CREATED,
+    TRAINING_PLAN_CREATED,
+    TRAINING_PLAN_DELETED,
+    TRAINING_PLAN_UPDATED,
 )
 
 
@@ -106,6 +113,26 @@ SESSION_TYPE_LABELS = {
     "fitness": "Физическая подготовка",
 }
 
+COACH_TASK_STATUS_LABELS = {
+    "open": "Открыта",
+    "in_progress": "В работе",
+    "done": "Выполнена",
+    "cancelled": "Отменена",
+}
+
+COACH_TASK_PRIORITY_LABELS = {
+    "low": "Низкий",
+    "normal": "Обычный",
+    "high": "Высокий",
+    "urgent": "Срочный",
+}
+
+TRAINING_PLAN_STATUS_LABELS = {
+    "active": "Активный",
+    "completed": "Завершен",
+    "paused": "На паузе",
+}
+
 GENDER_LABELS = {
     "M": "Мужской",
     "F": "Женский",
@@ -151,7 +178,44 @@ AUDIT_EVENT_LABELS = {
     TOURNAMENT_PUBLISHED: "Турнир опубликован",
     TOURNAMENT_CORRECTED: "Коррекция турнира",
     TOURNAMENT_DELETED: "Турнир удален",
+    COACH_TASK_CREATED: "Задача тренера создана",
+    COACH_TASK_UPDATED: "Задача тренера обновлена",
+    COACH_TASK_COMPLETED: "Задача тренера выполнена",
+    COACH_TASK_DELETED: "Задача тренера удалена",
+    TRAINING_PLAN_CREATED: "План тренировок создан",
+    TRAINING_PLAN_UPDATED: "План тренировок обновлен",
+    TRAINING_PLAN_DELETED: "План тренировок удален",
 }
+
+
+def tournament_status_icon(value: object) -> str:
+    """Return unicode emoji for tournament status."""
+    icons = {
+        "draft": "\u270F\uFE0F",
+        "review": "\U0001F50D",
+        "confirmed": "\u2705",
+        "published": "\U0001F310",
+        "archived": "\U0001F4E6",
+        "canceled": "\u274C",
+    }
+    if value is None:
+        return ""
+    return icons.get(str(value), "")
+
+
+def tournament_status_color(value: object) -> str:
+    """Return hex color for tournament status."""
+    colors = {
+        "draft": "#9E9E9E",
+        "review": "#FF9800",
+        "confirmed": "#2196F3",
+        "published": "#4CAF50",
+        "archived": "#607D8B",
+        "canceled": "#F44336",
+    }
+    if value is None:
+        return "#9E9E9E"
+    return colors.get(str(value), "#9E9E9E")
 
 
 def display_label(value: object, mapping: dict[str, str], *, empty: str = "-") -> str:
@@ -217,3 +281,15 @@ def audit_event_label(value: object) -> str:
 
 def level_label(value: object) -> str:
     return display_label(value, LEVEL_LABELS)
+
+
+def coach_task_status_label(value: object) -> str:
+    return display_label(value, COACH_TASK_STATUS_LABELS)
+
+
+def coach_task_priority_label(value: object) -> str:
+    return display_label(value, COACH_TASK_PRIORITY_LABELS)
+
+
+def training_plan_status_label(value: object) -> str:
+    return display_label(value, TRAINING_PLAN_STATUS_LABELS)

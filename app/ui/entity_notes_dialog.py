@@ -24,7 +24,6 @@ from PySide6.QtWidgets import (
 
 from app.services.notes import EntityNoteDefaults, create_note, list_entity_notes
 from app.ui.labels import (
-    ENTITY_TYPE_LABELS,
     NOTE_TYPE_LABELS,
     PRIORITY_LABELS,
     VISIBILITY_LABELS,

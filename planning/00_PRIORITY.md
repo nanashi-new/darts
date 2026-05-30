@@ -35,21 +35,23 @@
 
 | Порядок | Задача | Статус | Task | Зависимости |
 |---:|---|---|---|---|
-| 18 | Карточка игрока v2 | planned | [player-card-v2.md](tasks/player-card-v2.md) | dashboard/data safety |
-| 19 | Полировка турнирного workflow | planned | [tournament-workflow-polish.md](tasks/tournament-workflow-polish.md) | fullscreen/UI polish |
-| 20 | Расширение ежедневной работы: теги, вложения, кастомные поля, workspace | planned | [future-workspace-features.md](tasks/future-workspace-features.md) | player card v2 |
+| 18 | Карточка игрока v2 | done | [player-card-v2.md](tasks/player-card-v2.md) | dashboard/data safety |
+| 19 | Полировка турнирного workflow | done | [tournament-workflow-polish.md](tasks/tournament-workflow-polish.md) | fullscreen/UI polish |
+| 20 | Расширение ежедневной работы: теги, вложения, кастомные поля, workspace | done | [future-workspace-features.md](tasks/future-workspace-features.md) | player card v2 |
+| 21 | Тема оформления и визуальные улучшения | done | - | P2 tasks 18-20 |
+| 22 | Кастомизация приложения пользователем | done | - | theme system |
 
 ## P3 - Тренерский Слой
 
 | Порядок | Задача | Статус | Task | Зависимости |
 |---:|---|---|---|---|
-| 21 | Coach workflow v1: follow-up, планы, контекст | planned | [coach-workflow-v1.md](tasks/coach-workflow-v1.md) | P2 daily workspace |
+| 23 | Coach workflow v1: follow-up, планы, контекст | done | [coach-workflow-v1.md](tasks/coach-workflow-v1.md) | P2 daily workspace |
 
 ## P4 - Финальная Документация
 
 | Порядок | Задача | Статус | Task | Зависимости |
 |---:|---|---|---|---|
-| 22 | Удобная FAQ-инструкция по работе в приложении | done | [faq-user-guide.md](tasks/faq-user-guide.md) | скроллируемый справочник и smoke-тест готовы |
+| 24 | Удобная FAQ-инструкция по работе в приложении | done | [faq-user-guide.md](tasks/faq-user-guide.md) | скроллируемый справочник и smoke-тест готовы |
 
 ## Правило Обновления
 

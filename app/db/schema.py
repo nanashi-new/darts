@@ -213,6 +213,123 @@ AUDIT_LOG_INDEXES_SQL = [
     "CREATE INDEX IF NOT EXISTS idx_audit_log_event_type ON audit_log (event_type);",
 ]
 
+TAGS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS tags (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    color TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+ENTITY_TAGS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS entity_tags (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tag_id INTEGER NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(tag_id, entity_type, entity_id),
+    FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+);
+"""
+
+ENTITY_TAGS_INDEXES_SQL = [
+    "CREATE INDEX IF NOT EXISTS idx_entity_tags_entity ON entity_tags (entity_type, entity_id);",
+    "CREATE INDEX IF NOT EXISTS idx_entity_tags_tag ON entity_tags (tag_id);",
+]
+
+ATTACHMENTS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS attachments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    description TEXT,
+    file_size INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+ATTACHMENTS_INDEXES_SQL = [
+    "CREATE INDEX IF NOT EXISTS idx_attachments_entity ON attachments (entity_type, entity_id);",
+]
+
+COACH_TASKS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS coach_tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id INTEGER,
+    title TEXT NOT NULL,
+    description TEXT,
+    due_date TEXT,
+    status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','in_progress','done','cancelled')),
+    priority TEXT NOT NULL DEFAULT 'normal' CHECK(priority IN ('low','normal','high','urgent')),
+    category TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TEXT,
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE SET NULL
+);
+"""
+
+COACH_TASKS_INDEXES_SQL = [
+    "CREATE INDEX IF NOT EXISTS idx_coach_tasks_player_status_due ON coach_tasks (player_id, status, due_date);",
+    "CREATE INDEX IF NOT EXISTS idx_coach_tasks_status_priority_due ON coach_tasks (status, priority, due_date);",
+]
+
+TRAINING_PLANS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS training_plans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    goal TEXT,
+    start_date TEXT,
+    end_date TEXT,
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','completed','paused')),
+    exercises_json TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
+);
+"""
+
+TRAINING_PLANS_INDEXES_SQL = [
+    "CREATE INDEX IF NOT EXISTS idx_training_plans_player_status ON training_plans (player_id, status);",
+]
+
+CUSTOM_FIELDS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS custom_fields (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    field_type TEXT NOT NULL,
+    options_json TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+CUSTOM_FIELD_VALUES_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS custom_field_values (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    custom_field_id INTEGER NOT NULL,
+    player_id INTEGER NOT NULL,
+    value TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(custom_field_id, player_id),
+    FOREIGN KEY (custom_field_id) REFERENCES custom_fields(id) ON DELETE CASCADE,
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
+);
+"""
+
+CUSTOM_FIELD_VALUES_INDEXES_SQL = [
+    "CREATE INDEX IF NOT EXISTS idx_custom_field_values_player ON custom_field_values (player_id);",
+    "CREATE INDEX IF NOT EXISTS idx_custom_field_values_field ON custom_field_values (custom_field_id);",
+]
+
 
 SCHEMA_SQL = [
     PLAYER_TABLE_SQL,
@@ -224,6 +341,13 @@ SCHEMA_SQL = [
     TRAINING_ENTRIES_TABLE_SQL,
     RESTORE_POINTS_TABLE_SQL,
     AUDIT_LOG_TABLE_SQL,
+    TAGS_TABLE_SQL,
+    ENTITY_TAGS_TABLE_SQL,
+    ATTACHMENTS_TABLE_SQL,
+    CUSTOM_FIELDS_TABLE_SQL,
+    CUSTOM_FIELD_VALUES_TABLE_SQL,
+    COACH_TASKS_TABLE_SQL,
+    TRAINING_PLANS_TABLE_SQL,
     *PLAYER_INDEXES_SQL,
     *RESULT_INDEXES_SQL,
     *RATING_SNAPSHOTS_INDEXES_SQL,
@@ -232,6 +356,11 @@ SCHEMA_SQL = [
     *TRAINING_ENTRIES_INDEXES_SQL,
     *RESTORE_POINTS_INDEXES_SQL,
     *AUDIT_LOG_INDEXES_SQL,
+    *ENTITY_TAGS_INDEXES_SQL,
+    *ATTACHMENTS_INDEXES_SQL,
+    *CUSTOM_FIELD_VALUES_INDEXES_SQL,
+    *COACH_TASKS_INDEXES_SQL,
+    *TRAINING_PLANS_INDEXES_SQL,
 ]
 
 TOURNAMENT_LIFECYCLE_COLUMNS: list[tuple[str, str]] = [

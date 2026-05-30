@@ -1,0 +1,26 @@
+{
+  "id": "FEAT-007",
+  "type": "docs",
+  "description": "Update planning docs (00_PRIORITY.md and 03_CURRENT_STATE.md) to reflect P2 completion, and create dev log entries.",
+  "status": "completed",
+  "steps": [
+    "Update planning/00_PRIORITY.md: change status of tasks 18, 19, 20 from 'planned' to 'done'. Add new P2 entries for the UI/UX improvements (Block 4) and customization (Block 5) as tasks 18a and 18b or expand existing entries.",
+    "Update planning/03_CURRENT_STATE.md: add section documenting P2 completion including: theme system (light/dark), status bar, welcome screen, player card v2 with tabs, tournament workflow polish with filters and stepper, workspace extensions (tags/attachments/custom fields), customization settings.",
+    "Create logs/priority/p2-ui-ux-complete.md with a brief summary of what was delivered.",
+    "Create logs/reasoning/p2-architecture-decisions.md documenting key decisions: why QTabWidget for player card, why QSS for theming, why polymorphic entity_tags pattern for tags.",
+    "Run final verification: python -m mypy app and python -m pytest -q --tb=short"
+  ],
+  "acceptance_criteria": [
+    "planning/00_PRIORITY.md shows P2 tasks 18-20 as done",
+    "planning/03_CURRENT_STATE.md documents P2 features",
+    "Log files created in logs/priority/ and logs/reasoning/",
+    "python -m mypy app passes",
+    "python -m pytest -q --tb=short passes"
+  ],
+  "verification": [
+    "python -m mypy app --no-error-summary",
+    "python -m pytest -q --tb=short"
+  ],
+  "blocked_reason": null,
+  "findings": "Had to add 'Статус: done' to task files player-card-v2.md, tournament-workflow-polish.md, future-workspace-features.md to satisfy test_planning_consistency.py which checks that done entries in 00_PRIORITY.md have matching done status in their task files. Also renumbered P3/P4 entries (Coach workflow -> 23, FAQ -> 24) to accommodate new P2 entries 21-22."
+}

@@ -1,0 +1,34 @@
+{
+  "id": "FEAT-004",
+  "type": "feat",
+  "description": "Player Card v2 (P2-18): Expand PlayerCardDialog into a tabbed workspace with sections: General, Rating, Tournaments, Notes, Training, History. Show rating dynamics, tournament results, notes with filtering, league transfer history, and training progress trend. Prepare placeholders for future tags/attachments/custom fields.",
+  "status": "in_progress",
+  "steps": [
+    "Refactor app/ui/player_card_dialog.py to use QTabWidget instead of a single scroll with group boxes. Create tabs: 'Общее' (overview + basic info), 'Рейтинг' (rating states + history button + progress trend placeholder), 'Турниры' (tournament history table), 'Заметки' (notes with filter controls), 'Тренировки' (training journal table + add button), 'История' (league transfers + future audit log of player changes).",
+    "In the 'Общее' tab: keep existing overview label content. Add a section showing current league (from latest league_transfer_events) and current rating position (from rating_state_table first row). Add placeholder sections labeled 'Теги' and 'Кастомные поля' (empty QGroupBox with 'Будет доступно позже' label) for future extension.",
+    "In the 'Рейтинг' tab: show the rating_state_table (existing). Add a QLabel showing points trend: compare current points vs first recorded points and show arrow up/down/stable. Keep the 'Открыть историю рейтинга' button.",
+    "In the 'Турниры' tab: show tournament_history_table (existing) with full tournament results. Add a summary label at top: total tournaments played, best place, average points.",
+    "In the 'Заметки' tab: keep notes_table and buttons (add/coach/all). Add a QComboBox filter for note_type (Все/Заметка игрока/Заметка тренера/Контрольное действие) that filters the displayed notes when changed.",
+    "In the 'Тренировки' tab: keep training_table and add_training_button. Add a summary label: total sessions, last training date.",
+    "In the 'История' tab: show league_history_table (existing). Add a placeholder section 'Вложения' (empty QGroupBox with 'Будет доступно позже').",
+    "Write tests in tests/test_player_card_v2.py: test that dialog opens with QTabWidget, test tab names are correct, test empty player (no tournaments/notes/training) shows zeros in summaries, test player with history shows correct data in each tab, test notes filter changes displayed rows."
+  ],
+  "acceptance_criteria": [
+    "PlayerCardDialog uses QTabWidget with 6 tabs: Общее, Рейтинг, Турниры, Заметки, Тренировки, История",
+    "Each tab shows its section of player data correctly",
+    "Notes tab has a filter QComboBox that filters by note_type",
+    "Tournaments tab shows summary stats (total, best place, avg points)",
+    "Future extension placeholders exist (Теги, Кастомные поля, Вложения)",
+    "Existing test_player_card_dialog.py still passes (may need minor updates for new structure)",
+    "python -m mypy app passes",
+    "python -m pytest -q --tb=short passes"
+  ],
+  "verification": [
+    "python -m mypy app --no-error-summary",
+    "python -m pytest tests/test_player_card_v2.py -v --tb=short",
+    "python -m pytest tests/test_player_card_dialog.py -v --tb=short",
+    "python -m pytest -q --tb=short"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

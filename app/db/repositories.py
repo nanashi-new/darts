@@ -1134,3 +1134,292 @@ class RestorePointRepository:
             """
         ).fetchall()
         return [dict(row) for row in rows]
+
+
+class CoachTaskRepository:
+    """Repository for coach task data access."""
+
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self._connection = connection
+
+    def create(self, data: dict[str, Any]) -> int:
+        cursor = self._connection.execute(
+            """
+            INSERT INTO coach_tasks (
+                player_id,
+                title,
+                description,
+                due_date,
+                status,
+                priority,
+                category
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                data.get("player_id"),
+                data.get("title"),
+                data.get("description"),
+                data.get("due_date"),
+                data.get("status", "open"),
+                data.get("priority", "normal"),
+                data.get("category"),
+            ),
+        )
+        self._connection.commit()
+        return _lastrowid_as_int(cursor)
+
+    def get(self, task_id: int) -> dict[str, Any] | None:
+        row = self._connection.execute(
+            """
+            SELECT
+                coach_tasks.*,
+                players.last_name,
+                players.first_name,
+                players.middle_name
+            FROM coach_tasks
+            LEFT JOIN players ON players.id = coach_tasks.player_id
+            WHERE coach_tasks.id = ?
+            """,
+            (task_id,),
+        ).fetchone()
+        return _row_to_dict(row)
+
+    def update(self, task_id: int, data: dict[str, Any]) -> None:
+        fields: list[str] = []
+        params: list[Any] = []
+        allowed = [
+            "player_id", "title", "description", "due_date",
+            "status", "priority", "category", "completed_at",
+        ]
+        for key in allowed:
+            if key in data:
+                fields.append(f"{key} = ?")
+                params.append(data[key])
+        if not fields:
+            return
+        fields.append("updated_at = CURRENT_TIMESTAMP")
+        params.append(task_id)
+        self._connection.execute(
+            f"UPDATE coach_tasks SET {', '.join(fields)} WHERE id = ?",
+            params,
+        )
+        self._connection.commit()
+
+    def delete(self, task_id: int) -> None:
+        self._connection.execute("DELETE FROM coach_tasks WHERE id = ?", (task_id,))
+        self._connection.commit()
+
+    def list_all(
+        self,
+        *,
+        status: str | None = None,
+        priority: str | None = None,
+        player_id: int | None = None,
+        include_done: bool = False,
+    ) -> List[RowDict]:
+        clauses: list[str] = []
+        params: list[Any] = []
+        if status:
+            clauses.append("coach_tasks.status = ?")
+            params.append(status)
+        elif not include_done:
+            clauses.append("coach_tasks.status NOT IN ('done', 'cancelled')")
+        if priority:
+            clauses.append("coach_tasks.priority = ?")
+            params.append(priority)
+        if player_id is not None:
+            clauses.append("coach_tasks.player_id = ?")
+            params.append(player_id)
+        where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        rows = self._connection.execute(
+            f"""
+            SELECT
+                coach_tasks.*,
+                players.last_name,
+                players.first_name,
+                players.middle_name
+            FROM coach_tasks
+            LEFT JOIN players ON players.id = coach_tasks.player_id
+            {where_sql}
+            ORDER BY coach_tasks.due_date ASC, coach_tasks.id DESC
+            """,
+            params,
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_for_player(self, player_id: int, *, include_done: bool = False) -> List[RowDict]:
+        clauses = ["coach_tasks.player_id = ?"]
+        params: list[Any] = [player_id]
+        if not include_done:
+            clauses.append("coach_tasks.status NOT IN ('done', 'cancelled')")
+        rows = self._connection.execute(
+            f"""
+            SELECT
+                coach_tasks.*,
+                players.last_name,
+                players.first_name,
+                players.middle_name
+            FROM coach_tasks
+            LEFT JOIN players ON players.id = coach_tasks.player_id
+            WHERE {' AND '.join(clauses)}
+            ORDER BY coach_tasks.due_date ASC, coach_tasks.id DESC
+            """,
+            params,
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_overdue(self) -> List[RowDict]:
+        rows = self._connection.execute(
+            """
+            SELECT
+                coach_tasks.*,
+                players.last_name,
+                players.first_name,
+                players.middle_name
+            FROM coach_tasks
+            LEFT JOIN players ON players.id = coach_tasks.player_id
+            WHERE coach_tasks.due_date < DATE('now')
+              AND coach_tasks.status NOT IN ('done', 'cancelled')
+            ORDER BY coach_tasks.due_date ASC, coach_tasks.id DESC
+            """
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def complete(self, task_id: int) -> None:
+        self._connection.execute(
+            """
+            UPDATE coach_tasks
+            SET status = 'done',
+                completed_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (task_id,),
+        )
+        self._connection.commit()
+
+
+class TrainingPlanRepository:
+    """Repository for training plan data access."""
+
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self._connection = connection
+
+    def create(self, data: dict[str, Any]) -> int:
+        cursor = self._connection.execute(
+            """
+            INSERT INTO training_plans (
+                player_id,
+                title,
+                description,
+                goal,
+                start_date,
+                end_date,
+                status,
+                exercises_json
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                data.get("player_id"),
+                data.get("title"),
+                data.get("description"),
+                data.get("goal"),
+                data.get("start_date"),
+                data.get("end_date"),
+                data.get("status", "active"),
+                data.get("exercises_json", "[]"),
+            ),
+        )
+        self._connection.commit()
+        return _lastrowid_as_int(cursor)
+
+    def get(self, plan_id: int) -> dict[str, Any] | None:
+        row = self._connection.execute(
+            """
+            SELECT
+                training_plans.*,
+                players.last_name,
+                players.first_name,
+                players.middle_name
+            FROM training_plans
+            JOIN players ON players.id = training_plans.player_id
+            WHERE training_plans.id = ?
+            """,
+            (plan_id,),
+        ).fetchone()
+        return _row_to_dict(row)
+
+    def update(self, plan_id: int, data: dict[str, Any]) -> None:
+        fields: list[str] = []
+        params: list[Any] = []
+        allowed = [
+            "player_id", "title", "description", "goal",
+            "start_date", "end_date", "status", "exercises_json",
+        ]
+        for key in allowed:
+            if key in data:
+                fields.append(f"{key} = ?")
+                params.append(data[key])
+        if not fields:
+            return
+        fields.append("updated_at = CURRENT_TIMESTAMP")
+        params.append(plan_id)
+        self._connection.execute(
+            f"UPDATE training_plans SET {', '.join(fields)} WHERE id = ?",
+            params,
+        )
+        self._connection.commit()
+
+    def delete(self, plan_id: int) -> None:
+        self._connection.execute("DELETE FROM training_plans WHERE id = ?", (plan_id,))
+        self._connection.commit()
+
+    def list_all(self, *, status: str | None = None, player_id: int | None = None) -> List[RowDict]:
+        clauses: list[str] = []
+        params: list[Any] = []
+        if status:
+            clauses.append("training_plans.status = ?")
+            params.append(status)
+        if player_id is not None:
+            clauses.append("training_plans.player_id = ?")
+            params.append(player_id)
+        where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        rows = self._connection.execute(
+            f"""
+            SELECT
+                training_plans.*,
+                players.last_name,
+                players.first_name,
+                players.middle_name
+            FROM training_plans
+            JOIN players ON players.id = training_plans.player_id
+            {where_sql}
+            ORDER BY training_plans.created_at DESC, training_plans.id DESC
+            """,
+            params,
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_for_player(self, player_id: int, *, status: str | None = None) -> List[RowDict]:
+        clauses = ["training_plans.player_id = ?"]
+        params: list[Any] = [player_id]
+        if status:
+            clauses.append("training_plans.status = ?")
+            params.append(status)
+        rows = self._connection.execute(
+            f"""
+            SELECT
+                training_plans.*,
+                players.last_name,
+                players.first_name,
+                players.middle_name
+            FROM training_plans
+            JOIN players ON players.id = training_plans.player_id
+            WHERE {' AND '.join(clauses)}
+            ORDER BY training_plans.created_at DESC, training_plans.id DESC
+            """,
+            params,
+        ).fetchall()
+        return [dict(row) for row in rows]

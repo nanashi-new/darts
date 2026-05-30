@@ -1,0 +1,29 @@
+{
+  "project_type": "Python PySide6 desktop app (Darts League management)",
+  "language": "Python 3.12 (runtime uses 3.11 in sandbox)",
+  "build_system": "No formal build system - direct pytest/mypy execution",
+  "test_framework": "pytest with pytest.mark.integration, tmp_path for DB, get_connection(tmp_path / 'name.db')",
+  "build_command": "python -m mypy app/ tests/ --ignore-missing-imports",
+  "test_command": "python -m pytest -x -q",
+  "verification_instructions": "1) Run mypy: python -m mypy app/ tests/ --ignore-missing-imports. 2) Run pytest: python -m pytest -x -q. 3) Check 136+ tests pass.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "Already set up. Python 3.11 with PySide6, openpyxl, pytest, mypy installed.",
+  "environment_constraints": "OPEN_INTERNET mode - no restrictions. PySide6 tests that need display are skipped (no QApplication in CI).",
+  "contribution_requirements": "All UI text in Russian. mypy clean. pytest green. Don't break existing tests. Don't mix coach tasks with tournaments. Log key decisions in logs/.",
+  "key_patterns": "Services: dataclass for results, connection as parameter. UI: QDialog for forms, QTableWidget for lists, tooltips on buttons. Schema: CREATE TABLE IF NOT EXISTS, migrations via _column_exists. Repositories: class-based with create/list/get/search methods. Audit: AuditLogService(connection).log_event(). Labels: labels.py maps codes to Russian. Tests: pytest.mark.integration, tmp_path for DB.",
+  "relevant_files": [
+    "app/db/schema.py",
+    "app/db/repositories.py",
+    "app/services/training_journal.py",
+    "app/services/notes.py",
+    "app/services/audit_log.py",
+    "app/ui/context_view.py",
+    "app/ui/player_card_dialog.py",
+    "app/ui/main_window.py",
+    "app/ui/training_entry_dialog.py",
+    "app/ui/labels.py",
+    "app/ui/dashboard_view.py",
+    "tests/test_training_journal.py"
+  ],
+  "directory_structure": "app/ - main application code. app/db/ - schema, repositories, database module. app/services/ - business logic services. app/ui/ - PySide6 UI widgets/dialogs. app/domain/ - domain logic (points, rating). tests/ - pytest test files. logs/ - development logs. planning/ - planning docs."
+}

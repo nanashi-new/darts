@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QGridLayout,
     QGroupBox,
@@ -10,6 +12,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QSizePolicy,
+    QStackedWidget,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -21,9 +24,10 @@ from app.db.repositories import TournamentRepository
 from app.runtime_paths import get_runtime_paths
 from app.services.import_report import list_import_reports
 from app.services.notes import list_notes_hub
-from app.settings import get_last_self_check
+from app.settings import get_appearance_settings, get_last_self_check
 from app.ui.labels import import_apply_status_label, tournament_status_label, visibility_label
 from app.ui.player_card_dialog import PlayerCardDialog
+from app.ui.welcome_widget import WelcomeWidget
 
 
 class DashboardView(QWidget):
@@ -33,43 +37,60 @@ class DashboardView(QWidget):
         self._connection = get_connection()
         self._navigate = navigate
         self._tournament_repo = TournamentRepository(self._connection)
-        layout = QVBoxLayout(self)
 
-        layout.addWidget(QLabel("Главная", self))
+        root_layout = QVBoxLayout(self)
+
+        self._stacked = QStackedWidget(self)
+        root_layout.addWidget(self._stacked)
+
+        # Page 0: welcome widget
+        self._welcome_widget = WelcomeWidget(self)
+        self._stacked.addWidget(self._welcome_widget)
+
+        # Page 1: main content
+        self._main_content = QWidget(self)
+        layout = QVBoxLayout(self._main_content)
+
+        self.branding_label = self._build_branding_label()
+        layout.addWidget(self.branding_label)
+
+        layout.addWidget(QLabel("Главная", self._main_content))
         layout.addWidget(self._build_profile_status_group())
         layout.addLayout(self._build_quick_actions())
         layout.addWidget(self._build_summary_group())
         layout.addWidget(self._build_attention_group(), 1)
 
-        self.recent_tournaments_table = QTableWidget(0, 3, self)
+        self.recent_tournaments_table = QTableWidget(0, 3, self._main_content)
         self.recent_tournaments_table.setHorizontalHeaderLabels(["Дата", "Турнир", "Статус"])
         self._configure_table(self.recent_tournaments_table)
-        layout.addWidget(QLabel("Последние турниры", self))
+        layout.addWidget(QLabel("Последние турниры", self._main_content))
         layout.addWidget(self.recent_tournaments_table, 2)
 
-        self.recent_imports_table = QTableWidget(0, 4, self)
+        self.recent_imports_table = QTableWidget(0, 4, self._main_content)
         self.recent_imports_table.setHorizontalHeaderLabels(["Создан", "Турнир", "Статус", "Импортировано"])
         self._configure_table(self.recent_imports_table)
-        layout.addWidget(QLabel("Последние отчеты импорта", self))
+        layout.addWidget(QLabel("Последние отчеты импорта", self._main_content))
         layout.addWidget(self.recent_imports_table, 2)
 
-        self.follow_up_notes_table = QTableWidget(0, 3, self)
+        self.follow_up_notes_table = QTableWidget(0, 3, self._main_content)
         self.follow_up_notes_table.setHorizontalHeaderLabels(["Объект", "Заголовок", "Доступ"])
         self._configure_table(self.follow_up_notes_table)
-        layout.addWidget(QLabel("Контрольные заметки", self))
+        layout.addWidget(QLabel("Контрольные заметки", self._main_content))
         layout.addWidget(self.follow_up_notes_table, 2)
 
-        self.open_follow_up_player_button = QPushButton("Карточка", self)
+        self.open_follow_up_player_button = QPushButton("Карточка", self._main_content)
         self.open_follow_up_player_button.setToolTip(
             "Открыть карточку выбранного игрока из контрольных заметок."
         )
         self.open_follow_up_player_button.clicked.connect(self._open_selected_follow_up_player)
         layout.addWidget(self.open_follow_up_player_button)
 
-        self.diagnostics_summary_label = QLabel("Диагностика: самопроверка еще не запускалась", self)
+        self.diagnostics_summary_label = QLabel("Диагностика: самопроверка еще не запускалась", self._main_content)
         layout.addWidget(self.diagnostics_summary_label)
 
         layout.addStretch(1)
+
+        self._stacked.addWidget(self._main_content)
         self.refresh()
 
     @staticmethod
@@ -78,6 +99,20 @@ class DashboardView(QWidget):
         table.setAlternatingRowColors(True)
         table.horizontalHeader().setStretchLastSection(True)
         table.verticalHeader().setVisible(False)
+
+    def _build_branding_label(self) -> QLabel:
+        appearance = get_appearance_settings()
+        logo_path = appearance.get("custom_logo_path")
+        label = QLabel(self)
+        if logo_path and isinstance(logo_path, str) and Path(logo_path).is_file():
+            pixmap = QPixmap(logo_path)
+            if not pixmap.isNull():
+                label.setPixmap(
+                    pixmap.scaledToHeight(60, Qt.TransformationMode.SmoothTransformation)
+                )
+                return label
+        label.setText("<b>Дартс Лига</b>")
+        return label
 
     def _build_quick_actions(self) -> QHBoxLayout:
         layout = QHBoxLayout()
@@ -141,6 +176,12 @@ class DashboardView(QWidget):
         return group
 
     def refresh(self) -> None:
+        players_count = self._count_rows("players")
+        tournaments_count = self._count_rows("tournaments")
+        if players_count == 0 and tournaments_count == 0:
+            self._stacked.setCurrentIndex(0)
+        else:
+            self._stacked.setCurrentIndex(1)
         self._fill_profile_status()
         self._fill_summary()
         self._fill_attention()

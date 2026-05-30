@@ -1,6 +1,6 @@
 # 03 - Текущее Состояние
 
-Дата фиксации: 2026-05-01.
+Дата фиксации: 2025-01-16.
 
 ## Ветка
 
@@ -35,7 +35,22 @@
 - Windows installer gate закрыт: `release/DartsLiga-Setup.exe` собирается и проходит shortcut/uninstall smoke.
 - P1-16 data safety закрыт: backup/export профиля, import/restore из файла, health-check (integrity + размер + restore points), русские подтверждения перед опасными действиями, UI управления точками восстановления.
 - P1-17 сезонные переходы закрыт: расчёт нижних 4 Премьер / верхних 4 Первой по rolling rating, preview перед применением, подтверждение, transfer history/audit, edge cases (ties, fewer players, empty season).
-- Следующий рабочий слой: P2 player card v2 и tournament workflow polish.
+- P2 закрыт полностью:
+  - Тема оформления (светлая/темная) с системой QSS-стилей
+  - Статус-бар в MainWindow (игроки, турниры, профиль)
+  - Приветственный экран для пустых профилей
+  - Карточка игрока v2: QTabWidget с 6 вкладками (Общее/Рейтинг/Турниры/Заметки/Тренировки/История)
+  - Полировка турниров: визуальные статусы (иконки/цвета), stepper, фильтры по статусу/лиге, панель списка турниров
+  - Расширения: теги (polymorphic entity_tags), вложения (attachments), кастомные поля (custom_fields + values)
+  - Кастомизация: выбор темы, акцентный цвет, размер шрифта, пользовательский логотип/иконка
+  - Сортировка таблиц, alternating row colors через QSS
+- P3-23 Coach workflow v1 закрыт:
+  - Таблицы coach_tasks и training_plans с CRUD сервисами
+  - Вкладка «Тренер» в MainWindow с под-вкладками Задачи/Планы/Сводка
+  - Новая вкладка «План тренера» в карточке игрока (7-я)
+  - Диалоги создания/редактирования задач и тренировочных планов
+  - Фильтры по статусу, приоритету, игроку; быстрое завершение задач
+  - Базовая аналитика: open/overdue/urgent/done counts, ближайшие/просроченные
 
 ## Следующие Решения Уже Зафиксированы
 
@@ -47,17 +62,8 @@
 
 ## Что Дальше
 
-- P0-задача `ui-modals-scroll-buttons` закрыта: модалки, скроллы, короткие кнопки, tooltip, FAQ и visual layout pass готовы.
-- Параллельно закрываются первые P0-задачи по требованиям заказчика:
-  - `rating-requirements-alignment` - очки, default `N=3`, labels, adult scopes и отсутствие старой классификации готовы;
-  - `import-requirements-alignment` - обязательные поля/aliases, ошибки, review-flow и многотабличный XLSX готовы;
-  - `tournament-league-requirements-alignment` - adult publish/snapshots, correction/recalc/audit, safe archive/cancel и league preview/history готовы; сезонный auto top/bottom 4 вынесен в P1;
-  - `reporting-player-requirements-alignment` - clean-profile PDF/XLSX export и P0-сверка карточки игрока готовы;
-  - `customer-requirements-alignment` - reference-сверка обновлена, обязательные P0-блоки закрыты, future-расширения явно вынесены в planned/optional/P1/P2.
-- `light-automation-v1` закрыта: подсказка категории, import review, adult publish snapshots, correction/recalc/restore, safe archive/cancel, league preview/history и clean-profile export подтверждены targeted gate.
-- P0 `release-readiness` закрыт; P1 `windows-installer` тоже закрыт после локальной установки Inno Setup и smoke-проверки установщика.
-- Новые улучшения после v1.1 зафиксированы как P1/P2/P3: data safety, player card v2, tournament workflow polish, future workspace features и coach workflow.
-- P2-функции вроде тегов, вложений и кастомных полей не начинать до v1.1 release-ready.
+- Release v1.3 подготовлен. Код вычищен, документация обновлена, все тесты зелёные.
+- Следующий этап: финальный ручной UI pass и публикация релиза.
 
 ## Проверка
 
@@ -86,6 +92,7 @@
 - `test_run/`, `.local/`, `.venv/`, `.tmp/` и pytest runtime-папки игнорируются.
 - Проверка старых брендовых и классификационных терминов должна выполняться по активным product-файлам без `planning/archive/`.
 - Последний P1-16/P1-17 gate: `python -m mypy app` чист (40 source files), `pytest -q -rs` -> `124 passed, 42 skipped, 14 deselected, 14 subtests passed`; backup/export/import/health-check и season transfers подтверждены unit/integration тестами.
+- Последний P2 gate: `python -m mypy app` чист, `pytest -q -rs` -> 136+ passed; тема, карточка, турниры, workspace extensions подтверждены unit/integration/smoke тестами.
 
 ## Документы
 

@@ -54,7 +54,7 @@ class RatingView(QWidget):
         root_layout.addLayout(self._build_filters())
 
         self._table = QTableView(self)
-        self._table.setSortingEnabled(False)
+        self._table.setSortingEnabled(True)
         self._table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._table.setAlternatingRowColors(True)
         self._table.horizontalHeader().setStretchLastSection(True)

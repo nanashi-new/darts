@@ -77,7 +77,7 @@ class PlayersView(QWidget):
         self._players_table.horizontalHeader().setStretchLastSection(True)
         self._players_table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self._players_table.setSelectionMode(QTableView.SelectionMode.SingleSelection)
-        self._players_table.setSortingEnabled(False)
+        self._players_table.setSortingEnabled(True)
         self._players_table.doubleClicked.connect(lambda *_args: self._open_player_card())
         splitter.addWidget(self._players_table)
 

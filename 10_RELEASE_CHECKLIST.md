@@ -91,6 +91,18 @@ The zip/exe fallback release and Windows installer release are ready after the c
 - Passed: installer shortcut/uninstall smoke; Start menu shortcut, optional desktop shortcut, clean-profile installed app start, and uninstall/profile preservation were verified.
 - Passed: dashboard command center update; `pytest -q` -> `154 passed, 14 deselected, 14 subtests passed`.
 
+## v1.3 Release Gates
+
+- [x] Coach workflow tests pass (coach_tasks, training_plans)
+- [x] Theme system tests pass (theme switching, QSS generation)
+- [x] Workspace extensions tests pass (tags, attachments, custom fields)
+- [x] Season transfer tests pass (promotion/relegation calculation)
+- [x] Backup/restore tests pass (export/import/health-check)
+- [x] `python -m mypy app` clean: 46 source files
+- [x] `python -m pytest -q -rs`: 151+ passed
+- [x] `ruff check app/ --select F401`: 0 errors
+- [x] All planning docs updated for v1.3
+
 Deferred by choice, not by release blocker:
 - attachments
 - tags
