@@ -1,0 +1,22 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Verify baseline: install deps, run mypy and pytest to confirm clean starting state before P2 work.",
+  "status": "completed",
+  "steps": [
+    "Run pip install -r requirements-dev.txt in /projects/sandbox/darts",
+    "Run python -m mypy app and confirm 0 errors",
+    "Run python -m pytest -q --tb=short and confirm 125+ tests pass",
+    "Update FEAT-001.json status to completed"
+  ],
+  "acceptance_criteria": [
+    "mypy reports 0 errors",
+    "pytest reports 125+ passed, 0 failed"
+  ],
+  "verification": [
+    "python -m mypy app --no-error-summary",
+    "python -m pytest -q --tb=short"
+  ],
+  "blocked_reason": null,
+  "findings": "mypy: 0 errors (clean). pytest: 125 passed, 42 skipped, 14 deselected, 14 subtests passed in 1.17s. Environment uses Python 3.12 (not 3.11) with all deps pre-installed. QT_QPA_PLATFORM=offscreen required for headless Qt tests. Baseline is clean and ready for P2 work."
+}
