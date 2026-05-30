@@ -10,6 +10,7 @@ from app.ui.context_view import ContextView
 from app.ui.dashboard_view import DashboardView
 from app.ui.diagnostics_view import DiagnosticsView
 from app.ui.faq_view import FaqView
+from app.ui.guided_tour import GuidedTour, is_tour_completed
 from app.ui.import_export_view import ImportExportView
 from app.ui.players_view import PlayersView
 from app.ui.rating_view import RatingView
@@ -42,7 +43,7 @@ class MainWindow(QMainWindow):
         tabs.addTab(ImportExportView(tournaments_view), "Импорт/Экспорт")
         tabs.addTab(ReportsView(), "Отчеты")
         tabs.addTab(DiagnosticsView(), "Диагностика")
-        tabs.addTab(FaqView(), "Вопросы и ответы")
+        tabs.addTab(FaqView(), "Справка")
         tabs.addTab(SettingsView(), "Настройки")
         tabs.addTab(AboutView(), "О программе")
 
@@ -52,6 +53,13 @@ class MainWindow(QMainWindow):
         self._restore_state()
         tabs.currentChanged.connect(self._persist_state)
         tabs.currentChanged.connect(lambda _idx: self._refresh_status_bar())
+        self._setup_guided_tour()
+
+    def _setup_guided_tour(self) -> None:
+        """Initialize guided tour overlay, show on first launch."""
+        self._guided_tour = GuidedTour(self)
+        if not is_tour_completed():
+            self._guided_tour.start_tour()
 
     def _setup_status_bar(self) -> None:
         status_bar = QStatusBar(self)
@@ -107,6 +115,10 @@ class MainWindow(QMainWindow):
             "Настройки": "Настройки",
             "About": "О программе",
             "О программе": "О программе",
+            "Справка": "Справка",
+            "FAQ": "Справка",
+            "Help": "Справка",
+            "Вопросы и ответы": "Справка",
         }
         resolved_target = aliases.get(target, target)
         for index in range(tabs.count()):
