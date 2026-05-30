@@ -8,6 +8,7 @@ from app.db.repositories import TrainingPlanRepository
 from app.services.audit_log import (
     AuditLogService,
     TRAINING_PLAN_CREATED,
+    TRAINING_PLAN_DELETED,
     TRAINING_PLAN_UPDATED,
 )
 
@@ -152,6 +153,13 @@ def get_training_plan(*, connection: Any, plan_id: int) -> TrainingPlanRecord | 
 def delete_training_plan(*, connection: Any, plan_id: int) -> None:
     repo = TrainingPlanRepository(connection)
     repo.delete(plan_id)
+    AuditLogService(connection).log_event(
+        TRAINING_PLAN_DELETED,
+        "Удален план тренировок",
+        f"План ID: {plan_id}",
+        context={"plan_id": plan_id},
+        source="training_plans",
+    )
 
 
 def _row_to_record(row: dict[str, Any]) -> TrainingPlanRecord:

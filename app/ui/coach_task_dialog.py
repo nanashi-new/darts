@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from PySide6.QtCore import QDate
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDateEdit,
     QDialog,
@@ -63,10 +64,14 @@ class CoachTaskDialog(QDialog):
         self.player_combo.addItem("-- Без игрока --", None)
         self._load_players(connection)
 
+        self.due_date_checkbox = QCheckBox("Указать срок", self)
+        self.due_date_checkbox.setChecked(False)
+        self.due_date_checkbox.toggled.connect(self._on_due_date_toggled)
+
         self.due_date_edit = QDateEdit(self)
         self.due_date_edit.setCalendarPopup(True)
         self.due_date_edit.setDate(QDate.currentDate())
-        self.due_date_edit.setSpecialValueText(" ")
+        self.due_date_edit.setEnabled(False)
 
         self.priority_combo = QComboBox(self)
         self.priority_combo.addItem("Низкий", "low")
@@ -87,6 +92,7 @@ class CoachTaskDialog(QDialog):
         form.addRow("Название*", self.title_input)
         form.addRow("Описание", self.description_input)
         form.addRow("Игрок", self.player_combo)
+        form.addRow("", self.due_date_checkbox)
         form.addRow("Срок", self.due_date_edit)
         form.addRow("Приоритет", self.priority_combo)
         form.addRow("Категория", self.category_input)
@@ -147,6 +153,9 @@ class CoachTaskDialog(QDialog):
                 self.player_combo.setCurrentIndex(i)
                 break
 
+    def _on_due_date_toggled(self, checked: bool) -> None:
+        self.due_date_edit.setEnabled(checked)
+
     def _populate_from_record(self, record: CoachTaskRecord) -> None:
         self.title_input.setText(record.title)
         if record.description:
@@ -154,9 +163,12 @@ class CoachTaskDialog(QDialog):
         if record.player_id is not None:
             self._select_player(record.player_id)
         if record.due_date:
+            self.due_date_checkbox.setChecked(True)
             date = QDate.fromString(record.due_date, "yyyy-MM-dd")
             if date.isValid():
                 self.due_date_edit.setDate(date)
+        else:
+            self.due_date_checkbox.setChecked(False)
         # Priority
         for i in range(self.priority_combo.count()):
             if self.priority_combo.itemData(i) == record.priority:
@@ -178,7 +190,9 @@ class CoachTaskDialog(QDialog):
         self.accept()
 
     def form_data(self) -> CoachTaskFormData:
-        due_date_val = self.due_date_edit.date().toString("yyyy-MM-dd")
+        due_date_val: str | None = None
+        if self.due_date_checkbox.isChecked():
+            due_date_val = self.due_date_edit.date().toString("yyyy-MM-dd")
         player_id = self.player_combo.currentData()
         return CoachTaskFormData(
             title=self.title_input.text().strip(),

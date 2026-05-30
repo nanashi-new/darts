@@ -56,6 +56,7 @@ class CoachView(QWidget):
         self._tabs.addTab(self._build_tasks_tab(), "Задачи")
         self._tabs.addTab(self._build_plans_tab(), "Планы")
         self._tabs.addTab(self._build_dashboard_tab(), "Сводка")
+        self._tabs.currentChanged.connect(self._on_subtab_changed)
         layout.addWidget(self._tabs)
 
         self._refresh_tasks()
@@ -246,6 +247,10 @@ class CoachView(QWidget):
     def _on_task_filters_changed(self, *_args: object) -> None:
         self._refresh_tasks()
 
+    def _on_subtab_changed(self, index: int) -> None:
+        if index == 2:
+            self._refresh_dashboard()
+
     # ─── Refresh ────────────────────────────────────────────────
 
     def _refresh_tasks(self) -> None:
@@ -316,6 +321,9 @@ class CoachView(QWidget):
                 self.plans_table.setItem(row_index, col, item)
 
     def _refresh_dashboard(self) -> None:
+        # Skip refresh if the dashboard sub-tab is not currently active
+        if self._tabs.currentIndex() != 2:
+            return
         # Open tasks
         open_tasks = list_coach_tasks(connection=self._connection, status="open")
         in_progress_tasks = list_coach_tasks(connection=self._connection, status="in_progress")

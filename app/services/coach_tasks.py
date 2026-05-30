@@ -8,6 +8,7 @@ from app.db.repositories import CoachTaskRepository
 from app.services.audit_log import (
     AuditLogService,
     COACH_TASK_CREATED,
+    COACH_TASK_DELETED,
     COACH_TASK_UPDATED,
     COACH_TASK_COMPLETED,
 )
@@ -168,6 +169,13 @@ def get_coach_task(*, connection: Any, task_id: int) -> CoachTaskRecord | None:
 def delete_coach_task(*, connection: Any, task_id: int) -> None:
     repo = CoachTaskRepository(connection)
     repo.delete(task_id)
+    AuditLogService(connection).log_event(
+        COACH_TASK_DELETED,
+        "Удалена задача тренера",
+        f"Задача ID: {task_id}",
+        context={"task_id": task_id},
+        source="coach_tasks",
+    )
 
 
 def _row_to_record(row: dict[str, Any]) -> CoachTaskRecord:

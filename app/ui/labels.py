@@ -6,6 +6,7 @@ from app.domain.tournament_lifecycle import TournamentStatus
 from app.services.audit_log import (
     COACH_TASK_COMPLETED,
     COACH_TASK_CREATED,
+    COACH_TASK_DELETED,
     COACH_TASK_UPDATED,
     DIAGNOSTIC_BUNDLE_EXPORTED,
     ERROR,
@@ -32,6 +33,7 @@ from app.services.audit_log import (
     TOURNAMENT_UPDATED,
     TRAINING_ENTRY_CREATED,
     TRAINING_PLAN_CREATED,
+    TRAINING_PLAN_DELETED,
     TRAINING_PLAN_UPDATED,
 )
 
@@ -179,8 +181,10 @@ AUDIT_EVENT_LABELS = {
     COACH_TASK_CREATED: "Задача тренера создана",
     COACH_TASK_UPDATED: "Задача тренера обновлена",
     COACH_TASK_COMPLETED: "Задача тренера выполнена",
+    COACH_TASK_DELETED: "Задача тренера удалена",
     TRAINING_PLAN_CREATED: "План тренировок создан",
     TRAINING_PLAN_UPDATED: "План тренировок обновлен",
+    TRAINING_PLAN_DELETED: "План тренировок удален",
 }
 
 
