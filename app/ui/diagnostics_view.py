@@ -227,6 +227,7 @@ class DiagnosticsView(QWidget):
             "Подтверждение",
             "Вы уверены? Текущие данные будут заменены данными из точки восстановления. Это действие необратимо.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
         )
         if reply != QMessageBox.StandardButton.Yes:
             return
@@ -247,6 +248,7 @@ class DiagnosticsView(QWidget):
             "Подтверждение",
             "Вы уверены? Все данные профиля будут сброшены. Резервная копия будет создана автоматически.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
         )
         if reply != QMessageBox.StandardButton.Yes:
             return
@@ -294,6 +296,7 @@ class DiagnosticsView(QWidget):
             "Вы уверены? Текущий профиль будет заменен данными из выбранного файла. "
             "Точка восстановления текущего состояния будет создана автоматически.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
         )
         if reply != QMessageBox.StandardButton.Yes:
             return

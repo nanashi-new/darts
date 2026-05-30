@@ -120,3 +120,67 @@ def test_health_check_on_fresh_db_reports_no_backups(monkeypatch: pytest.MonkeyP
     assert result.last_backup_date is None
     assert result.restore_points_count == 0
     assert result.integrity_ok is True
+
+
+def test_import_then_process_pending_action_restores_db(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Verify the full import cycle: export -> modify -> import -> process pending -> data restored."""
+    monkeypatch.setenv("DARTS_PROFILE_ROOT", str(tmp_path / "profile"))
+    connection = get_connection()
+
+    # Create initial data
+    PlayerRepository(connection).create(
+        {
+            "last_name": "Export",
+            "first_name": "Test",
+            "middle_name": None,
+            "birth_date": None,
+            "gender": None,
+            "coach": None,
+            "club": None,
+            "notes": None,
+        }
+    )
+
+    from app.services.backup_restore import export_profile_backup, import_profile_from_backup
+
+    # Export current state (1 player)
+    export_path = tmp_path / "export.db"
+    export_profile_backup(connection=connection, destination_path=export_path)
+
+    # Add more data to simulate changes after export
+    PlayerRepository(connection).create(
+        {
+            "last_name": "Second",
+            "first_name": "Player",
+            "middle_name": None,
+            "birth_date": None,
+            "gender": None,
+            "coach": None,
+            "club": None,
+            "notes": None,
+        }
+    )
+
+    # Verify we now have 2 players
+    players = PlayerRepository(connection).list()
+    assert len(players) == 2
+
+    # Import the older export (should queue restore to 1-player state)
+    import_profile_from_backup(connection=connection, source_path=export_path)
+    connection.close()
+
+    # Simulate restart by processing pending action
+    from app.services.restore_points import process_pending_profile_action
+
+    result = process_pending_profile_action()
+
+    assert result is not None
+    assert result["action"] == "restore_db"
+    assert result["status"] == "applied"
+
+    # Verify the DB was restored (only first player should exist)
+    restored_conn = get_connection()
+    players = PlayerRepository(restored_conn).list()
+    assert len(players) == 1
+    assert players[0]["last_name"] == "Export"
+    restored_conn.close()

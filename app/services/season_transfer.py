@@ -119,8 +119,8 @@ def apply_season_transfers(
         {
             "name": f"Сезонные переходы {now_str}",
             "date": now_str,
-            "category_code": None,
-            "league_code": None,
+            "category_code": "TRANSFER",
+            "league_code": "TRANSFER",
             "is_adult_mode": 0,
             "source_files": "[]",
             "status": "published",
@@ -158,44 +158,53 @@ def apply_season_transfers(
         )
 
     transfer_repo = LeagueTransferRepository(connection)
-    transfer_repo.create_many(entries)
+    try:
+        transfer_repo.create_many(entries)
+    except Exception:
+        # Rollback marker tournament on failure to avoid orphan rows
+        tournament_repo.delete(marker_tournament_id)
+        raise
 
-    audit = AuditLogService(connection)
-    for candidate in preview.relegated:
-        audit.log_event(
-            SEASON_TRANSFER_APPLIED,
-            "Сезонный переход: вылет",
-            f"{candidate.fio}: {candidate.league_code} -> FIRST",
-            context={
-                "player_id": candidate.player_id,
-                "from_league_code": candidate.league_code,
-                "to_league_code": "FIRST",
-                "rating_points": candidate.rating_points,
-                "rating_position": candidate.rating_position,
-            },
-            entity_type="player",
-            entity_id=str(candidate.player_id),
-            source=actor,
-            operation_group_id=operation_group_id,
-        )
+    # Audit logging is non-critical; failure here does not corrupt transfer data
+    try:
+        audit = AuditLogService(connection)
+        for candidate in preview.relegated:
+            audit.log_event(
+                SEASON_TRANSFER_APPLIED,
+                "Сезонный переход: вылет",
+                f"{candidate.fio}: {candidate.league_code} -> FIRST",
+                context={
+                    "player_id": candidate.player_id,
+                    "from_league_code": candidate.league_code,
+                    "to_league_code": "FIRST",
+                    "rating_points": candidate.rating_points,
+                    "rating_position": candidate.rating_position,
+                },
+                entity_type="player",
+                entity_id=str(candidate.player_id),
+                source=actor,
+                operation_group_id=operation_group_id,
+            )
 
-    for candidate in preview.promoted:
-        audit.log_event(
-            SEASON_TRANSFER_APPLIED,
-            "Сезонный переход: повышение",
-            f"{candidate.fio}: {candidate.league_code} -> PREMIER",
-            context={
-                "player_id": candidate.player_id,
-                "from_league_code": candidate.league_code,
-                "to_league_code": "PREMIER",
-                "rating_points": candidate.rating_points,
-                "rating_position": candidate.rating_position,
-            },
-            entity_type="player",
-            entity_id=str(candidate.player_id),
-            source=actor,
-            operation_group_id=operation_group_id,
-        )
+        for candidate in preview.promoted:
+            audit.log_event(
+                SEASON_TRANSFER_APPLIED,
+                "Сезонный переход: повышение",
+                f"{candidate.fio}: {candidate.league_code} -> PREMIER",
+                context={
+                    "player_id": candidate.player_id,
+                    "from_league_code": candidate.league_code,
+                    "to_league_code": "PREMIER",
+                    "rating_points": candidate.rating_points,
+                    "rating_position": candidate.rating_position,
+                },
+                entity_type="player",
+                entity_id=str(candidate.player_id),
+                source=actor,
+                operation_group_id=operation_group_id,
+            )
+    except Exception:
+        pass  # Audit failure is non-critical; transfers are already persisted
 
     return SeasonTransferResult(
         applied_count=len(entries),
