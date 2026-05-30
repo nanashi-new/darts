@@ -1,7 +1,14 @@
 {
   "task_id": "task-coach-workflow-v1",
   "task_description": "P3-23: Coach Workflow v1 - Add coach tasks, training plans, Coach tab in MainWindow, player card integration, and basic analytics for the darts league management app.",
-  "status": "in_progress",
+  "status": "completed",
   "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
-  "blocked_reason": null
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "mypy clean (46 source files), 151 tests pass (70 skipped for headless display), all review issues addressed (audit on delete, dashboard optimization, due_date nullable UI)"
+  }
 }
