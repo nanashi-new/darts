@@ -56,6 +56,7 @@ from app.ui.import_apply_review_dialog import ImportApplyReviewDialog
 from app.ui.import_preview_dialog import ImportPreviewDialog
 from app.ui.labels import category_label, tournament_status_label
 from app.ui.player_match_dialog import PlayerMatchDialog
+from app.ui.smart_import_dialog import SmartImportDialog
 
 
 class TableBlocksDialog(QDialog):
@@ -224,6 +225,11 @@ class ImportExportView(QWidget):
         self.import_button.setToolTip("Выбрать XLSX-файл и пройти предпросмотр перед импортом.")
         self.import_button.clicked.connect(self._on_import_clicked)
         layout.addWidget(self.import_button)
+
+        self.smart_import_button = QPushButton("Умный импорт", self)
+        self.smart_import_button.setToolTip("Импорт из файлов заказчика (DOCX, PDF, XLSX) с выбором режима.")
+        self.smart_import_button.clicked.connect(self._on_smart_import_clicked)
+        layout.addWidget(self.smart_import_button)
 
         self.import_folder_button = QPushButton("Импорт папки", self)
         self.import_folder_button.clicked.connect(self._on_import_folder_clicked)
@@ -629,6 +635,10 @@ class ImportExportView(QWidget):
             operation_group_id=apply_report.operation_group_id or None,
         )
         self._show_apply_review(apply_report)
+
+    def _on_smart_import_clicked(self) -> None:
+        dialog = SmartImportDialog(self)
+        dialog.exec()
 
     def _on_import_folder_clicked(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, "Выберите папку с XLSX")
