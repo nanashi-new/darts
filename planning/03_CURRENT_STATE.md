@@ -33,7 +33,9 @@
 - P0 для v1.1 закрыт и зафиксирован в release-readiness commit.
 - Zip/exe fallback release готов: `dist/DartsLiga.exe` и `release/DartsLiga-release.zip`.
 - Windows installer gate закрыт: `release/DartsLiga-Setup.exe` собирается и проходит shortcut/uninstall smoke.
-- Следующий рабочий слой: data safety и сезонные переходы лиг.
+- P1-16 data safety закрыт: backup/export профиля, import/restore из файла, health-check (integrity + размер + restore points), русские подтверждения перед опасными действиями, UI управления точками восстановления.
+- P1-17 сезонные переходы закрыт: расчёт нижних 4 Премьер / верхних 4 Первой по rolling rating, preview перед применением, подтверждение, transfer history/audit, edge cases (ties, fewer players, empty season).
+- Следующий рабочий слой: P2 player card v2 и tournament workflow polish.
 
 ## Следующие Решения Уже Зафиксированы
 
@@ -83,6 +85,7 @@
 - `test_run/` удален как generated runtime-папка.
 - `test_run/`, `.local/`, `.venv/`, `.tmp/` и pytest runtime-папки игнорируются.
 - Проверка старых брендовых и классификационных терминов должна выполняться по активным product-файлам без `planning/archive/`.
+- Последний P1-16/P1-17 gate: `python -m mypy app` чист (40 source files), `pytest -q -rs` -> `124 passed, 42 skipped, 14 deselected, 14 subtests passed`; backup/export/import/health-check и season transfers подтверждены unit/integration тестами.
 
 ## Документы
 
