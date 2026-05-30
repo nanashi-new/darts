@@ -160,6 +160,43 @@ QSpinBox {
 QSplitter::handle {
     background-color: #E0E0E0;
 }
+
+/* Sidebar styles - light theme */
+#sidebar_widget {
+    background-color: #F0F0F0;
+    border-right: 1px solid #E0E0E0;
+}
+#sidebar_branding {
+    font-size: 14px;
+    font-weight: bold;
+    color: #1976D2;
+}
+#sidebar_widget QPushButton {
+    background-color: transparent;
+    color: #424242;
+    text-align: left;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+#sidebar_widget QPushButton:hover {
+    background-color: #E0E0E0;
+}
+#sidebar_widget QPushButton:checked {
+    background-color: #BBDEFB;
+    color: #1976D2;
+    font-weight: bold;
+}
+#sidebar_collapse_btn {
+    background-color: transparent;
+    color: #757575;
+    border-top: 1px solid #E0E0E0;
+    border-radius: 0px;
+    padding: 6px;
+}
+#sidebar_collapse_btn:hover {
+    background-color: #E0E0E0;
+}
 """
 
 DARK_THEME_QSS = """
@@ -320,6 +357,43 @@ QSpinBox {
 
 QSplitter::handle {
     background-color: #2D3843;
+}
+
+/* Sidebar styles - dark theme */
+#sidebar_widget {
+    background-color: #151D25;
+    border-right: 1px solid #2D3843;
+}
+#sidebar_branding {
+    font-size: 14px;
+    font-weight: bold;
+    color: #54A3D8;
+}
+#sidebar_widget QPushButton {
+    background-color: transparent;
+    color: #8B9DAF;
+    text-align: left;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+#sidebar_widget QPushButton:hover {
+    background-color: #253545;
+}
+#sidebar_widget QPushButton:checked {
+    background-color: #253545;
+    color: #54A3D8;
+    font-weight: bold;
+}
+#sidebar_collapse_btn {
+    background-color: transparent;
+    color: #6B7B8D;
+    border-top: 1px solid #2D3843;
+    border-radius: 0px;
+    padding: 6px;
+}
+#sidebar_collapse_btn:hover {
+    background-color: #253545;
 }
 """
 

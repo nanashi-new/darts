@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
     QHBoxLayout,
+    QHeaderView,
     QInputDialog,
     QLabel,
     QMessageBox,
@@ -92,8 +93,14 @@ class TournamentsView(QWidget):
         self.tournaments_list_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.tournaments_list_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.tournaments_list_table.horizontalHeader().setStretchLastSection(True)
+        self.tournaments_list_table.setAlternatingRowColors(True)
         self.tournaments_list_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.tournaments_list_table.cellClicked.connect(self._on_tournament_list_clicked)
+        t_header = self.tournaments_list_table.horizontalHeader()
+        t_header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        t_header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        t_header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        t_header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         list_layout.addWidget(self.tournaments_list_table)
         self._splitter.addWidget(self._list_panel)
 
@@ -114,6 +121,8 @@ class TournamentsView(QWidget):
         self.results_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.results_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.results_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.results_table.setAlternatingRowColors(True)
+        self.results_table.horizontalHeader().setStretchLastSection(True)
         self.results_table.setAlternatingRowColors(True)
         self.results_table.horizontalHeader().setStretchLastSection(True)
         self.results_table.doubleClicked.connect(lambda *_args: self._open_selected_result_details())

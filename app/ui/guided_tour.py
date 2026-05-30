@@ -33,28 +33,28 @@ class TourStep:
 
 DEFAULT_STEPS: list[TourStep] = [
     TourStep(
-        target_name="main_workspace_tabs",
-        text="Используйте вкладки для навигации между разделами приложения.",
+        target_name="sidebar_widget",
+        text="Используйте боковую панель для навигации между разделами приложения.",
     ),
     TourStep(
-        target_name="main_workspace_tabs",
-        text="Вкладка «Импорт/Экспорт» позволяет загружать результаты турниров из файлов.",
+        target_name="sidebar_widget",
+        text="Раздел «Данные» содержит импорт/экспорт результатов турниров из файлов.",
     ),
     TourStep(
-        target_name="main_workspace_tabs",
-        text="Вкладка «Рейтинг» показывает текущий рейтинг игроков на основе опубликованных турниров.",
+        target_name="sidebar_widget",
+        text="Раздел «Работа» содержит рейтинг игроков, турниры и список участников.",
     ),
     TourStep(
-        target_name="main_workspace_tabs",
-        text="Вкладка «Игроки» содержит базу всех участников лиги.",
+        target_name="sidebar_widget",
+        text="Раздел «Тренер» содержит задачи, аналитику и контекст.",
     ),
     TourStep(
-        target_name="main_workspace_tabs",
-        text="Вкладка «Диагностика» помогает проверить целостность данных.",
+        target_name="sidebar_widget",
+        text="Раздел «Система» содержит диагностику, настройки и справку.",
     ),
     TourStep(
-        target_name="main_workspace_tabs",
-        text="Вкладка «Справка» содержит полное руководство и поиск по содержимому.",
+        target_name="sidebar_widget",
+        text="Боковую панель можно свернуть кнопкой внизу для увеличения рабочей области.",
     ),
 ]
 

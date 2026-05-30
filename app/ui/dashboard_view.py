@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QPushButton,
     QSizePolicy,
@@ -23,9 +24,8 @@ from app.db.database import get_connection
 from app.db.repositories import TournamentRepository
 from app.runtime_paths import get_runtime_paths
 from app.services.import_report import list_import_reports
-from app.services.notes import list_notes_hub
 from app.settings import get_appearance_settings, get_last_self_check
-from app.ui.labels import import_apply_status_label, tournament_status_label, visibility_label
+from app.ui.labels import tournament_status_label
 from app.ui.player_card_dialog import PlayerCardDialog
 from app.ui.welcome_widget import WelcomeWidget
 
@@ -47,45 +47,46 @@ class DashboardView(QWidget):
         self._welcome_widget = WelcomeWidget(self)
         self._stacked.addWidget(self._welcome_widget)
 
-        # Page 1: main content
+        # Page 1: main content with card grid
         self._main_content = QWidget(self)
         layout = QVBoxLayout(self._main_content)
 
         self.branding_label = self._build_branding_label()
         layout.addWidget(self.branding_label)
 
-        layout.addWidget(QLabel("Главная", self._main_content))
-        layout.addWidget(self._build_profile_status_group())
-        layout.addLayout(self._build_quick_actions())
-        layout.addWidget(self._build_summary_group())
-        layout.addWidget(self._build_attention_group(), 1)
+        layout.addWidget(QLabel("\u0413\u043b\u0430\u0432\u043d\u0430\u044f", self._main_content))
 
-        self.recent_tournaments_table = QTableWidget(0, 3, self._main_content)
-        self.recent_tournaments_table.setHorizontalHeaderLabels(["Дата", "Турнир", "Статус"])
+        # Card grid layout
+        cards_grid = QGridLayout()
+
+        # Row 0: Profile status and Quick actions
+        cards_grid.addWidget(self._build_profile_status_group(), 0, 0)
+        quick_actions_group = QGroupBox("\u0411\u044b\u0441\u0442\u0440\u044b\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f", self._main_content)
+        qa_layout = QVBoxLayout(quick_actions_group)
+        qa_buttons_layout = self._build_quick_actions()
+        qa_layout.addLayout(qa_buttons_layout)
+        cards_grid.addWidget(quick_actions_group, 0, 1)
+
+        # Row 1: Summary and Attention
+        cards_grid.addWidget(self._build_summary_group(), 1, 0)
+        cards_grid.addWidget(self._build_attention_group(), 1, 1)
+
+        # Row 2: Recent tournaments (full width)
+        tournaments_group = QGroupBox("\u041f\u043e\u0441\u043b\u0435\u0434\u043d\u0438\u0435 \u0442\u0443\u0440\u043d\u0438\u0440\u044b", self._main_content)
+        t_layout = QVBoxLayout(tournaments_group)
+        self.recent_tournaments_table = QTableWidget(0, 3, tournaments_group)
+        self.recent_tournaments_table.setHorizontalHeaderLabels(["\u0414\u0430\u0442\u0430", "\u0422\u0443\u0440\u043d\u0438\u0440", "\u0421\u0442\u0430\u0442\u0443\u0441"])
         self._configure_table(self.recent_tournaments_table)
-        layout.addWidget(QLabel("Последние турниры", self._main_content))
-        layout.addWidget(self.recent_tournaments_table, 2)
+        header = self.recent_tournaments_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        t_layout.addWidget(self.recent_tournaments_table)
+        cards_grid.addWidget(tournaments_group, 2, 0, 1, 2)
 
-        self.recent_imports_table = QTableWidget(0, 4, self._main_content)
-        self.recent_imports_table.setHorizontalHeaderLabels(["Создан", "Турнир", "Статус", "Импортировано"])
-        self._configure_table(self.recent_imports_table)
-        layout.addWidget(QLabel("Последние отчеты импорта", self._main_content))
-        layout.addWidget(self.recent_imports_table, 2)
+        layout.addLayout(cards_grid)
 
-        self.follow_up_notes_table = QTableWidget(0, 3, self._main_content)
-        self.follow_up_notes_table.setHorizontalHeaderLabels(["Объект", "Заголовок", "Доступ"])
-        self._configure_table(self.follow_up_notes_table)
-        layout.addWidget(QLabel("Контрольные заметки", self._main_content))
-        layout.addWidget(self.follow_up_notes_table, 2)
-
-        self.open_follow_up_player_button = QPushButton("Карточка", self._main_content)
-        self.open_follow_up_player_button.setToolTip(
-            "Открыть карточку выбранного игрока из контрольных заметок."
-        )
-        self.open_follow_up_player_button.clicked.connect(self._open_selected_follow_up_player)
-        layout.addWidget(self.open_follow_up_player_button)
-
-        self.diagnostics_summary_label = QLabel("Диагностика: самопроверка еще не запускалась", self._main_content)
+        self.diagnostics_summary_label = QLabel("\u0414\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0430: \u0441\u0430\u043c\u043e\u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 \u0435\u0449\u0435 \u043d\u0435 \u0437\u0430\u043f\u0443\u0441\u043a\u0430\u043b\u0430\u0441\u044c", self._main_content)
         layout.addWidget(self.diagnostics_summary_label)
 
         layout.addStretch(1)
@@ -99,6 +100,7 @@ class DashboardView(QWidget):
         table.setAlternatingRowColors(True)
         table.horizontalHeader().setStretchLastSection(True)
         table.verticalHeader().setVisible(False)
+        table.setWordWrap(True)
 
     def _build_branding_label(self) -> QLabel:
         appearance = get_appearance_settings()
@@ -111,18 +113,18 @@ class DashboardView(QWidget):
                     pixmap.scaledToHeight(60, Qt.TransformationMode.SmoothTransformation)
                 )
                 return label
-        label.setText("<b>Дартс Лига</b>")
+        label.setText("<b>\u0414\u0430\u0440\u0442\u0441 \u041b\u0438\u0433\u0430</b>")
         return label
 
     def _build_quick_actions(self) -> QHBoxLayout:
         layout = QHBoxLayout()
         actions = [
-            ("Рейтинг", "Рейтинг", "Открыть текущие рейтинги по категориям и взрослым зачетам."),
-            ("Турниры", "Турниры", "Открыть турниры, публикацию и корректировки."),
-            ("Игроки", "Игроки", "Открыть список игроков и карточки."),
-            ("Импорт", "Импорт/Экспорт", "Импортировать XLSX и проверить отчет перед публикацией."),
-            ("Отчеты", "Отчеты", "Открыть экспорт, журнал и историю импортов."),
-            ("Диагностика", "Диагностика", "Проверить профиль, логи и точки восстановления."),
+            ("\u0420\u0435\u0439\u0442\u0438\u043d\u0433", "\u0420\u0435\u0439\u0442\u0438\u043d\u0433", "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0442\u0435\u043a\u0443\u0449\u0438\u0435 \u0440\u0435\u0439\u0442\u0438\u043d\u0433\u0438 \u043f\u043e \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u044f\u043c \u0438 \u0432\u0437\u0440\u043e\u0441\u043b\u044b\u043c \u0437\u0430\u0447\u0435\u0442\u0430\u043c."),
+            ("\u0422\u0443\u0440\u043d\u0438\u0440\u044b", "\u0422\u0443\u0440\u043d\u0438\u0440\u044b", "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0442\u0443\u0440\u043d\u0438\u0440\u044b, \u043f\u0443\u0431\u043b\u0438\u043a\u0430\u0446\u0438\u044e \u0438 \u043a\u043e\u0440\u0440\u0435\u043a\u0442\u0438\u0440\u043e\u0432\u043a\u0438."),
+            ("\u0418\u0433\u0440\u043e\u043a\u0438", "\u0418\u0433\u0440\u043e\u043a\u0438", "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0441\u043f\u0438\u0441\u043e\u043a \u0438\u0433\u0440\u043e\u043a\u043e\u0432 \u0438 \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0438."),
+            ("\u0418\u043c\u043f\u043e\u0440\u0442", "\u0418\u043c\u043f\u043e\u0440\u0442/\u042d\u043a\u0441\u043f\u043e\u0440\u0442", "\u0418\u043c\u043f\u043e\u0440\u0442\u0438\u0440\u043e\u0432\u0430\u0442\u044c XLSX \u0438 \u043f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u043e\u0442\u0447\u0435\u0442 \u043f\u0435\u0440\u0435\u0434 \u043f\u0443\u0431\u043b\u0438\u043a\u0430\u0446\u0438\u0435\u0439."),
+            ("\u041e\u0442\u0447\u0435\u0442\u044b", "\u041e\u0442\u0447\u0435\u0442\u044b", "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u044d\u043a\u0441\u043f\u043e\u0440\u0442, \u0436\u0443\u0440\u043d\u0430\u043b \u0438 \u0438\u0441\u0442\u043e\u0440\u0438\u044e \u0438\u043c\u043f\u043e\u0440\u0442\u043e\u0432."),
+            ("\u0414\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0430", "\u0414\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0430", "\u041f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u043f\u0440\u043e\u0444\u0438\u043b\u044c, \u043b\u043e\u0433\u0438 \u0438 \u0442\u043e\u0447\u043a\u0438 \u0432\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f."),
         ]
         for label, target, tooltip in actions:
             button = QPushButton(label, self)
@@ -133,13 +135,13 @@ class DashboardView(QWidget):
         return layout
 
     def _build_profile_status_group(self) -> QGroupBox:
-        group = QGroupBox("Статус рабочего профиля", self)
+        group = QGroupBox("\u0421\u0442\u0430\u0442\u0443\u0441 \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e \u043f\u0440\u043e\u0444\u0438\u043b\u044f", self)
         layout = QGridLayout(group)
-        self.profile_status_label = QLabel("Профиль: -", group)
-        self.database_status_label = QLabel("База: -", group)
-        self.dashboard_diagnostics_label = QLabel("Диагностика: -", group)
-        self.refresh_button = QPushButton("Обновить", group)
-        self.refresh_button.setToolTip("Обновить сводку главной страницы.")
+        self.profile_status_label = QLabel("\u041f\u0440\u043e\u0444\u0438\u043b\u044c: -", group)
+        self.database_status_label = QLabel("\u0411\u0430\u0437\u0430: -", group)
+        self.dashboard_diagnostics_label = QLabel("\u0414\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0430: -", group)
+        self.refresh_button = QPushButton("\u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c", group)
+        self.refresh_button.setToolTip("\u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c \u0441\u0432\u043e\u0434\u043a\u0443 \u0433\u043b\u0430\u0432\u043d\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u044b.")
         self.refresh_button.clicked.connect(self.refresh)
         layout.addWidget(self.profile_status_label, 0, 0)
         layout.addWidget(self.database_status_label, 0, 1)
@@ -148,17 +150,17 @@ class DashboardView(QWidget):
         return group
 
     def _build_summary_group(self) -> QGroupBox:
-        group = QGroupBox("Операционная сводка", self)
+        group = QGroupBox("\u041e\u043f\u0435\u0440\u0430\u0446\u0438\u043e\u043d\u043d\u0430\u044f \u0441\u0432\u043e\u0434\u043a\u0430", self)
         layout = QGridLayout(group)
         self.summary_labels: dict[str, QLabel] = {}
         entries = [
-            ("players", "Игроки"),
-            ("tournaments", "Турниры"),
-            ("drafts", "Черновики"),
-            ("review", "На проверке"),
-            ("published", "Опубликованы"),
-            ("follow_up", "Контрольные заметки"),
-            ("restore_points", "Точки восстановления"),
+            ("players", "\u0418\u0433\u0440\u043e\u043a\u0438"),
+            ("tournaments", "\u0422\u0443\u0440\u043d\u0438\u0440\u044b"),
+            ("drafts", "\u0427\u0435\u0440\u043d\u043e\u0432\u0438\u043a\u0438"),
+            ("review", "\u041d\u0430 \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0435"),
+            ("published", "\u041e\u043f\u0443\u0431\u043b\u0438\u043a\u043e\u0432\u0430\u043d\u044b"),
+            ("follow_up", "\u041a\u043e\u043d\u0442\u0440\u043e\u043b\u044c\u043d\u044b\u0435 \u0437\u0430\u043c\u0435\u0442\u043a\u0438"),
+            ("restore_points", "\u0422\u043e\u0447\u043a\u0438 \u0432\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f"),
         ]
         for index, (key, title) in enumerate(entries):
             label = QLabel(f"{title}: 0", group)
@@ -167,11 +169,15 @@ class DashboardView(QWidget):
         return group
 
     def _build_attention_group(self) -> QGroupBox:
-        group = QGroupBox("Требует внимания", self)
+        group = QGroupBox("\u0422\u0440\u0435\u0431\u0443\u0435\u0442 \u0432\u043d\u0438\u043c\u0430\u043d\u0438\u044f", self)
         layout = QVBoxLayout(group)
         self.attention_table = QTableWidget(0, 3, group)
-        self.attention_table.setHorizontalHeaderLabels(["Приоритет", "Сценарий", "Что сделать"])
+        self.attention_table.setHorizontalHeaderLabels(["\u041f\u0440\u0438\u043e\u0440\u0438\u0442\u0435\u0442", "\u0421\u0446\u0435\u043d\u0430\u0440\u0438\u0439", "\u0427\u0442\u043e \u0441\u0434\u0435\u043b\u0430\u0442\u044c"])
         self._configure_table(self.attention_table)
+        header = self.attention_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         layout.addWidget(self.attention_table)
         return group
 
@@ -186,25 +192,23 @@ class DashboardView(QWidget):
         self._fill_summary()
         self._fill_attention()
         self._fill_recent_tournaments()
-        self._fill_recent_imports()
-        self._fill_follow_up_notes()
         self._fill_diagnostics_summary()
 
     def _fill_profile_status(self) -> None:
         paths = get_runtime_paths()
-        self.profile_status_label.setText(f"Профиль: {paths.profile_root.name}")
+        self.profile_status_label.setText(f"\u041f\u0440\u043e\u0444\u0438\u043b\u044c: {paths.profile_root.name}")
         self.profile_status_label.setToolTip(str(paths.profile_root))
         self.database_status_label.setText(
-            "База: доступна" if paths.db_path.exists() else "База: будет создана"
+            "\u0411\u0430\u0437\u0430: \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430" if paths.db_path.exists() else "\u0411\u0430\u0437\u0430: \u0431\u0443\u0434\u0435\u0442 \u0441\u043e\u0437\u0434\u0430\u043d\u0430"
         )
         last_self_check = get_last_self_check()
         if not last_self_check:
-            self.dashboard_diagnostics_label.setText("Диагностика: самопроверка не запускалась")
+            self.dashboard_diagnostics_label.setText("\u0414\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0430: \u0441\u0430\u043c\u043e\u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 \u043d\u0435 \u0437\u0430\u043f\u0443\u0441\u043a\u0430\u043b\u0430\u0441\u044c")
             return
         issues = last_self_check.get("issues", [])
         created_at = last_self_check.get("created_at", "-")
         self.dashboard_diagnostics_label.setText(
-            f"Диагностика: проблем - {len(issues)}, проверка - {created_at}"
+            f"\u0414\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0430: \u043f\u0440\u043e\u0431\u043b\u0435\u043c - {len(issues)}, \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 - {created_at}"
         )
 
     def _fill_summary(self) -> None:
@@ -218,13 +222,13 @@ class DashboardView(QWidget):
             "restore_points": self._count_rows("restore_points"),
         }
         titles = {
-            "players": "Игроки",
-            "tournaments": "Турниры",
-            "drafts": "Черновики",
-            "review": "На проверке",
-            "published": "Опубликованы",
-            "follow_up": "Контрольные заметки",
-            "restore_points": "Точки восстановления",
+            "players": "\u0418\u0433\u0440\u043e\u043a\u0438",
+            "tournaments": "\u0422\u0443\u0440\u043d\u0438\u0440\u044b",
+            "drafts": "\u0427\u0435\u0440\u043d\u043e\u0432\u0438\u043a\u0438",
+            "review": "\u041d\u0430 \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0435",
+            "published": "\u041e\u043f\u0443\u0431\u043b\u0438\u043a\u043e\u0432\u0430\u043d\u044b",
+            "follow_up": "\u041a\u043e\u043d\u0442\u0440\u043e\u043b\u044c\u043d\u044b\u0435 \u0437\u0430\u043c\u0435\u0442\u043a\u0438",
+            "restore_points": "\u0422\u043e\u0447\u043a\u0438 \u0432\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f",
         }
         for key, value in counts.items():
             self.summary_labels[key].setText(f"{titles[key]}: {value}")
@@ -235,10 +239,10 @@ class DashboardView(QWidget):
             status = str(tournament.get("status") or "")
             if status not in {"draft", "review"}:
                 continue
-            action = "Проверить и отправить на публикацию" if status == "draft" else "Подтвердить или вернуть к правкам"
+            action = "\u041f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u0438 \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043d\u0430 \u043f\u0443\u0431\u043b\u0438\u043a\u0430\u0446\u0438\u044e" if status == "draft" else "\u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u0438\u043b\u0438 \u0432\u0435\u0440\u043d\u0443\u0442\u044c \u043a \u043f\u0440\u0430\u0432\u043a\u0430\u043c"
             self._append_attention_row(
-                "Турнир",
-                str(tournament.get("name") or "Без названия"),
+                "\u0422\u0443\u0440\u043d\u0438\u0440",
+                str(tournament.get("name") or "\u0411\u0435\u0437 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u044f"),
                 action,
             )
             if self.attention_table.rowCount() >= 4:
@@ -248,21 +252,23 @@ class DashboardView(QWidget):
             report = report_record.report
             if report.warnings_count <= 0 and report.errors_count <= 0:
                 continue
-            details = "; ".join(report.warnings[:2]) or "Проверить отчет импорта"
-            self._append_attention_row("Импорт", report.tournament_name, details)
+            details = "; ".join(report.warnings[:2]) or "\u041f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u043e\u0442\u0447\u0435\u0442 \u0438\u043c\u043f\u043e\u0440\u0442\u0430"
+            self._append_attention_row("\u0418\u043c\u043f\u043e\u0440\u0442", report.tournament_name, details)
             if self.attention_table.rowCount() >= 6:
                 break
 
         last_self_check = get_last_self_check()
         issues = last_self_check.get("issues", []) if last_self_check else []
         if issues:
-            self._append_attention_row("Диагностика", "Самопроверка", "; ".join(str(issue) for issue in issues[:2]))
+            self._append_attention_row("\u0414\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0430", "\u0421\u0430\u043c\u043e\u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0430", "; ".join(str(issue) for issue in issues[:2]))
 
     def _append_attention_row(self, priority: str, scenario: str, action: str) -> None:
         row_index = self.attention_table.rowCount()
         self.attention_table.insertRow(row_index)
         for column, value in enumerate([priority, scenario, action]):
-            self.attention_table.setItem(row_index, column, QTableWidgetItem(value))
+            item = QTableWidgetItem(value)
+            item.setToolTip(value)
+            self.attention_table.setItem(row_index, column, item)
 
     def _count_rows(
         self,
@@ -287,67 +293,20 @@ class DashboardView(QWidget):
                 tournament_status_label(tournament.get("status")),
             ]
             for column, value in enumerate(values):
-                self.recent_tournaments_table.setItem(
-                    row_index,
-                    column,
-                    QTableWidgetItem("" if value is None else str(value)),
-                )
-
-    def _fill_recent_imports(self) -> None:
-        self.recent_imports_table.setRowCount(0)
-        for report_record in list_import_reports(self._connection)[:5]:
-            row_index = self.recent_imports_table.rowCount()
-            self.recent_imports_table.insertRow(row_index)
-            values = [
-                report_record.created_at,
-                report_record.report.tournament_name,
-                import_apply_status_label(report_record.report.apply_status),
-                report_record.report.rows_imported,
-            ]
-            for column, value in enumerate(values):
-                self.recent_imports_table.setItem(row_index, column, QTableWidgetItem(str(value)))
-
-    def _fill_follow_up_notes(self) -> None:
-        self.follow_up_notes_table.setRowCount(0)
-        for note in list_notes_hub(
-            connection=self._connection,
-            note_types=["follow_up"],
-        )[:5]:
-            row_index = self.follow_up_notes_table.rowCount()
-            self.follow_up_notes_table.insertRow(row_index)
-            values = [
-                note.entity_label or f"{note.entity_type}:{note.entity_id}",
-                note.title,
-                visibility_label(note.visibility),
-            ]
-            for column, value in enumerate(values):
-                item = QTableWidgetItem(str(value))
-                item.setData(Qt.ItemDataRole.UserRole, note.entity_type)
-                item.setData(Qt.ItemDataRole.UserRole + 1, note.entity_id)
-                self.follow_up_notes_table.setItem(row_index, column, item)
+                item = QTableWidgetItem("" if value is None else str(value))
+                item.setToolTip("" if value is None else str(value))
+                self.recent_tournaments_table.setItem(row_index, column, item)
 
     def _fill_diagnostics_summary(self) -> None:
         last_self_check = get_last_self_check()
         if not last_self_check:
-            self.diagnostics_summary_label.setText("Диагностика: самопроверка еще не запускалась")
+            self.diagnostics_summary_label.setText("\u0414\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0430: \u0441\u0430\u043c\u043e\u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 \u0435\u0449\u0435 \u043d\u0435 \u0437\u0430\u043f\u0443\u0441\u043a\u0430\u043b\u0430\u0441\u044c")
             return
         issues = last_self_check.get("issues", [])
         created_at = last_self_check.get("created_at", "-")
         self.diagnostics_summary_label.setText(
-            f"Диагностика: проблем - {len(issues)}, последняя проверка - {created_at}"
+            f"\u0414\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0430: \u043f\u0440\u043e\u0431\u043b\u0435\u043c - {len(issues)}, \u043f\u043e\u0441\u043b\u0435\u0434\u043d\u044f\u044f \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 - {created_at}"
         )
-
-    def _open_selected_follow_up_player(self) -> None:
-        row = self.follow_up_notes_table.currentRow()
-        if row < 0:
-            return
-        item = self.follow_up_notes_table.item(row, 0)
-        if item is None:
-            return
-        entity_type = str(item.data(Qt.ItemDataRole.UserRole) or "")
-        entity_id = str(item.data(Qt.ItemDataRole.UserRole + 1) or "")
-        if entity_type == "player" and entity_id.isdigit():
-            PlayerCardDialog(connection=self._connection, player_id=int(entity_id), parent=self).exec()
 
     def _navigate_to(self, target: str) -> None:
         if self._navigate is not None:
