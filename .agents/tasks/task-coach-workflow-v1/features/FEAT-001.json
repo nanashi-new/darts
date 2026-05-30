@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "feat",
   "description": "Add coach_tasks and training_plans database tables, repository classes, and CRUD service modules with full test coverage.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "1. In app/db/schema.py: Add COACH_TASKS_TABLE_SQL with columns (id INTEGER PK AUTOINCREMENT, player_id INTEGER nullable FK->players, title TEXT NOT NULL, description TEXT, due_date TEXT, status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','in_progress','done','cancelled')), priority TEXT NOT NULL DEFAULT 'normal' CHECK(priority IN ('low','normal','high','urgent')), category TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, completed_at TEXT). Add COACH_TASKS_INDEXES_SQL with indexes on (player_id, status, due_date) and (status, priority, due_date). Add to SCHEMA_SQL list.",
     "2. In app/db/schema.py: Add TRAINING_PLANS_TABLE_SQL with columns (id INTEGER PK AUTOINCREMENT, player_id INTEGER NOT NULL FK->players, title TEXT NOT NULL, description TEXT, goal TEXT, start_date TEXT, end_date TEXT, status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','completed','paused')), exercises_json TEXT NOT NULL DEFAULT '[]', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP). Add TRAINING_PLANS_INDEXES_SQL with index on (player_id, status). Add to SCHEMA_SQL list.",
@@ -30,5 +30,5 @@
     "python -m pytest -x -q"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All 10 steps implemented. mypy clean on new files. 15 new tests pass. 151 total tests pass (63 skipped for display). Pre-existing mypy errors in tests/ unrelated to this feature (70 errors in 17 files, none in coach_tasks or training_plans code)."
 }
