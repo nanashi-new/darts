@@ -244,3 +244,160 @@ def test_detect_format_preserves_existing() -> None:
     assert detect_format("f.csv") == "csv"
     assert detect_format("f.json") == "json"
     assert detect_format("f.xlsx") == "xlsx"
+
+
+# --- Import modes tests (require in-memory DB) ---
+
+import sqlite3
+
+from app.db.schema import initialize_schema
+from app.services.import_modes import (
+    import_multi_tournament,
+    import_players_only,
+    import_update_players,
+)
+from app.services.import_xlsx import TableBlock
+
+
+def _make_db() -> sqlite3.Connection:
+    """Create an in-memory database with full schema."""
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    initialize_schema(conn)
+    return conn
+
+
+def _make_block(
+    rows: list[dict[str, object]],
+    sheet_name: str = "test",
+) -> TableBlock:
+    """Create a minimal TableBlock with given rows."""
+    return TableBlock(
+        sheet_name=sheet_name,
+        start_row=1,
+        end_row=len(rows),
+        header_mapping={},
+        rows=rows,
+        warnings=[],
+        errors=[],
+        needs_mapping=False,
+        confidence=1.0,
+        missing_required_columns=[],
+    )
+
+
+@pytest.mark.integration
+def test_import_players_only_creates_new() -> None:
+    """import_players_only creates new players and reports counts."""
+    conn = _make_db()
+    block = _make_block([
+        {"fio": "Иванов Иван", "birth": "2010", "coach": "Тренер А"},
+        {"fio": "Петров Петр", "birth": "2011", "coach": "Тренер Б"},
+    ])
+
+    report = import_players_only(connection=conn, blocks=[block])
+
+    assert report.created == 2
+    assert report.existing == 0
+
+
+@pytest.mark.integration
+def test_import_players_only_detects_existing() -> None:
+    """import_players_only detects an existing player and only creates new ones."""
+    conn = _make_db()
+    # Pre-create a player
+    conn.execute(
+        "INSERT INTO players (last_name, first_name, middle_name, birth_date) "
+        "VALUES (?, ?, ?, ?)",
+        ("иванов", "иван", None, "2010"),
+    )
+    conn.commit()
+
+    block = _make_block([
+        {"fio": "Иванов Иван", "birth": "2010", "coach": "Тренер А"},
+        {"fio": "Петров Петр", "birth": "2011", "coach": "Тренер Б"},
+    ])
+
+    report = import_players_only(connection=conn, blocks=[block])
+
+    assert report.created == 1
+    assert report.existing == 1
+
+
+@pytest.mark.integration
+def test_import_update_players_fills_empty_coach() -> None:
+    """import_update_players fills empty coach field for an existing player."""
+    conn = _make_db()
+    # Pre-create a player with no coach
+    conn.execute(
+        "INSERT INTO players (last_name, first_name, middle_name, birth_date, coach) "
+        "VALUES (?, ?, ?, ?, ?)",
+        ("иванов", "иван", None, "2010", None),
+    )
+    conn.commit()
+
+    block = _make_block([
+        {"fio": "Иванов Иван", "birth": "2010", "coach": "Тренеров Т.Т."},
+    ])
+
+    report = import_update_players(connection=conn, blocks=[block])
+
+    assert report.updated == 1
+    # Verify the coach was actually written to DB
+    row = conn.execute("SELECT coach FROM players WHERE last_name = 'иванов'").fetchone()
+    assert row["coach"] == "Тренеров Т.Т."
+
+
+@pytest.mark.integration
+def test_import_update_players_does_not_overwrite_existing_coach() -> None:
+    """import_update_players does not overwrite an existing coach value."""
+    conn = _make_db()
+    # Pre-create a player with existing coach
+    conn.execute(
+        "INSERT INTO players (last_name, first_name, middle_name, birth_date, coach) "
+        "VALUES (?, ?, ?, ?, ?)",
+        ("иванов", "иван", None, "2010", "Существующий тренер"),
+    )
+    conn.commit()
+
+    block = _make_block([
+        {"fio": "Иванов Иван", "birth": "2010", "coach": "Новый тренер"},
+    ])
+
+    report = import_update_players(connection=conn, blocks=[block])
+
+    assert report.unchanged == 1
+    # Verify the coach was NOT changed
+    row = conn.execute("SELECT coach FROM players WHERE last_name = 'иванов'").fetchone()
+    assert row["coach"] == "Существующий тренер"
+
+
+@pytest.mark.integration
+def test_import_multi_tournament_creates_separate() -> None:
+    """import_multi_tournament creates separate tournaments per block."""
+    conn = _make_db()
+    block1 = _make_block(
+        [{"fio": "Иванов Иван", "birth": "2010", "place": "1", "coach": None}],
+        sheet_name="Юниоры",
+    )
+    block2 = _make_block(
+        [{"fio": "Петрова Мария", "birth": "2011", "place": "1", "coach": None}],
+        sheet_name="Юниорки",
+    )
+
+    reports = import_multi_tournament(
+        connection=conn,
+        blocks=[block1, block2],
+        base_name="Первенство",
+        tournament_date="2025-01-01",
+        is_adult_mode=False,
+        source_files=["test.docx"],
+    )
+
+    assert len(reports) == 2
+    # Verify tournaments have correct names
+    tournaments = conn.execute(
+        "SELECT name FROM tournaments ORDER BY id"
+    ).fetchall()
+    assert tournaments[0]["name"] == "Первенство - Юниоры"
+    assert tournaments[1]["name"] == "Первенство - Юниорки"
