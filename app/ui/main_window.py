@@ -4,6 +4,7 @@ from PySide6.QtWidgets import QLabel, QMainWindow, QSizePolicy, QStatusBar, QTab
 from app.db.database import get_connection
 from app.runtime_paths import get_runtime_paths
 from app.ui.about_view import AboutView
+from app.ui.coach_view import CoachView
 from app.ui.context_view import ContextView
 from app.ui.dashboard_view import DashboardView
 from app.ui.diagnostics_view import DiagnosticsView
@@ -35,6 +36,7 @@ class MainWindow(QMainWindow):
         tabs.addTab(tournaments_view, "Турниры")
         tabs.addTab(PlayersView(), "Игроки")
         tabs.addTab(ContextView(), "Контекст")
+        tabs.addTab(CoachView(), "Тренер")
         tabs.addTab(ImportExportView(tournaments_view), "Импорт/Экспорт")
         tabs.addTab(ReportsView(), "Отчеты")
         tabs.addTab(DiagnosticsView(), "Диагностика")
@@ -85,6 +87,8 @@ class MainWindow(QMainWindow):
             "Главная": "Главная",
             "Context": "Контекст",
             "Контекст": "Контекст",
+            "Coach": "Тренер",
+            "Тренер": "Тренер",
             "Players": "Игроки",
             "Игроки": "Игроки",
             "Tournaments": "Турниры",

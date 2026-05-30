@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QTabWidget,
@@ -20,27 +21,38 @@ from PySide6.QtWidgets import (
 )
 
 from app.db.repositories import PlayerRepository, ResultRepository
+from app.services.coach_tasks import (
+    CoachTaskRecord,
+    complete_coach_task,
+    list_player_coach_tasks,
+)
 from app.services.league_transfer import LeagueTransferEvent, list_player_league_transfers
 from app.services.notes import EntityNoteDefaults, NoteRecord, create_note, list_entity_notes
 from app.services.rating_snapshot import PlayerRatingStateEntry, list_latest_player_rating_states
 from app.services.training_journal import TrainingEntryRecord, create_training_entry, list_player_training_entries
+from app.services.training_plans import TrainingPlanRecord, list_player_training_plans
 from app.ui.attachments_widget import AttachmentsWidget
+from app.ui.coach_task_dialog import CoachTaskDialog
 from app.ui.custom_fields_widget import CustomFieldsWidget
 from app.ui.entity_notes_dialog import EntityNoteDialog, EntityNotesDialog
 from app.ui.labels import (
     adult_scope_label,
     category_label,
+    coach_task_priority_label,
+    coach_task_status_label,
     gender_label,
     league_label,
     note_type_label,
     priority_label,
     scope_type_label,
     session_type_label,
+    training_plan_status_label,
     visibility_label,
 )
 from app.ui.rating_history_dialog import RatingHistoryDialog
 from app.ui.tags_widget import TagsWidget
 from app.ui.training_entry_dialog import TrainingEntryDialog
+from app.ui.training_plan_dialog import TrainingPlanDialog
 
 
 class PlayerCardDialog(QDialog):
@@ -54,6 +66,8 @@ class PlayerCardDialog(QDialog):
         self._all_notes: list[NoteRecord] = []
         self._league_transfers: list[LeagueTransferEvent] = []
         self._tournament_history: list[dict[str, object]] = []
+        self._coach_tasks: list[CoachTaskRecord] = []
+        self._coach_plans: list[TrainingPlanRecord] = []
 
         player = self._player_repo.get(player_id)
         if player is None:
@@ -79,6 +93,7 @@ class PlayerCardDialog(QDialog):
         self._tab_widget.addTab(self._build_notes_tab(), "Заметки")
         self._tab_widget.addTab(self._build_training_tab(), "Тренировки")
         self._tab_widget.addTab(self._build_history_tab(), "История")
+        self._tab_widget.addTab(self._build_coach_tab(), "План тренера")
 
         self._load_context()
 
@@ -312,6 +327,68 @@ class PlayerCardDialog(QDialog):
         scroll.setWidget(container)
         return scroll
 
+    # ─── Tab 7: Coach Plan ──────────────────────────────────────
+
+    def _build_coach_tab(self) -> QWidget:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        container = QWidget()
+        layout = QVBoxLayout(container)
+
+        # Coach tasks group
+        tasks_group = QGroupBox("Задачи тренера", container)
+        tasks_layout = QVBoxLayout(tasks_group)
+
+        self.coach_tasks_table = QTableWidget(0, 5, container)
+        self.coach_tasks_table.setHorizontalHeaderLabels(
+            ["Статус", "Приоритет", "Задача", "Срок", "Категория"]
+        )
+        self.coach_tasks_table.verticalHeader().setVisible(False)
+        self.coach_tasks_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.coach_tasks_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.coach_tasks_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        tasks_layout.addWidget(self.coach_tasks_table)
+
+        tasks_controls = QHBoxLayout()
+        self.create_coach_task_button = QPushButton("Создать задачу", container)
+        self.create_coach_task_button.setToolTip("Создать новую задачу тренера для этого игрока.")
+        self.create_coach_task_button.clicked.connect(self._create_coach_task)
+        self.complete_coach_task_button = QPushButton("Завершить задачу", container)
+        self.complete_coach_task_button.setToolTip("Пометить выбранную задачу как выполненную.")
+        self.complete_coach_task_button.clicked.connect(self._complete_coach_task)
+        tasks_controls.addWidget(self.create_coach_task_button)
+        tasks_controls.addWidget(self.complete_coach_task_button)
+        tasks_controls.addStretch(1)
+        tasks_layout.addLayout(tasks_controls)
+        layout.addWidget(tasks_group)
+
+        # Training plans group
+        plans_group = QGroupBox("Тренировочный план", container)
+        plans_layout = QVBoxLayout(plans_group)
+
+        self.coach_plans_table = QTableWidget(0, 4, container)
+        self.coach_plans_table.setHorizontalHeaderLabels(
+            ["Статус", "Название", "Цель", "Период"]
+        )
+        self.coach_plans_table.verticalHeader().setVisible(False)
+        self.coach_plans_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.coach_plans_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.coach_plans_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        plans_layout.addWidget(self.coach_plans_table)
+
+        plans_controls = QHBoxLayout()
+        self.create_coach_plan_button = QPushButton("Создать план", container)
+        self.create_coach_plan_button.setToolTip("Создать новый план тренировок для этого игрока.")
+        self.create_coach_plan_button.clicked.connect(self._create_coach_plan)
+        plans_controls.addWidget(self.create_coach_plan_button)
+        plans_controls.addStretch(1)
+        plans_layout.addLayout(plans_controls)
+        layout.addWidget(plans_group)
+
+        layout.addStretch(1)
+        scroll.setWidget(container)
+        return scroll
+
     # ─── Data loading ───────────────────────────────────────────
 
     def _load_context(self) -> None:
@@ -345,6 +422,12 @@ class PlayerCardDialog(QDialog):
         self._refresh_rating_history_button_state()
         self._update_rating_trend()
         self._update_current_rating_position()
+
+        # Coach tasks and plans
+        self._coach_tasks = list_player_coach_tasks(connection=self._connection, player_id=self._player_id)
+        self._fill_coach_tasks(self._coach_tasks)
+        self._coach_plans = list_player_training_plans(connection=self._connection, player_id=self._player_id)
+        self._fill_coach_plans(self._coach_plans)
 
     def _build_overview_text(self) -> str:
         player = self._player
@@ -627,6 +710,103 @@ class PlayerCardDialog(QDialog):
         entries = list_player_training_entries(connection=self._connection, player_id=self._player_id)
         self._fill_training_entries(entries)
         self._update_training_summary(entries)
+
+    # ─── Coach actions ──────────────────────────────────────────
+
+    def _fill_coach_tasks(self, tasks: list[CoachTaskRecord]) -> None:
+        self.coach_tasks_table.setRowCount(0)
+        for task in tasks:
+            row_index = self.coach_tasks_table.rowCount()
+            self.coach_tasks_table.insertRow(row_index)
+            self._set_table_row(
+                self.coach_tasks_table,
+                row_index,
+                [
+                    coach_task_status_label(task.status),
+                    coach_task_priority_label(task.priority),
+                    task.title,
+                    task.due_date or "",
+                    task.category or "",
+                ],
+            )
+
+    def _fill_coach_plans(self, plans: list[TrainingPlanRecord]) -> None:
+        self.coach_plans_table.setRowCount(0)
+        for plan in plans:
+            row_index = self.coach_plans_table.rowCount()
+            self.coach_plans_table.insertRow(row_index)
+            period = ""
+            if plan.start_date and plan.end_date:
+                period = f"{plan.start_date} - {plan.end_date}"
+            elif plan.start_date:
+                period = f"с {plan.start_date}"
+            elif plan.end_date:
+                period = f"до {plan.end_date}"
+            self._set_table_row(
+                self.coach_plans_table,
+                row_index,
+                [
+                    training_plan_status_label(plan.status),
+                    plan.title,
+                    plan.goal or "",
+                    period,
+                ],
+            )
+
+    def _create_coach_task(self) -> None:
+        dialog = CoachTaskDialog(
+            connection=self._connection,
+            default_player_id=self._player_id,
+            parent=self,
+        )
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        from app.services.coach_tasks import create_coach_task
+        data = dialog.form_data()
+        create_coach_task(
+            connection=self._connection,
+            player_id=data.player_id,
+            title=data.title,
+            description=data.description,
+            due_date=data.due_date,
+            priority=data.priority,
+            category=data.category,
+        )
+        self._coach_tasks = list_player_coach_tasks(connection=self._connection, player_id=self._player_id)
+        self._fill_coach_tasks(self._coach_tasks)
+
+    def _complete_coach_task(self) -> None:
+        row = self.coach_tasks_table.currentRow()
+        if row < 0 or row >= len(self._coach_tasks):
+            QMessageBox.information(self, "Тренер", "Сначала выберите задачу.")
+            return
+        record = self._coach_tasks[row]
+        complete_coach_task(record.id, connection=self._connection)
+        self._coach_tasks = list_player_coach_tasks(connection=self._connection, player_id=self._player_id)
+        self._fill_coach_tasks(self._coach_tasks)
+
+    def _create_coach_plan(self) -> None:
+        dialog = TrainingPlanDialog(
+            connection=self._connection,
+            default_player_id=self._player_id,
+            parent=self,
+        )
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        from app.services.training_plans import create_training_plan
+        data = dialog.form_data()
+        create_training_plan(
+            connection=self._connection,
+            player_id=data.player_id,
+            title=data.title,
+            description=data.description,
+            goal=data.goal,
+            start_date=data.start_date,
+            end_date=data.end_date,
+            exercises=data.exercises,
+        )
+        self._coach_plans = list_player_training_plans(connection=self._connection, player_id=self._player_id)
+        self._fill_coach_plans(self._coach_plans)
 
     # ─── Utility ────────────────────────────────────────────────
 

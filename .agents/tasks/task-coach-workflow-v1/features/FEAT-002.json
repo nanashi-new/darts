@@ -2,7 +2,7 @@
   "id": "FEAT-002",
   "type": "feat",
   "description": "Add Coach UI: task/plan dialogs, task list view with filters, Coach tab in MainWindow, coach section in PlayerCardDialog, and basic analytics dashboard.",
-  "status": "pending",
+  "status": "in_progress",
   "steps": [
     "1. Create app/ui/coach_task_dialog.py: QDialog for creating/editing a coach task. Fields: title (QLineEdit, required), description (QTextEdit), player_id (QComboBox with players list from PlayerRepository, nullable/optional for general tasks), due_date (QDateEdit, optional), priority (QComboBox: low/normal/high/urgent), category (QLineEdit, optional), status (QComboBox for edit mode: open/in_progress/done/cancelled). Dataclass CoachTaskFormData. Pattern: follow TrainingEntryDialog. All labels in Russian. Save/Cancel buttons. Validation: title required.",
     "2. Create app/ui/training_plan_dialog.py: QDialog for creating/editing a training plan. Fields: title (QLineEdit, required), player_id (QComboBox with players list, required), description (QTextEdit), goal (QTextEdit), start_date (QDateEdit), end_date (QDateEdit), status (QComboBox: active/completed/paused for edit), exercises (QTextEdit with JSON placeholder, e.g. [{\"name\": \"...\", \"reps\": 10}]). Dataclass TrainingPlanFormData. Validation: title required, exercises must be valid JSON array.",
