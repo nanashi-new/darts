@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -37,14 +39,6 @@ class ExportProtocolDialog(QDialog):
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
-
-        # Protocol type
-        row = QHBoxLayout()
-        row.addWidget(QLabel("\u0422\u0438\u043f \u043f\u0440\u043e\u0442\u043e\u043a\u043e\u043b\u0430:"))
-        self._protocol_type_combo = QComboBox(self)
-        self._protocol_type_combo.addItems(["\u041a\u043b\u0430\u0441\u0441\u0438\u0444\u0438\u043a\u0430\u0446\u0438\u044f", "501"])
-        layout.addLayout(row)
-        row.addWidget(self._protocol_type_combo)
 
         # Competition title
         row2 = QHBoxLayout()
@@ -180,6 +174,14 @@ class ExportProtocolDialog(QDialog):
             lp = profile.get("logo_path")
             if lp:
                 logo_path = str(lp)
+                # Warn user if logo file does not exist before export
+                if not os.path.isfile(logo_path):
+                    QMessageBox.warning(
+                        self,
+                        "\u041b\u043e\u0433\u043e\u0442\u0438\u043f",
+                        "\u0424\u0430\u0439\u043b \u043b\u043e\u0433\u043e\u0442\u0438\u043f\u0430 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d, "
+                        "\u044d\u043a\u0441\u043f\u043e\u0440\u0442 \u0431\u0443\u0434\u0435\u0442 \u0432\u044b\u043f\u043e\u043b\u043d\u0435\u043d \u0431\u0435\u0437 \u043b\u043e\u0433\u043e\u0442\u0438\u043f\u0430.",
+                    )
 
         # Map results
         mapped_results: list[dict[str, object]] = []
@@ -192,6 +194,9 @@ class ExportProtocolDialog(QDialog):
             birth_date = str(r.get("birth_date", ""))
             birth_year = birth_date[:4] if len(birth_date) >= 4 else birth_date
 
+            # Region is set from organization profile city. This is by design:
+            # the player data model has no per-player region field, and in the
+            # Tver federation context all participants are from the same region.
             mapped_results.append({
                 "place": r.get("place", ""),
                 "fio": fio,
@@ -202,6 +207,7 @@ class ExportProtocolDialog(QDialog):
                 "score_big_round": r.get("score_big_round", ""),
                 "points_total": r.get("points_total", ""),
                 "rank_achieved": str(r.get("rank_achieved", "")),
+                "current_rank": str(r.get("current_rank", "")),
                 "region": str(profile.get("city", "")),
             })
 

@@ -108,7 +108,8 @@ def test_export_protocol_xlsx_with_logo(tmp_path):
         jury=[],
         results=[{"place": 1, "fio": "Ivanova M.", "birth_year": "1995", "coach": "",
                   "score_set": 0, "score_sector20": 0, "score_big_round": 0,
-                  "points_total": 501, "rank_achieved": "", "region": "Moscow"}],
+                  "points_total": 501, "rank_achieved": "I", "current_rank": "II",
+                  "region": "Moscow"}],
     )
 
     path = str(tmp_path / "protocol_logo.xlsx")
@@ -172,5 +173,5 @@ def test_export_protocol_dialog_smoke():
     dialog = ExportProtocolDialog(tournament=tournament, results=results)
     assert dialog.windowTitle() == "\u042d\u043a\u0441\u043f\u043e\u0440\u0442 \u043f\u0440\u043e\u0442\u043e\u043a\u043e\u043b\u0430"
     # Verify key widgets exist
-    assert dialog._protocol_type_combo is not None
+    assert dialog._format_type_combo is not None
     assert dialog._export_btn is not None

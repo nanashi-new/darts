@@ -96,7 +96,7 @@ def export_protocol_docx(path: str, data: ProtocolData) -> None:
             "\u0422\u0440\u0435\u043d\u0435\u0440",
             "\u0412\u044b\u043f\u043e\u043b\u043d\u0435\u043d \u0440\u0430\u0437\u0440\u044f\u0434",
         ]
-        result_keys = ["place", "fio", "birth_year", "rank_achieved", "region", "coach", "rank_achieved"]
+        result_keys = ["place", "fio", "birth_year", "current_rank", "region", "coach", "rank_achieved"]
     else:
         columns = [
             "\u041c\u0435\u0441\u0442\u043e",
