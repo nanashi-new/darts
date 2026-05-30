@@ -1,0 +1,32 @@
+{
+  "id": "FEAT-004",
+  "type": "feat",
+  "description": "Multi-profile support: multiple isolated profiles (each with own DB, settings, attachments). Profile selector dialog at startup or from Settings. Create new / open existing / switch profiles. Each profile is a separate directory. Last used profile remembered. Profile manager accessible from Settings view.",
+  "status": "in_progress",
+  "steps": [
+    "Create app/services/profile_manager.py: ProfileManager class with methods: list_profiles() -> list[ProfileInfo] (scan parent directory for profile directories), create_profile(name: str) -> ProfileInfo (create new directory with empty DB), switch_profile(profile_path: Path) -> None (update last_used in global config), get_current_profile() -> ProfileInfo, get_last_used_profile() -> Path|None. ProfileInfo dataclass: name, path, db_size, last_modified. Store global profile registry in a JSON file at the app data parent level (e.g. %APPDATA%/Darts/profiles.json).",
+    "Update app/runtime_paths.py: add get_profiles_registry_path() returning the parent-level profiles.json path. Modify _resolve_profile_root() to check profiles.json for last-used profile path (if not overridden by env var).",
+    "Create app/ui/profile_selector_dialog.py: QDialog shown at startup (or on demand). Shows list of profiles with name, last modified, size. Buttons: Открыть, Создать новый, Удалить. On selection, updates last-used and triggers app restart hint or direct switch.",
+    "Update app/ui/settings_view.py: add 'Управление профилями' section with button to open ProfileSelectorDialog. Show current profile name and path.",
+    "Update app/__main__.py: before MainWindow creation, check if multiple profiles exist or if this is first launch. If multiple profiles and no last-used, show ProfileSelectorDialog. Otherwise use last-used profile.",
+    "Add tests in tests/test_profile_manager.py: test create_profile creates directory with valid structure, test list_profiles finds existing profiles, test switch_profile updates registry, test isolation (two profiles have independent DBs).",
+    "Ensure mypy clean."
+  ],
+  "acceptance_criteria": [
+    "Multiple profiles can be created with unique names",
+    "Each profile has isolated DB, settings, and directory structure",
+    "Switching profiles updates the global registry",
+    "Profile selector dialog shows all available profiles",
+    "Last-used profile is remembered and loaded on next launch",
+    "Current profile name shown in status bar and settings",
+    "All new tests pass",
+    "mypy clean"
+  ],
+  "verification": [
+    "python -m mypy app",
+    "python -m pytest tests/test_profile_manager.py -q --tb=short",
+    "python -m pytest -q --tb=short (all tests pass)"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

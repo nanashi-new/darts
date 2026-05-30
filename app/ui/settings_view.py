@@ -16,11 +16,14 @@ from PySide6.QtWidgets import (
 )
 
 from app.db.database import get_connection
+from app.runtime_paths import get_profiles_base_dir, get_runtime_paths
 from app.services.audit_log import AuditLogService, RECALC_ALL
 from app.services.player_merge import PlayerMergeService
+from app.services.profile_manager import ProfileManager
 from app.services.recalculate_tournament import recalculate_all_tournaments
 from app.settings import get_appearance_settings, update_appearance_settings
 from app.ui.player_merge_dialog import PlayerMergeDialog
+from app.ui.profile_selector_dialog import ProfileSelectorDialog
 from app.ui.season_transfer_dialog import SeasonTransferDialog
 from app.ui.theme import ThemeManager
 
@@ -57,6 +60,9 @@ class SettingsView(QWidget):
 
         # Appearance section
         layout.addWidget(self._build_appearance_group())
+
+        # Profile section
+        layout.addWidget(self._build_profile_group())
 
         description = QLabel("Служебные действия для обслуживания базы и данных приложения.", self)
         description.setWordWrap(True)
@@ -161,6 +167,35 @@ class SettingsView(QWidget):
         )
         if path:
             self._icon_label.setText(path)
+
+    def _build_profile_group(self) -> QGroupBox:
+        group = QGroupBox("Профили", self)
+        layout = QVBoxLayout(group)
+
+        paths = get_runtime_paths()
+        profile_name = paths.profile_root.name
+        profile_path = str(paths.profile_root)
+
+        info_label = QLabel(
+            f"Текущий профиль: <b>{profile_name}</b><br>"
+            f"Путь: {profile_path}",
+            group,
+        )
+        info_label.setWordWrap(True)
+        layout.addWidget(info_label)
+
+        manage_btn = QPushButton("Управление профилями", group)
+        manage_btn.setToolTip("Открыть диалог управления профилями")
+        manage_btn.clicked.connect(self._open_profile_manager)
+        layout.addWidget(manage_btn)
+
+        return group
+
+    def _open_profile_manager(self) -> None:
+        base_dir = get_profiles_base_dir()
+        manager = ProfileManager(base_dir)
+        dialog = ProfileSelectorDialog(manager, self)
+        dialog.exec()
 
     def _apply_appearance(self) -> None:
         theme = _THEME_VALUES[self._theme_combo.currentIndex()]
