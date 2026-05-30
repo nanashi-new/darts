@@ -20,19 +20,34 @@ def test_app_main_uses_workspace_show(monkeypatch, tmp_path) -> None:
         def setStyleSheet(self, _qss: str) -> None:
             pass
 
+        def setWindowIcon(self, _icon: object) -> None:
+            pass
+
+        @staticmethod
+        def instance() -> None:
+            return None
+
     class FakeMainWindow:
         def show_workspace(self) -> None:
             calls.append("show_workspace")
 
+    class FakeIcon:
+        def __init__(self, *args: object) -> None:
+            pass
+
     qt_widgets = types.ModuleType("PySide6.QtWidgets")
     qt_widgets.QApplication = FakeApplication
+    qt_gui = types.ModuleType("PySide6.QtGui")
+    qt_gui.QIcon = FakeIcon
     pyside = types.ModuleType("PySide6")
     pyside.QtWidgets = qt_widgets
+    pyside.QtGui = qt_gui
     main_window = types.ModuleType("app.ui.main_window")
     main_window.MainWindow = FakeMainWindow
 
     monkeypatch.setitem(sys.modules, "PySide6", pyside)
     monkeypatch.setitem(sys.modules, "PySide6.QtWidgets", qt_widgets)
+    monkeypatch.setitem(sys.modules, "PySide6.QtGui", qt_gui)
     monkeypatch.setitem(sys.modules, "app.ui.main_window", main_window)
     monkeypatch.delitem(sys.modules, "app.__main__", raising=False)
 

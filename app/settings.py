@@ -55,3 +55,23 @@ def get_last_self_check() -> dict[str, object]:
 
 def set_last_self_check(report_payload: dict[str, object]) -> None:
     update_setting("last_self_check", report_payload)
+
+
+def get_appearance_settings() -> dict[str, object]:
+    """Get appearance settings with defaults."""
+    settings = load_settings()
+    appearance = settings.get("appearance")
+    if not isinstance(appearance, dict):
+        appearance = {}
+    return {
+        "theme": appearance.get("theme", "light"),
+        "accent_color": appearance.get("accent_color", "#1976D2"),
+        "font_size": appearance.get("font_size", "medium"),
+        "custom_logo_path": appearance.get("custom_logo_path"),
+        "custom_icon_path": appearance.get("custom_icon_path"),
+    }
+
+
+def update_appearance_settings(appearance: dict[str, object]) -> None:
+    """Update appearance settings."""
+    update_setting("appearance", appearance)

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QGridLayout,
     QGroupBox,
@@ -22,7 +24,7 @@ from app.db.repositories import TournamentRepository
 from app.runtime_paths import get_runtime_paths
 from app.services.import_report import list_import_reports
 from app.services.notes import list_notes_hub
-from app.settings import get_last_self_check
+from app.settings import get_appearance_settings, get_last_self_check
 from app.ui.labels import import_apply_status_label, tournament_status_label, visibility_label
 from app.ui.player_card_dialog import PlayerCardDialog
 from app.ui.welcome_widget import WelcomeWidget
@@ -48,6 +50,9 @@ class DashboardView(QWidget):
         # Page 1: main content
         self._main_content = QWidget(self)
         layout = QVBoxLayout(self._main_content)
+
+        self.branding_label = self._build_branding_label()
+        layout.addWidget(self.branding_label)
 
         layout.addWidget(QLabel("Главная", self._main_content))
         layout.addWidget(self._build_profile_status_group())
@@ -94,6 +99,20 @@ class DashboardView(QWidget):
         table.setAlternatingRowColors(True)
         table.horizontalHeader().setStretchLastSection(True)
         table.verticalHeader().setVisible(False)
+
+    def _build_branding_label(self) -> QLabel:
+        appearance = get_appearance_settings()
+        logo_path = appearance.get("custom_logo_path")
+        label = QLabel(self)
+        if logo_path and isinstance(logo_path, str) and Path(logo_path).is_file():
+            pixmap = QPixmap(logo_path)
+            if not pixmap.isNull():
+                label.setPixmap(
+                    pixmap.scaledToHeight(60, Qt.TransformationMode.SmoothTransformation)
+                )
+                return label
+        label.setText("<b>Дартс Лига</b>")
+        return label
 
     def _build_quick_actions(self) -> QHBoxLayout:
         layout = QHBoxLayout()
