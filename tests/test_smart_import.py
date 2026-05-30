@@ -174,3 +174,73 @@ def test_parse_docx_multiple_categories(tmp_path) -> None:
     assert len(result) == 2
     assert result[0].sheet_name == "Юниоры 15-17 лет"
     assert result[1].sheet_name == "Юниорки 15-17 лет"
+
+
+# --- PDF parser tests ---
+
+from app.services.import_protocol_pdf import parse_lines, parse_tables_from_pdf
+from app.services.import_pipeline import detect_format
+
+
+def test_parse_pdf_basic() -> None:
+    """parse_lines extracts rows from structured text with place, FIO, birth, scores."""
+    text = (
+        "1 Иванов Иван Иванович 2008 150 80 60 290 1р\n"
+        "2 Сидоров Сидор 2009 130 70 50 250 2р\n"
+    )
+    rows, warnings, _cat = parse_lines(text)
+    assert len(rows) == 2
+    assert rows[0]["fio"] == "Иванов Иван Иванович"
+    assert rows[0]["place"] == "1"
+    assert rows[0]["birth"] == "2008"
+    assert rows[0]["score_set"] == "150"
+    assert rows[0]["score_sector20"] == "80"
+    assert rows[0]["score_big_round"] == "60"
+    assert rows[1]["fio"] == "Сидоров Сидор"
+    assert rows[1]["place"] == "2"
+
+
+def test_parse_pdf_category_detection() -> None:
+    """Category keywords like 'мужчины'/'женщины' are detected from text."""
+    text = (
+        "мужчины 18+ лет\n"
+        "1 Иванов Иван 1990 200 100 80 380 КМС\n"
+        "женщины 18+ лет\n"
+        "1 Петрова Мария 1995 180 90 70 340 1р\n"
+    )
+    rows, warnings, last_cat = parse_lines(text)
+    # parse_lines returns the last category detected
+    assert last_cat == "женщины 18+ лет"
+    # Both rows parsed (categories don't split rows in parse_lines)
+    assert len(rows) == 2
+
+
+def test_parse_pdf_empty_file(tmp_path) -> None:
+    """Non-existent file returns empty list without raising."""
+    result = parse_tables_from_pdf("/nonexistent/path/file.pdf")
+    assert result == []
+
+    # Empty file (not a valid PDF)
+    empty_file = tmp_path / "empty.pdf"
+    empty_file.write_bytes(b"")
+    result = parse_tables_from_pdf(str(empty_file))
+    assert result == []
+
+
+def test_detect_format_docx() -> None:
+    """detect_format returns 'docx' for .docx files."""
+    assert detect_format("file.docx") == "docx"
+    assert detect_format("path/to/File.DOCX") == "docx"
+
+
+def test_detect_format_pdf() -> None:
+    """detect_format returns 'pdf' for .pdf files."""
+    assert detect_format("file.pdf") == "pdf"
+    assert detect_format("path/to/File.PDF") == "pdf"
+
+
+def test_detect_format_preserves_existing() -> None:
+    """detect_format still correctly handles csv, json, xlsx."""
+    assert detect_format("f.csv") == "csv"
+    assert detect_format("f.json") == "json"
+    assert detect_format("f.xlsx") == "xlsx"
