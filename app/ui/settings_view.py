@@ -6,11 +6,16 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QGroupBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
+    QLineEdit,
     QMessageBox,
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    QTableWidget,
+    QTableWidgetItem,
+    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -22,6 +27,7 @@ from app.services.player_merge import PlayerMergeService
 from app.services.profile_manager import ProfileManager
 from app.services.recalculate_tournament import recalculate_all_tournaments
 from app.settings import get_appearance_settings, update_appearance_settings
+from app.settings import get_organization_profile, update_organization_profile
 from app.ui.player_merge_dialog import PlayerMergeDialog
 from app.ui.profile_selector_dialog import ProfileSelectorDialog
 from app.ui.season_transfer_dialog import SeasonTransferDialog
@@ -60,6 +66,9 @@ class SettingsView(QWidget):
 
         # Appearance section
         layout.addWidget(self._build_appearance_group())
+
+        # Organization section
+        layout.addWidget(self._build_organization_group())
 
         # Profile section
         layout.addWidget(self._build_profile_group())
@@ -167,6 +176,130 @@ class SettingsView(QWidget):
         )
         if path:
             self._icon_label.setText(path)
+
+    def _build_organization_group(self) -> QGroupBox:
+        profile = get_organization_profile()
+        group = QGroupBox("\u041e\u0440\u0433\u0430\u043d\u0438\u0437\u0430\u0446\u0438\u044f", self)
+        layout = QVBoxLayout(group)
+
+        # Org name (multi-line)
+        layout.addWidget(QLabel("\u041d\u0430\u0437\u0432\u0430\u043d\u0438\u0435 \u043e\u0440\u0433\u0430\u043d\u0438\u0437\u0430\u0446\u0438\u0438:", group))
+        self._org_name_edit = QTextEdit(group)
+        self._org_name_edit.setPlaceholderText("\u041d\u0430\u0437\u0432\u0430\u043d\u0438\u0435 \u043e\u0440\u0433\u0430\u043d\u0438\u0437\u0430\u0446\u0438\u0438 (\u0434\u043e 3 \u0441\u0442\u0440\u043e\u043a)")
+        self._org_name_edit.setMaximumHeight(70)
+        self._org_name_edit.setPlainText(str(profile.get("org_name", "")))
+        layout.addWidget(self._org_name_edit)
+
+        # City
+        city_row = QHBoxLayout()
+        city_row.addWidget(QLabel("\u0413\u043e\u0440\u043e\u0434:", group))
+        self._org_city_edit = QLineEdit(group)
+        self._org_city_edit.setPlaceholderText("\u0413\u043e\u0440\u043e\u0434")
+        self._org_city_edit.setText(str(profile.get("city", "")))
+        city_row.addWidget(self._org_city_edit)
+        layout.addLayout(city_row)
+
+        # Default venue
+        venue_row = QHBoxLayout()
+        venue_row.addWidget(QLabel("\u041c\u0435\u0441\u0442\u043e \u043f\u0440\u043e\u0432\u0435\u0434\u0435\u043d\u0438\u044f:", group))
+        self._org_venue_edit = QLineEdit(group)
+        self._org_venue_edit.setPlaceholderText("\u041c\u0435\u0441\u0442\u043e \u043f\u0440\u043e\u0432\u0435\u0434\u0435\u043d\u0438\u044f \u043f\u043e \u0443\u043c\u043e\u043b\u0447\u0430\u043d\u0438\u044e")
+        self._org_venue_edit.setText(str(profile.get("default_venue", "")))
+        venue_row.addWidget(self._org_venue_edit)
+        layout.addLayout(venue_row)
+
+        # Logo
+        logo_row = QHBoxLayout()
+        self._org_logo_button = QPushButton("\u041b\u043e\u0433\u043e\u0442\u0438\u043f...", group)
+        self._org_logo_button.clicked.connect(self._select_org_logo)
+        logo_row.addWidget(self._org_logo_button)
+        logo_path = profile.get("logo_path")
+        self._org_logo_label = QLabel(
+            str(logo_path) if logo_path else "\u041d\u0435 \u0432\u044b\u0431\u0440\u0430\u043d", group
+        )
+        self._org_logo_label.setWordWrap(True)
+        logo_row.addWidget(self._org_logo_label, 1)
+        layout.addLayout(logo_row)
+
+        # Jury table
+        layout.addWidget(QLabel("\u0421\u0443\u0434\u0435\u0439\u0441\u043a\u0430\u044f \u043a\u043e\u043b\u043b\u0435\u0433\u0438\u044f:", group))
+        self._org_jury_table = QTableWidget(group)
+        self._org_jury_table.setColumnCount(4)
+        self._org_jury_table.setHorizontalHeaderLabels([
+            "\u0414\u043e\u043b\u0436\u043d\u043e\u0441\u0442\u044c",
+            "\u0424\u0418\u041e",
+            "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u044f",
+            "\u0413\u043e\u0440\u043e\u0434",
+        ])
+        self._org_jury_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        jury_members = profile.get("jury_members")
+        if isinstance(jury_members, list):
+            self._org_jury_table.setRowCount(len(jury_members))
+            for row_idx, member in enumerate(jury_members):
+                if isinstance(member, dict):
+                    self._org_jury_table.setItem(row_idx, 0, QTableWidgetItem(str(member.get("position", ""))))
+                    self._org_jury_table.setItem(row_idx, 1, QTableWidgetItem(str(member.get("name", ""))))
+                    self._org_jury_table.setItem(row_idx, 2, QTableWidgetItem(str(member.get("category", ""))))
+                    self._org_jury_table.setItem(row_idx, 3, QTableWidgetItem(str(member.get("city", ""))))
+        layout.addWidget(self._org_jury_table)
+
+        # Jury add/remove buttons
+        jury_btn_row = QHBoxLayout()
+        add_btn = QPushButton("\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c", group)
+        add_btn.clicked.connect(self._add_org_jury_row)
+        remove_btn = QPushButton("\u0423\u0434\u0430\u043b\u0438\u0442\u044c", group)
+        remove_btn.clicked.connect(self._remove_org_jury_row)
+        jury_btn_row.addWidget(add_btn)
+        jury_btn_row.addWidget(remove_btn)
+        jury_btn_row.addStretch(1)
+        layout.addLayout(jury_btn_row)
+
+        # Save button
+        save_btn = QPushButton("\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043e\u0440\u0433\u0430\u043d\u0438\u0437\u0430\u0446\u0438\u044e", group)
+        save_btn.clicked.connect(self._save_organization_profile)
+        layout.addWidget(save_btn)
+
+        return group
+
+    def _select_org_logo(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "\u0412\u044b\u0431\u0440\u0430\u0442\u044c \u043b\u043e\u0433\u043e\u0442\u0438\u043f \u043e\u0440\u0433\u0430\u043d\u0438\u0437\u0430\u0446\u0438\u0438", "", "\u0418\u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u044f (*.png *.svg *.jpg)"
+        )
+        if path:
+            self._org_logo_label.setText(path)
+
+    def _add_org_jury_row(self) -> None:
+        row = self._org_jury_table.rowCount()
+        self._org_jury_table.insertRow(row)
+        for col in range(4):
+            self._org_jury_table.setItem(row, col, QTableWidgetItem(""))
+
+    def _remove_org_jury_row(self) -> None:
+        row = self._org_jury_table.currentRow()
+        if row >= 0:
+            self._org_jury_table.removeRow(row)
+
+    def _save_organization_profile(self) -> None:
+        jury_members: list[dict[str, str]] = []
+        for row_idx in range(self._org_jury_table.rowCount()):
+            position = (self._org_jury_table.item(row_idx, 0) or QTableWidgetItem("")).text()
+            name = (self._org_jury_table.item(row_idx, 1) or QTableWidgetItem("")).text()
+            category = (self._org_jury_table.item(row_idx, 2) or QTableWidgetItem("")).text()
+            city = (self._org_jury_table.item(row_idx, 3) or QTableWidgetItem("")).text()
+            if position or name:
+                jury_members.append({"position": position, "name": name, "category": category, "city": city})
+
+        logo_text = self._org_logo_label.text()
+        logo_path: str | None = None if logo_text == "\u041d\u0435 \u0432\u044b\u0431\u0440\u0430\u043d" else logo_text
+
+        update_organization_profile({
+            "org_name": self._org_name_edit.toPlainText(),
+            "city": self._org_city_edit.text(),
+            "default_venue": self._org_venue_edit.text(),
+            "logo_path": logo_path,
+            "jury_members": jury_members,
+        })
+        QMessageBox.information(self, "\u041e\u0440\u0433\u0430\u043d\u0438\u0437\u0430\u0446\u0438\u044f", "\u041f\u0440\u043e\u0444\u0438\u043b\u044c \u043e\u0440\u0433\u0430\u043d\u0438\u0437\u0430\u0446\u0438\u0438 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d.")
 
     def _build_profile_group(self) -> QGroupBox:
         group = QGroupBox("Профили", self)

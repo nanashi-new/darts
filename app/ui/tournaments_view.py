@@ -43,6 +43,7 @@ from app.ui.manual_tournament_dialog import ManualTournamentDialog
 from app.ui.messages import confirm_yes_no
 from app.ui.tournament_details_dialog import TournamentDetailsDialog
 from app.ui.tournament_result_details_dialog import TournamentResultDetailsDialog
+from app.ui.export_protocol_dialog import ExportProtocolDialog
 
 
 class TournamentsView(QWidget):
@@ -222,6 +223,8 @@ class TournamentsView(QWidget):
         self._image_mode_combo.addItems(["Сохранить видимую область", "Сохранить всю таблицу"])
         self._export_btn = QPushButton("Экспорт", self)
         self._print_btn = QPushButton("Печать", self)
+        self._protocol_btn = QPushButton("Протокол", self)
+        self._protocol_btn.setToolTip("Экспорт протокола в формате заказчика.")
         self._lifecycle_hint_label = QLabel("", self)
         self._lifecycle_hint_label.setWordWrap(True)
 
@@ -248,6 +251,7 @@ class TournamentsView(QWidget):
         self._correction_btn.clicked.connect(self._start_correction)
         self._export_btn.clicked.connect(self._export_selected_format)
         self._print_btn.clicked.connect(self._print_table)
+        self._protocol_btn.clicked.connect(self._export_protocol)
 
         lifecycle_layout.addWidget(self._create_adult_btn)
         lifecycle_layout.addWidget(self._notes_btn)
@@ -267,6 +271,7 @@ class TournamentsView(QWidget):
         export_layout.addWidget(self._image_mode_combo)
         export_layout.addWidget(self._export_btn)
         export_layout.addWidget(self._print_btn)
+        export_layout.addWidget(self._protocol_btn)
         export_layout.addWidget(self._lifecycle_hint_label, 1)
 
         actions_layout.addLayout(lifecycle_layout)
@@ -873,3 +878,14 @@ class TournamentsView(QWidget):
             f"Категория: {category_label}",
             "N: 3",
         ]
+
+    def _export_protocol(self) -> None:
+        if not self._current_tournament:
+            QMessageBox.warning(self, "Протокол", "Турнир не выбран.")
+            return
+        dialog = ExportProtocolDialog(
+            tournament=self._current_tournament,
+            results=self._result_rows,
+            parent=self,
+        )
+        dialog.exec()

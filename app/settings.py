@@ -81,3 +81,23 @@ def get_appearance_settings() -> dict[str, object]:
 def update_appearance_settings(appearance: dict[str, object]) -> None:
     """Update appearance settings."""
     update_setting("appearance", appearance)
+
+
+def get_organization_profile() -> dict[str, object]:
+    """Get organization profile settings."""
+    settings = load_settings()
+    profile = settings.get("organization_profile")
+    if not isinstance(profile, dict):
+        profile = {}
+    return {
+        "org_name": profile.get("org_name", ""),
+        "city": profile.get("city", ""),
+        "logo_path": profile.get("logo_path"),
+        "jury_members": profile.get("jury_members", []),
+        "default_venue": profile.get("default_venue", ""),
+    }
+
+
+def update_organization_profile(data: dict[str, object]) -> None:
+    """Update organization profile settings."""
+    update_setting("organization_profile", data)
