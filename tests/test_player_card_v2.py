@@ -321,10 +321,17 @@ def test_placeholder_groupboxes_exist(tmp_path) -> None:
     assert "Кастомные поля" in titles
     assert "Вложения" in titles
 
-    # Verify placeholder labels
-    assert dialog.tags_placeholder_label.text() == "Будет доступно позже"
-    assert dialog.custom_fields_placeholder_label.text() == "Будет доступно позже"
-    assert dialog.attachments_placeholder_label.text() == "Будет доступно позже"
+    # Verify real widgets replaced placeholders
+    from app.ui.tags_widget import TagsWidget
+    from app.ui.attachments_widget import AttachmentsWidget
+    from app.ui.custom_fields_widget import CustomFieldsWidget
+
+    assert hasattr(dialog, "tags_widget")
+    assert isinstance(dialog.tags_widget, TagsWidget)
+    assert hasattr(dialog, "custom_fields_widget")
+    assert isinstance(dialog.custom_fields_widget, CustomFieldsWidget)
+    assert hasattr(dialog, "attachments_widget")
+    assert isinstance(dialog.attachments_widget, AttachmentsWidget)
 
 
 def test_training_summary_shows_last_date(tmp_path) -> None:

@@ -24,6 +24,8 @@ from app.services.league_transfer import LeagueTransferEvent, list_player_league
 from app.services.notes import EntityNoteDefaults, NoteRecord, create_note, list_entity_notes
 from app.services.rating_snapshot import PlayerRatingStateEntry, list_latest_player_rating_states
 from app.services.training_journal import TrainingEntryRecord, create_training_entry, list_player_training_entries
+from app.ui.attachments_widget import AttachmentsWidget
+from app.ui.custom_fields_widget import CustomFieldsWidget
 from app.ui.entity_notes_dialog import EntityNoteDialog, EntityNotesDialog
 from app.ui.labels import (
     adult_scope_label,
@@ -37,6 +39,7 @@ from app.ui.labels import (
     visibility_label,
 )
 from app.ui.rating_history_dialog import RatingHistoryDialog
+from app.ui.tags_widget import TagsWidget
 from app.ui.training_entry_dialog import TrainingEntryDialog
 
 
@@ -109,18 +112,27 @@ class PlayerCardDialog(QDialog):
         rating_pos_layout.addWidget(self.current_rating_position_label)
         layout.addWidget(rating_pos_group)
 
-        # Tags placeholder
+        # Tags widget
         tags_group = QGroupBox("Теги", container)
         tags_layout = QVBoxLayout(tags_group)
-        self.tags_placeholder_label = QLabel("Будет доступно позже", tags_group)
-        tags_layout.addWidget(self.tags_placeholder_label)
+        self.tags_widget = TagsWidget(
+            connection=self._connection,
+            entity_type="player",
+            entity_id=str(self._player_id),
+            parent=tags_group,
+        )
+        tags_layout.addWidget(self.tags_widget)
         layout.addWidget(tags_group)
 
-        # Custom fields placeholder
+        # Custom fields widget
         custom_fields_group = QGroupBox("Кастомные поля", container)
         custom_fields_layout = QVBoxLayout(custom_fields_group)
-        self.custom_fields_placeholder_label = QLabel("Будет доступно позже", custom_fields_group)
-        custom_fields_layout.addWidget(self.custom_fields_placeholder_label)
+        self.custom_fields_widget = CustomFieldsWidget(
+            connection=self._connection,
+            player_id=self._player_id,
+            parent=custom_fields_group,
+        )
+        custom_fields_layout.addWidget(self.custom_fields_widget)
         layout.addWidget(custom_fields_group)
 
         layout.addStretch(1)
@@ -284,11 +296,16 @@ class PlayerCardDialog(QDialog):
         self.league_history_table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         layout.addWidget(self.league_history_table)
 
-        # Attachments placeholder
+        # Attachments widget
         attachments_group = QGroupBox("Вложения", container)
         attachments_layout = QVBoxLayout(attachments_group)
-        self.attachments_placeholder_label = QLabel("Будет доступно позже", attachments_group)
-        attachments_layout.addWidget(self.attachments_placeholder_label)
+        self.attachments_widget = AttachmentsWidget(
+            connection=self._connection,
+            entity_type="player",
+            entity_id=str(self._player_id),
+            parent=attachments_group,
+        )
+        attachments_layout.addWidget(self.attachments_widget)
         layout.addWidget(attachments_group)
 
         layout.addStretch(1)
