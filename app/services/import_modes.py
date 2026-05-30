@@ -73,40 +73,47 @@ def import_players_only(
     existing = 0
     details: list[str] = []
 
-    for block in blocks:
-        for row in block.rows:
-            fio = row.get("fio")
-            if fio is None or _normalize_text(fio) == "":
-                continue
+    with connection:
+        for block in blocks:
+            for row in block.rows:
+                fio = row.get("fio")
+                if fio is None or _normalize_text(fio) == "":
+                    continue
 
-            last_name, first_name, middle_name = _parse_fio(fio)
-            birth_date, birth_year = _parse_birth_value(row.get("birth"))
+                last_name, first_name, middle_name = _parse_fio(fio)
+                birth_date, birth_year = _parse_birth_value(row.get("birth"))
 
-            candidates = find_player_candidates(
-                fio=fio,
-                birth_date_or_year=birth_date or birth_year,
-                player_repo=player_repo,
-            )
-
-            if candidates:
-                existing += 1
-            else:
-                coach_raw = row.get("coach")
-                coach = _normalize_text(coach_raw) if coach_raw is not None else None
-                player_repo.create(
-                    {
-                        "last_name": last_name,
-                        "first_name": first_name,
-                        "middle_name": middle_name,
-                        "birth_date": birth_date or birth_year,
-                        "gender": None,
-                        "coach": coach if coach else None,
-                        "club": None,
-                        "notes": None,
-                    }
+                candidates = find_player_candidates(
+                    fio=fio,
+                    birth_date_or_year=birth_date or birth_year,
+                    player_repo=player_repo,
                 )
-                created += 1
-                details.append(f"Создан: {last_name} {first_name}")
+
+                if candidates:
+                    existing += 1
+                else:
+                    coach_raw = row.get("coach")
+                    coach = _normalize_text(coach_raw) if coach_raw is not None else None
+                    connection.execute(
+                        """
+                        INSERT INTO players (
+                            last_name, first_name, middle_name,
+                            birth_date, gender, coach, club, notes
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            last_name,
+                            first_name,
+                            middle_name,
+                            birth_date or birth_year,
+                            None,
+                            coach if coach else None,
+                            None,
+                            None,
+                        ),
+                    )
+                    created += 1
+                    details.append(f"Создан: {last_name} {first_name}")
 
     return PlayersImportReport(created=created, existing=existing, details=details)
 
@@ -123,78 +130,77 @@ def import_update_players(
     unchanged = 0
     details: list[str] = []
 
-    for block in blocks:
-        for row in block.rows:
-            fio = row.get("fio")
-            if fio is None or _normalize_text(fio) == "":
-                continue
+    with connection:
+        for block in blocks:
+            for row in block.rows:
+                fio = row.get("fio")
+                if fio is None or _normalize_text(fio) == "":
+                    continue
 
-            last_name, first_name, middle_name = _parse_fio(fio)
-            birth_date, birth_year = _parse_birth_value(row.get("birth"))
+                last_name, first_name, middle_name = _parse_fio(fio)
+                birth_date, birth_year = _parse_birth_value(row.get("birth"))
 
-            candidates = find_player_candidates(
-                fio=fio,
-                birth_date_or_year=birth_date or birth_year,
-                player_repo=player_repo,
-            )
-
-            if not candidates:
-                coach_raw = row.get("coach")
-                coach = _normalize_text(coach_raw) if coach_raw is not None else None
-                player_repo.create(
-                    {
-                        "last_name": last_name,
-                        "first_name": first_name,
-                        "middle_name": middle_name,
-                        "birth_date": birth_date or birth_year,
-                        "gender": None,
-                        "coach": coach if coach else None,
-                        "club": None,
-                        "notes": None,
-                    }
+                candidates = find_player_candidates(
+                    fio=fio,
+                    birth_date_or_year=birth_date or birth_year,
+                    player_repo=player_repo,
                 )
-                created += 1
-                details.append(f"Создан: {last_name} {first_name}")
-            else:
-                player = candidates[0]
-                player_id = int(player["id"])  # type: ignore[call-overload]
-                needs_update = False
 
-                player_coach = _normalize_text(player.get("coach"))
-                coach_raw = row.get("coach")
-                row_coach = _normalize_text(coach_raw) if coach_raw is not None else ""
-
-                player_birth = _normalize_text(player.get("birth_date"))
-
-                new_coach = player_coach
-                new_birth = player_birth
-
-                if not player_coach and row_coach:
-                    new_coach = row_coach
-                    needs_update = True
-
-                if not player_birth and (birth_date or birth_year):
-                    new_birth = birth_date or birth_year or ""
-                    needs_update = True
-
-                if needs_update:
-                    player_repo.update(
-                        player_id,
-                        {
-                            "last_name": player.get("last_name"),
-                            "first_name": player.get("first_name"),
-                            "middle_name": player.get("middle_name"),
-                            "birth_date": new_birth if new_birth else player.get("birth_date"),
-                            "gender": player.get("gender"),
-                            "coach": new_coach if new_coach else player.get("coach"),
-                            "club": player.get("club"),
-                            "notes": player.get("notes"),
-                        },
+                if not candidates:
+                    coach_raw = row.get("coach")
+                    coach = _normalize_text(coach_raw) if coach_raw is not None else None
+                    connection.execute(
+                        """
+                        INSERT INTO players (
+                            last_name, first_name, middle_name,
+                            birth_date, gender, coach, club, notes
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            last_name,
+                            first_name,
+                            middle_name,
+                            birth_date or birth_year,
+                            None,
+                            coach if coach else None,
+                            None,
+                            None,
+                        ),
                     )
-                    updated += 1
-                    details.append(f"Обновлен: {last_name} {first_name}")
+                    created += 1
+                    details.append(f"Создан: {last_name} {first_name}")
                 else:
-                    unchanged += 1
+                    player = candidates[0]
+                    player_id = int(player["id"])  # type: ignore[call-overload]
+
+                    player_coach = _normalize_text(player.get("coach"))
+                    coach_raw = row.get("coach")
+                    row_coach = _normalize_text(coach_raw) if coach_raw is not None else ""
+
+                    player_birth = _normalize_text(player.get("birth_date"))
+
+                    set_clauses: list[str] = []
+                    params: list[object] = []
+
+                    if not player_coach and row_coach:
+                        set_clauses.append("coach = ?")
+                        params.append(row_coach)
+
+                    if not player_birth and (birth_date or birth_year):
+                        set_clauses.append("birth_date = ?")
+                        params.append(birth_date or birth_year)
+
+                    if set_clauses:
+                        set_clauses.append("updated_at = CURRENT_TIMESTAMP")
+                        params.append(player_id)
+                        connection.execute(
+                            f"UPDATE players SET {', '.join(set_clauses)} WHERE id = ?",
+                            params,
+                        )
+                        updated += 1
+                        details.append(f"Обновлен: {last_name} {first_name}")
+                    else:
+                        unchanged += 1
 
     return UpdatePlayersReport(
         created=created,
