@@ -1,0 +1,29 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Extended analytics for tournaments and players: new analytics service, analytics tab in MainWindow with sub-tabs (Tournaments, Players, Comparison). Text/table-based analytics including tournament stats (avg/median/min/max points, place distribution), tournament comparison, trends, top-10 results; player progress, comparison of 2-3 players, win percentage, average position, stability (standard deviation).",
+  "status": "in_progress",
+  "steps": [
+    "Create app/services/analytics.py with AnalyticsService class: methods for tournament_stats(tournament_id) returning dataclass with avg/median/min/max points and place distribution; compare_tournaments(tournament_ids) returning comparative data; player_progress(player_id) returning list of tournament results over time; compare_players(player_ids) returning comparative stats; player_stability(player_id) returning std deviation; top_results(period_start, period_end, limit=10). Use sqlite3.Connection as parameter, frozen dataclass results.",
+    "Create app/ui/analytics_view.py with AnalyticsView(QWidget) containing QTabWidget with 3 sub-tabs: TournamentAnalyticsTab, PlayerAnalyticsTab, ComparisonTab. TournamentAnalyticsTab: combo to select tournament, button to load stats, QTableWidget showing stats, section for trends (participants over time). PlayerAnalyticsTab: combo to select player, table showing progress by tournament, stats summary (win %, avg position, best/worst, stability). ComparisonTab: multi-select for tournaments or players, table showing side-by-side comparison.",
+    "Register the 'Аналитика' tab in app/ui/main_window.py after 'Тренер' tab. Add import and add to _activate_tab aliases.",
+    "Add tests in tests/test_analytics.py: test tournament_stats calculation correctness, test player_progress returns ordered results, test compare_players with 2-3 players, test stability calculation, test top_results with period filter. Use tmp_path for DB, create test data with players/tournaments/results.",
+    "Ensure mypy clean for new files."
+  ],
+  "acceptance_criteria": [
+    "AnalyticsService returns correct stats for tournaments (avg, median, min, max verified with known test data)",
+    "Player progress returns tournament results in chronological order",
+    "Stability calculation matches standard deviation of player scores",
+    "ComparisonTab displays side-by-side data for multiple players/tournaments",
+    "New 'Аналитика' tab appears in MainWindow between 'Тренер' and 'Импорт/Экспорт'",
+    "All new tests pass with pytest",
+    "mypy clean on all new files"
+  ],
+  "verification": [
+    "python -m mypy app",
+    "python -m pytest tests/test_analytics.py -q --tb=short",
+    "python -m pytest -q --tb=short (all 151+ tests pass)"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
