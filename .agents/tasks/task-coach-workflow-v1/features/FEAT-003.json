@@ -2,7 +2,7 @@
   "id": "FEAT-003",
   "type": "chore",
   "description": "Final integration: update planning docs, add dev log entry, run full verification.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "1. Update planning/00_PRIORITY.md: Find task P3-23 and mark it as done (change status indicator).",
     "2. Update planning/03_CURRENT_STATE.md: Add entry about Coach Workflow v1 being implemented (coach_tasks table, training_plans table, CoachView tab, PlayerCardDialog coach tab).",
@@ -21,5 +21,5 @@
     "python -m pytest -x -q"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All steps done. Had to add 'Статус: done' to planning/tasks/coach-workflow-v1.md because test_planning_consistency.py checks task files match priority table status. mypy clean (46 source files). 151 tests passed, 70 skipped (display-dependent)."
 }
