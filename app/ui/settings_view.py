@@ -15,6 +15,7 @@ from app.services.audit_log import AuditLogService, RECALC_ALL
 from app.services.player_merge import PlayerMergeService
 from app.services.recalculate_tournament import recalculate_all_tournaments
 from app.ui.player_merge_dialog import PlayerMergeDialog
+from app.ui.season_transfer_dialog import SeasonTransferDialog
 
 
 class SettingsView(QWidget):
@@ -49,6 +50,11 @@ class SettingsView(QWidget):
         merge_btn.clicked.connect(self._open_player_merge)
         layout.addWidget(merge_btn)
 
+        season_transfer_btn = QPushButton("Сезонные переходы", self)
+        season_transfer_btn.setToolTip("Рассчитать и применить сезонные переходы между лигами.")
+        season_transfer_btn.clicked.connect(self._open_season_transfer)
+        layout.addWidget(season_transfer_btn)
+
         layout.addStretch(1)
 
     def _recalculate_all(self) -> None:
@@ -77,4 +83,8 @@ class SettingsView(QWidget):
 
     def _open_player_merge(self) -> None:
         dialog = PlayerMergeDialog(PlayerMergeService(self._connection), self)
+        dialog.exec()
+
+    def _open_season_transfer(self) -> None:
+        dialog = SeasonTransferDialog(self)
         dialog.exec()
