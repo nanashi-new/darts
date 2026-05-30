@@ -1423,3 +1423,41 @@ class TrainingPlanRepository:
             params,
         ).fetchall()
         return [dict(row) for row in rows]
+
+
+class ReportTemplateRepository:
+    """Repository for report template data access."""
+
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self._connection = connection
+
+    def save_template(self, name: str, config_json: str) -> int:
+        cursor = self._connection.execute(
+            """
+            INSERT INTO report_templates (name, config_json)
+            VALUES (?, ?)
+            """,
+            (name, config_json),
+        )
+        self._connection.commit()
+        return _lastrowid_as_int(cursor)
+
+    def list_templates(self) -> list[sqlite3.Row]:
+        rows = self._connection.execute(
+            "SELECT * FROM report_templates ORDER BY created_at DESC"
+        ).fetchall()
+        return rows
+
+    def get_template(self, template_id: int) -> sqlite3.Row | None:
+        row = self._connection.execute(
+            "SELECT * FROM report_templates WHERE id = ?",
+            (template_id,),
+        ).fetchone()
+        return row
+
+    def delete_template(self, template_id: int) -> None:
+        self._connection.execute(
+            "DELETE FROM report_templates WHERE id = ?",
+            (template_id,),
+        )
+        self._connection.commit()
