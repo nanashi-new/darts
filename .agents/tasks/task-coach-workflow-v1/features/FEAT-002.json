@@ -2,7 +2,7 @@
   "id": "FEAT-002",
   "type": "feat",
   "description": "Add Coach UI: task/plan dialogs, task list view with filters, Coach tab in MainWindow, coach section in PlayerCardDialog, and basic analytics dashboard.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "1. Create app/ui/coach_task_dialog.py: QDialog for creating/editing a coach task. Fields: title (QLineEdit, required), description (QTextEdit), player_id (QComboBox with players list from PlayerRepository, nullable/optional for general tasks), due_date (QDateEdit, optional), priority (QComboBox: low/normal/high/urgent), category (QLineEdit, optional), status (QComboBox for edit mode: open/in_progress/done/cancelled). Dataclass CoachTaskFormData. Pattern: follow TrainingEntryDialog. All labels in Russian. Save/Cancel buttons. Validation: title required.",
     "2. Create app/ui/training_plan_dialog.py: QDialog for creating/editing a training plan. Fields: title (QLineEdit, required), player_id (QComboBox with players list, required), description (QTextEdit), goal (QTextEdit), start_date (QDateEdit), end_date (QDateEdit), status (QComboBox: active/completed/paused for edit), exercises (QTextEdit with JSON placeholder, e.g. [{\"name\": \"...\", \"reps\": 10}]). Dataclass TrainingPlanFormData. Validation: title required, exercises must be valid JSON array.",
@@ -31,5 +31,5 @@
     "python -c \"from app.ui.training_plan_dialog import TrainingPlanDialog; print('TrainingPlanDialog importable')\""
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All 8 steps implemented. mypy clean on all new files (app/ 46 files clean). ruff check passes. 151 tests pass (70 skipped for display). UI tests properly skip in headless environment. No new label functions needed in labels.py as all required ones (coach_task_status_label, coach_task_priority_label, training_plan_status_label) already existed from FEAT-001."
 }
