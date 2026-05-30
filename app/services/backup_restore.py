@@ -216,5 +216,30 @@ def run_health_check(
     )
 
 
+def create_quick_backup() -> Path:
+    """Create a quick backup of the current profile database.
+
+    Gets connection and paths automatically. Stores the backup under
+    restore_points_dir with a timestamped filename.
+
+    Returns the path of the created backup file.
+    """
+    from app.db.database import get_connection
+
+    connection = get_connection()
+    paths = get_runtime_paths()
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H%M%S")
+    destination = paths.restore_points_dir / f"quick_backup_{timestamp}.db"
+    destination.parent.mkdir(parents=True, exist_ok=True)
+
+    backup_conn = sqlite3.connect(str(destination))
+    try:
+        connection.backup(backup_conn)
+    finally:
+        backup_conn.close()
+
+    return destination
+
+
 def _current_timestamp() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")

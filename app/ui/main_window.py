@@ -155,6 +155,12 @@ class MainWindow(QMainWindow):
         if mime is not None and mime.hasUrls():
             event.acceptProposedAction()
 
+    def closeEvent(self, event: object) -> None:  # type: ignore[override]
+        from app.services.undo_manager import undo_manager
+
+        undo_manager.clear()
+        super().closeEvent(event)  # type: ignore[arg-type]
+
     def dropEvent(self, event: object) -> None:  # type: ignore[override]
         from PySide6.QtGui import QDropEvent
 

@@ -70,12 +70,13 @@ class ShortcutManager:
                 return
 
     def _trigger_backup(self) -> None:
-        from app.services.backup_restore import create_backup
+        from app.services.backup_restore import create_quick_backup
 
         try:
-            create_backup()
+            create_quick_backup()
+            self._main_window.show_toast("Резервная копия создана", "info")  # type: ignore[attr-defined]
         except Exception:  # noqa: BLE001
-            pass
+            self._main_window.show_toast("Ошибка создания резервной копии", "error")  # type: ignore[attr-defined]
 
     def _trigger_undo(self) -> None:
         from app.services.undo_manager import undo_manager
