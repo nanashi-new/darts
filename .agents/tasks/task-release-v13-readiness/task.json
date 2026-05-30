@@ -1,0 +1,14 @@
+{
+  "task_id": "task-release-v13-readiness",
+  "task_description": "Prepare Darts Liga project for release v1.3: code cleanup (unused imports, dead code), documentation updates (release notes, FAQ, SECURITY, roadmap, checklist, current state), and build verification",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002"],
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "compileall clean, mypy 46 files clean, pytest 151 passed, ruff F401 zero errors. All documentation files verified to contain correct content."
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "project_type": "Python PySide6 desktop app - Darts League management",
+  "language": "Python 3.11",
+  "build_system": "pip with requirements.txt / requirements-dev.txt / requirements-pinned.txt",
+  "test_framework": "pytest with markers (unit, integration, release_smoke); headless Qt tests skip on missing libGL",
+  "build_command": "python -m compileall app -q",
+  "test_command": "python -m pytest -q -rs",
+  "verification_instructions": "1. python -m compileall app -q  2. python -m mypy app  3. python -m pytest -q -rs  4. ruff check app/ --select F401",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "pip install -r requirements-dev.txt (includes PySide6, openpyxl, pytest, mypy)",
+  "environment_constraints": "OPEN_INTERNET network. No libGL on sandbox so Qt headless UI tests are skipped. Python 3.11 default. ruff 0.15.15 available.",
+  "contribution_requirements": "All UI and documentation in Russian. Brand name 'Darts Liga'. mypy clean. pytest green. Log changes to logs/ directory.",
+  "key_patterns": "app/ui/ contains PySide6 views, app/services/ contains business logic, app/db/ contains SQLite schema/repositories. Tests in tests/. Planning docs in planning/. Release docs at root level (10_RELEASE_CHECKLIST.md, FAQ.txt, SECURITY.md).",
+  "relevant_files": [
+    "app/db/database.py",
+    "app/ui/entity_notes_dialog.py",
+    "app/ui/player_note_dialog.py",
+    "app/ui/tournaments_view.py",
+    "app/services/coach_tasks.py",
+    "planning/07_RELEASE_NOTES_DRAFT.md",
+    "planning/02_ROADMAP.md",
+    "planning/03_CURRENT_STATE.md",
+    "10_RELEASE_CHECKLIST.md",
+    "FAQ.txt",
+    "SECURITY.md",
+    "logs/general/"
+  ],
+  "directory_structure": "app/ - source code (db/, domain/, services/, ui/, assets/); tests/ - pytest tests; planning/ - roadmap/state/decisions; logs/ - dev logs; scripts/ - build/release scripts; docs/ - extra documentation"
+}
