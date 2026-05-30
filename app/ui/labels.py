@@ -154,6 +154,36 @@ AUDIT_EVENT_LABELS = {
 }
 
 
+def tournament_status_icon(value: object) -> str:
+    """Return unicode emoji for tournament status."""
+    icons = {
+        "draft": "\u270F\uFE0F",
+        "review": "\U0001F50D",
+        "confirmed": "\u2705",
+        "published": "\U0001F310",
+        "archived": "\U0001F4E6",
+        "canceled": "\u274C",
+    }
+    if value is None:
+        return ""
+    return icons.get(str(value), "")
+
+
+def tournament_status_color(value: object) -> str:
+    """Return hex color for tournament status."""
+    colors = {
+        "draft": "#9E9E9E",
+        "review": "#FF9800",
+        "confirmed": "#2196F3",
+        "published": "#4CAF50",
+        "archived": "#607D8B",
+        "canceled": "#F44336",
+    }
+    if value is None:
+        return "#9E9E9E"
+    return colors.get(str(value), "#9E9E9E")
+
+
 def display_label(value: object, mapping: dict[str, str], *, empty: str = "-") -> str:
     if value is None:
         return empty

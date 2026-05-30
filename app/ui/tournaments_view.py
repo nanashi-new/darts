@@ -5,15 +5,20 @@ from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
     QHBoxLayout,
+    QHeaderView,
     QInputDialog,
     QLabel,
     QMessageBox,
     QPushButton,
     QSizePolicy,
+    QSplitter,
     QTableView,
+    QTableWidget,
+    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
+from PySide6.QtCore import Qt
 
 from app.db.database import get_connection
 from app.db.repositories import ResultRepository, TournamentRepository
@@ -33,6 +38,7 @@ from app.services.tournament_lifecycle import transition_tournament_status
 from app.ui.entity_notes_dialog import EntityNotesDialog
 from app.ui.labels import category_label as display_category_label
 from app.ui.labels import league_label
+from app.ui.labels import tournament_status_icon, tournament_status_color
 from app.ui.labels import tournament_status_label
 from app.ui.manual_tournament_dialog import ManualTournamentDialog
 from app.ui.messages import confirm_yes_no
@@ -53,15 +59,57 @@ class TournamentsView(QWidget):
         self._result_rows: list[dict[str, object]] = []
 
         layout = QVBoxLayout(self)
-        self.header_label = QLabel("Турниры пока не загружены.", self)
-        layout.addWidget(self.header_label)
-        self.status_label = QLabel("Статус: —", self)
-        layout.addWidget(self.status_label)
-        self.metadata_label = QLabel("Метаданные: —", self)
-        self.metadata_label.setWordWrap(True)
-        layout.addWidget(self.metadata_label)
 
-        self.results_table = QTableView(self)
+        # --- Filters ---
+        filter_layout = QHBoxLayout()
+        filter_layout.addWidget(QLabel("Статус:", self))
+        self.status_filter_combo = QComboBox(self)
+        self.status_filter_combo.addItems([
+            "Все", "Черновик", "На проверке", "Подтвержден",
+            "Опубликован", "В архиве", "Отменен",
+        ])
+        filter_layout.addWidget(self.status_filter_combo)
+        filter_layout.addWidget(QLabel("Лига:", self))
+        self.league_filter_combo = QComboBox(self)
+        self.league_filter_combo.addItems(["Все", "Премьер-лига", "Первая лига"])
+        filter_layout.addWidget(self.league_filter_combo)
+        filter_layout.addStretch(1)
+        layout.addLayout(filter_layout)
+
+        # --- Splitter ---
+        self._splitter = QSplitter(Qt.Orientation.Horizontal, self)
+        self._splitter.setObjectName("tournaments_workspace_splitter")
+
+        # Left panel: tournament list
+        self._list_panel = QWidget(self)
+        list_layout = QVBoxLayout(self._list_panel)
+        list_layout.setContentsMargins(0, 0, 0, 0)
+        self.tournaments_list_table = QTableWidget(self._list_panel)
+        self.tournaments_list_table.setObjectName("tournaments_list_table")
+        self.tournaments_list_table.setColumnCount(4)
+        self.tournaments_list_table.setHorizontalHeaderLabels(["Статус", "Название", "Дата", "Категория"])
+        self.tournaments_list_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.tournaments_list_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.tournaments_list_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.tournaments_list_table.horizontalHeader().setStretchLastSection(True)
+        self.tournaments_list_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.tournaments_list_table.cellClicked.connect(self._on_tournament_list_clicked)
+        list_layout.addWidget(self.tournaments_list_table)
+        self._splitter.addWidget(self._list_panel)
+
+        # Right panel: details area
+        self._detail_panel = QWidget(self)
+        detail_layout = QVBoxLayout(self._detail_panel)
+        detail_layout.setContentsMargins(0, 0, 0, 0)
+        self.header_label = QLabel("Турниры пока не загружены.", self._detail_panel)
+        detail_layout.addWidget(self.header_label)
+        self.status_label = QLabel("Статус: —", self._detail_panel)
+        detail_layout.addWidget(self.status_label)
+        self.metadata_label = QLabel("Метаданные: —", self._detail_panel)
+        self.metadata_label.setWordWrap(True)
+        detail_layout.addWidget(self.metadata_label)
+
+        self.results_table = QTableView(self._detail_panel)
         self.results_table.setSortingEnabled(True)
         self.results_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.results_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
@@ -69,10 +117,76 @@ class TournamentsView(QWidget):
         self.results_table.setAlternatingRowColors(True)
         self.results_table.horizontalHeader().setStretchLastSection(True)
         self.results_table.doubleClicked.connect(lambda *_args: self._open_selected_result_details())
-        layout.addWidget(self.results_table, 1)
-        layout.addWidget(self._build_actions())
+        detail_layout.addWidget(self.results_table, 1)
+        detail_layout.addWidget(self._build_actions())
+        self._splitter.addWidget(self._detail_panel)
 
+        self._splitter.setSizes([300, 700])
+        layout.addWidget(self._splitter, 1)
+
+        # Wire up filters
+        self.status_filter_combo.currentIndexChanged.connect(self._reload_tournament_list)
+        self.league_filter_combo.currentIndexChanged.connect(self._reload_tournament_list)
+
+        # Initial load
+        self._all_tournaments: list[dict[str, object]] = []
+        self._filtered_tournaments: list[dict[str, object]] = []
+        self._reload_tournament_list()
         self.refresh_latest_tournament()
+
+    def _reload_tournament_list(self) -> None:
+        """Reload the left-panel tournament list, applying current filters."""
+        self._all_tournaments = self._tournament_repo.list()
+        status_filter = self.status_filter_combo.currentText()
+        league_filter = self.league_filter_combo.currentText()
+
+        status_map = {
+            "Черновик": "draft",
+            "На проверке": "review",
+            "Подтвержден": "confirmed",
+            "Опубликован": "published",
+            "В архиве": "archived",
+            "Отменен": "canceled",
+        }
+        league_map = {
+            "Премьер-лига": "PREMIER",
+            "Первая лига": "FIRST",
+        }
+
+        filtered = self._all_tournaments
+        if status_filter != "Все":
+            target_status = status_map.get(status_filter, "")
+            filtered = [t for t in filtered if str(t.get("status", "")) == target_status]
+        if league_filter != "Все":
+            target_league = league_map.get(league_filter, "")
+            filtered = [t for t in filtered if str(t.get("league_code", "")) == target_league]
+
+        self.tournaments_list_table.setRowCount(len(filtered))
+        for row_idx, t in enumerate(filtered):
+            status_val = str(t.get("status", ""))
+            icon = tournament_status_icon(status_val)
+            label = tournament_status_label(status_val)
+            status_item = QTableWidgetItem(f"{icon} {label}")
+            self.tournaments_list_table.setItem(row_idx, 0, status_item)
+
+            name_item = QTableWidgetItem(str(t.get("name", "")))
+            self.tournaments_list_table.setItem(row_idx, 1, name_item)
+
+            date_item = QTableWidgetItem(str(t.get("date", "")))
+            self.tournaments_list_table.setItem(row_idx, 2, date_item)
+
+            cat_item = QTableWidgetItem(display_category_label(t.get("category_code")))
+            self.tournaments_list_table.setItem(row_idx, 3, cat_item)
+
+        self._filtered_tournaments = filtered
+
+    def _on_tournament_list_clicked(self, row: int, _column: int) -> None:
+        """Handle click on a tournament in the left list."""
+        if 0 <= row < len(self._filtered_tournaments):
+            t = self._filtered_tournaments[row]
+            tid = t.get("id")
+            if tid is not None:
+                self.refresh_latest_tournament(int(tid))
 
     def _build_actions(self) -> QWidget:
         actions_widget = QWidget(self)
@@ -186,9 +300,13 @@ class TournamentsView(QWidget):
             if tournament.get("category_code")
             else "категория не указана"
         )
-        status_label = tournament_status_label(tournament.get("status") or TournamentStatus.DRAFT.value)
+        status_value = tournament.get("status") or TournamentStatus.DRAFT.value
+        status_label = tournament_status_label(status_value)
+        icon = tournament_status_icon(status_value)
+        color = tournament_status_color(status_value)
         self.header_label.setText(f"Турнир: {tournament.get('name')}")
-        self.status_label.setText(f"Статус: {status_label}")
+        self.status_label.setText(f"Статус: {icon} {status_label}")
+        self.status_label.setStyleSheet(f"color: {color}; font-weight: bold;")
         self.metadata_label.setText(
             "Сводка: "
             f"дата: {date_label}; "
@@ -600,6 +718,31 @@ class TournamentsView(QWidget):
         if not self._current_tournament:
             QMessageBox.warning(self, action_title, "Турнир не выбран.")
             return
+
+        # Enhanced confirmation dialog before asking for reason
+        if target_status == TournamentStatus.ARCHIVED.value:
+            warning_text = (
+                "Архивация турнира сохранит все результаты, "
+                "но турнир будет убран из активных. "
+                "Это действие требует указания причины."
+            )
+        else:
+            warning_text = (
+                "Отмена турнира сохранит данные, "
+                "но пометит турнир как отмененный. "
+                "Это действие требует указания причины."
+            )
+
+        confirm = QMessageBox.warning(
+            self,
+            action_title,
+            warning_text,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+
         reason, accepted = QInputDialog.getText(
             self,
             action_title,

@@ -1,0 +1,31 @@
+{
+  "id": "FEAT-005",
+  "type": "feat",
+  "description": "Tournament workflow polish (P2-19): Add visual status indicators (icons/colors), progress stepper on tournament details, confirmation dialogs before dangerous actions, improved results display, and filters in the tournament list.",
+  "status": "completed",
+  "steps": [
+    "Add tournament status visual indicators to app/ui/labels.py: create tournament_status_icon(status) -> str function returning unicode emoji for each status (draft=pencil, review=magnifying glass, confirmed=checkmark, published=globe, archived=box, canceled=cross). Create tournament_status_color(status) -> str returning hex color codes.",
+    "Update app/ui/tournaments_view.py: in the header area, show the status with its icon and colored text using QSS inline style or QLabel with palette. Add a QComboBox filter for tournament status (Все/Черновик/На проверке/Подтвержден/Опубликован/Архив/Отменен) at the top of the view. Add a QComboBox filter for league (Все/Премьер-лига/Первая лига). When filters change, reload the tournament list showing only matching tournaments.",
+    "Add a tournament list panel to TournamentsView: instead of showing only the latest tournament, show a QTableWidget or QListWidget of all tournaments (with status icon, name, date, category) on the left side. Clicking a tournament loads it in the main panel. Use a QSplitter (horizontal) to separate list from details. Keep the existing detail area on the right.",
+    "Update app/ui/tournament_details_dialog.py: add a visual stepper/progress bar at the top showing the lifecycle stages (Черновик -> На проверке -> Подтвержден -> Опубликован) with the current stage highlighted. Use QLabel with styled text or a custom QWidget with horizontal QHBoxLayout of step labels, with the current step bold/colored.",
+    "Enhance confirmation dialogs: before archive action, show QMessageBox.warning with details about what will happen (results preserved, tournament moves to archive). Before cancel action, show similar warning (tournament data preserved but marked as canceled). These already partially exist in _safe_archive_or_cancel_tournament but enhance the text to be more informative.",
+    "Improve the results table display in TournamentsView: add row number column, make place column bold for top-3, add alternating row highlighting (already has setAlternatingRowColors but ensure it works with theme).",
+    "Write tests in tests/test_tournament_workflow_polish.py: test tournament_status_icon returns expected emojis, test tournament_status_color returns valid hex colors, test TournamentsView has status filter combo, test tournament details dialog has stepper widget, test splitter exists in TournamentsView."
+  ],
+  "acceptance_criteria": [
+    "Tournament status displayed with emoji icon and colored text",
+    "TournamentsView has filter comboboxes for status and league",
+    "TournamentsView has a tournament list panel (QSplitter with list on left, details on right)",
+    "TournamentDetailsDialog shows a visual lifecycle stepper at the top",
+    "Archive/cancel actions have enhanced confirmation dialogs with clear explanations",
+    "python -m mypy app passes",
+    "python -m pytest -q --tb=short passes"
+  ],
+  "verification": [
+    "python -m mypy app --no-error-summary",
+    "python -m pytest tests/test_tournament_workflow_polish.py -v --tb=short",
+    "python -m pytest -q --tb=short"
+  ],
+  "blocked_reason": null,
+  "findings": "All acceptance criteria met. mypy: 0 errors. pytest: 130 passed, 63 skipped, 14 deselected, 14 subtests passed. Qt UI tests skip in headless environment (libGL.so.1 missing, same pattern as all other Qt smoke tests). Added tournament_status_icon and tournament_status_color to labels.py. Refactored TournamentsView to use QSplitter with left tournament list panel and right detail panel. Added status/league filter combos. Enhanced status display with icon and color. Added lifecycle stepper to TournamentDetailsDialog. Enhanced archive/cancel confirmation with QMessageBox.warning before QInputDialog. All existing buttons and objectNames preserved for backward compatibility."
+}
