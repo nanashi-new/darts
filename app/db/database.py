@@ -6,7 +6,7 @@ import sqlite3
 from pathlib import Path
 from typing import Iterable
 
-from app.runtime_paths import APP_DIR_NAME, get_runtime_paths
+from app.runtime_paths import get_runtime_paths
 
 from .schema import initialize_schema
 
