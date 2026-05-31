@@ -30,6 +30,25 @@ from app.ui.player_card_dialog import PlayerCardDialog
 from app.ui.welcome_widget import WelcomeWidget
 
 
+
+
+def _format_diagnostic_issue(issue: object) -> str:
+    """Format a diagnostic issue dict as a human-readable string."""
+    if isinstance(issue, dict):
+        message = issue.get("message")
+        if message:
+            return str(message)
+        code = issue.get("code", "")
+        code_messages = {
+            "build_info.fallback": "Информация о сборке недоступна",
+            "build.schema_version": "Несовпадение версии схемы",
+            "db.integrity": "Проблема целостности базы данных",
+            "db.open": "Не удалось открыть базу данных",
+        }
+        return code_messages.get(code, code)
+    return str(issue)
+
+
 class DashboardView(QWidget):
     def __init__(self, *, navigate: Callable[[str], None] | None = None) -> None:
         super().__init__()
@@ -138,8 +157,11 @@ class DashboardView(QWidget):
         group = QGroupBox("\u0421\u0442\u0430\u0442\u0443\u0441 \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e \u043f\u0440\u043e\u0444\u0438\u043b\u044f", self)
         layout = QGridLayout(group)
         self.profile_status_label = QLabel("\u041f\u0440\u043e\u0444\u0438\u043b\u044c: -", group)
+        self.profile_status_label.setWordWrap(True)
         self.database_status_label = QLabel("\u0411\u0430\u0437\u0430: -", group)
+        self.database_status_label.setWordWrap(True)
         self.dashboard_diagnostics_label = QLabel("\u0414\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0430: -", group)
+        self.dashboard_diagnostics_label.setWordWrap(True)
         self.refresh_button = QPushButton("\u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c", group)
         self.refresh_button.setToolTip("\u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c \u0441\u0432\u043e\u0434\u043a\u0443 \u0433\u043b\u0430\u0432\u043d\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u044b.")
         self.refresh_button.clicked.connect(self.refresh)
@@ -260,7 +282,7 @@ class DashboardView(QWidget):
         last_self_check = get_last_self_check()
         issues = last_self_check.get("issues", []) if last_self_check else []
         if issues:
-            self._append_attention_row("\u0414\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0430", "\u0421\u0430\u043c\u043e\u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0430", "; ".join(str(issue) for issue in issues[:2]))
+            self._append_attention_row("\u0414\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0430", "\u0421\u0430\u043c\u043e\u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0430", "; ".join(_format_diagnostic_issue(issue) for issue in issues[:2]))
 
     def _append_attention_row(self, priority: str, scenario: str, action: str) -> None:
         row_index = self.attention_table.rowCount()

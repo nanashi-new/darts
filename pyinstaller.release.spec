@@ -13,6 +13,11 @@ generated_build_info = project_root / "build" / "build_info.json"
 if generated_build_info.exists():
     datas.append((str(generated_build_info), "app/resources"))
 
+user_guide = project_root / "app" / "resources" / "user_guide.md"
+if user_guide.exists():
+    datas.append((str(user_guide), "app/resources"))
+
+
 a = Analysis(
     ["app/__main__.py"],
     pathex=[str(project_root)],

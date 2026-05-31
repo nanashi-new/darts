@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 from PySide6.QtCore import Signal
@@ -51,7 +52,10 @@ class HelpView(QWidget):
 
     def _load_guide_text(self) -> str:
         """Load user guide from resources, falling back to FAQ.txt."""
-        guide_path = Path(__file__).resolve().parents[1] / "resources" / "user_guide.md"
+        if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+            guide_path = Path(sys._MEIPASS) / "app" / "resources" / "user_guide.md"
+        else:
+            guide_path = Path(__file__).resolve().parents[1] / "resources" / "user_guide.md"
         try:
             content = guide_path.read_text(encoding="utf-8").strip()
             if content:

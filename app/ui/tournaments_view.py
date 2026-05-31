@@ -83,6 +83,7 @@ class TournamentsView(QWidget):
 
         # Left panel: tournament list
         self._list_panel = QWidget(self)
+        self._list_panel.setMinimumWidth(350)
         list_layout = QVBoxLayout(self._list_panel)
         list_layout.setContentsMargins(0, 0, 0, 0)
         self.tournaments_list_table = QTableWidget(self._list_panel)
@@ -94,6 +95,7 @@ class TournamentsView(QWidget):
         self.tournaments_list_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.tournaments_list_table.horizontalHeader().setStretchLastSection(True)
         self.tournaments_list_table.setAlternatingRowColors(True)
+        self.tournaments_list_table.setWordWrap(True)
         self.tournaments_list_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.tournaments_list_table.cellClicked.connect(self._on_tournament_list_clicked)
         t_header = self.tournaments_list_table.horizontalHeader()
@@ -130,7 +132,7 @@ class TournamentsView(QWidget):
         detail_layout.addWidget(self._build_actions())
         self._splitter.addWidget(self._detail_panel)
 
-        self._splitter.setSizes([300, 700])
+        self._splitter.setSizes([400, 600])
         layout.addWidget(self._splitter, 1)
 
         # Wire up filters

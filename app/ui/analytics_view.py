@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from PySide6.QtWidgets import (
+    QHeaderView,
     QComboBox,
     QHBoxLayout,
     QLabel,
@@ -56,6 +57,7 @@ class TournamentAnalyticsTab(QWidget):
         self._trends_table = QTableWidget()
         self._trends_table.setObjectName("tournament_trends_table")
         self._trends_table.setColumnCount(4)
+        self._trends_table.horizontalHeader().setStretchLastSection(True)
         self._trends_table.setHorizontalHeaderLabels([
             "Период", "Кол-во турниров", "Среднее участников", "Средний уровень"
         ])
